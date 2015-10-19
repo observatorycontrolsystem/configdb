@@ -39,7 +39,7 @@ def camera_mappings_dict():
 
                         })
 
-            return data
+    return data
 
 
 def camera_mappings(request):
