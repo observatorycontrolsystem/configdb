@@ -1,0 +1,15 @@
+{% extends "rest_framework/base.html" %}
+{% load static %}
+{% block navbar %}
+      <div class="navbar navbar-static-top {% block bootstrap_navbar_variant %}navbar-inverse{% endblock %}">
+        <div class="container">
+          <span>
+            {% block branding %}
+              <a class='navbar-brand' rel="nofollow" href='/'>
+                  <img src="{% static 'img/logo.png' %}" alt="lcogt" style="height: 150%">
+              </a>
+            {% endblock %}
+          </span>
+        </div>
+      </div>
+{% endblock %}

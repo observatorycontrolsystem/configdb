@@ -1,0 +1,40 @@
+{% extends 'hardware/index.html' %}
+{% block title %}Telescopes{% endblock %}
+{% block content %}
+<h1 class="page-header">Telescopes</h1>
+<div class="table">
+  <table class="table table-striped" id="telescopes">
+    <thead>
+      <tr>
+      <th>Code</th>
+      <th>Name</th>
+      <th>Enclosure</th>
+      <th>Latitude</th>
+      <th>Longitude</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for telescope in object_list %}
+      {% if telescope.active %}
+      <tr>
+        <td>{{ telescope }}</td>
+        <td><a href="{% url 'telescope-detail' pk=telescope.pk %}">{{ telescope.name }}</a></td>
+        <td><a href="{% url 'enclosure-detail' pk=telescope.enclosure.pk %}">
+          {{ telescope.enclosure.name}}
+        </a></td>
+        <td>{{ telescope.lat }}</td>
+        <td>{{ telescope.long }}</td>
+      </tr>
+      {% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+{% block extra_javascript %}
+<script type="text/javascript">
+  $(document).ready(function(){
+    $('#telescopes').DataTable()
+  })
+</script>
+{% endblock %}

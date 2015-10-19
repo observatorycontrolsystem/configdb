@@ -1,0 +1,32 @@
+{% extends 'hardware/index.html' %}
+{% block title %}Filterwheels{% endblock %}
+{% block content %}
+<h1 class="page-header">Filterwheels</h1>
+<div class="table">
+  <table class="table table-striped" id="filters">
+    <thead>
+      <tr>
+      <th>Id</th>
+      <th>Filters</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for filterwheel in object_list %}
+      {% if filterwheel.active %}
+      <tr>
+        <td><a href="{% url 'filterwheel-detail' pk=filterwheel.pk %}">{{ filterwheel.id }}</a></td>
+        <td>{{ filterwheel.filters }}</td>
+      </tr>
+      {% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+{% block extra_javascript %}
+<script type="text/javascript">
+  $(document).ready(function(){
+    $('#filters').DataTable()
+  })
+</script>
+{% endblock %}

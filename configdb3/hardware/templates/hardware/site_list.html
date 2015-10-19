@@ -1,0 +1,37 @@
+{% extends 'hardware/index.html' %}
+{% block title %}Sites{% endblock %}
+{% block content %}
+<h1 class="page-header">Sites</h1>
+<div class="table">
+  <table class="table table-striped" id="sites">
+    <thead>
+      <tr>
+      <th>Code</th>
+      <th>Name</th>
+      <th>UTC Offset</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for site in object_list %}
+      {% if site.active %}
+      <tr>
+        <td>{{ site.code }}</td>
+        <td><a href="{% url 'site-detail' pk=site.pk %}">{{ site.name }}</a></td>
+        <td>{{ site.timezone }}</td>
+      </tr>
+      {% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+{% block extra_javascript %}
+<script type="text/javascript">
+  $(document).ready(function(){
+    $('#sites').DataTable({
+      "paging": false,
+      "search": false
+    })
+  })
+</script>
+{% endblock %}

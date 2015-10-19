@@ -1,0 +1,36 @@
+{% extends 'hardware/index.html' %}
+{% block title %}Cameras{% endblock %}
+{% block content %}
+<h1 class="page-header">Cameras</h1>
+<div class="table">
+  <table class="table table-striped" id="cameras">
+    <thead>
+      <tr>
+      <th>Code</th>
+      <th>Type</th>
+      <th>Filters</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for camera in object_list %}
+      {% if camera.active %}
+      <tr>
+        <td><a href="{% url 'camera-detail' pk=camera.pk %}">{{ camera.code }}</a></td>
+        <td><a href="{% url 'cameratype-detail' pk=camera.camera_type.pk %}">{{ camera.camera_type }}</a></td>
+        <td>{{ camera.filters }}</td>
+      </tr>
+      {% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+{% block extra_javascript %}
+<script type="text/javascript">
+  $(document).ready(function(){
+    $('#cameras').DataTable({
+      "order": [[0, "asc"]]
+    })
+  })
+</script>
+{% endblock %}

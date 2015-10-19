@@ -1,0 +1,14 @@
+web:
+    build: .
+    command: python3 manage.py runserver 0.0.0.0:8000
+    volumes:
+        - .:/lco/configdb3
+    ports:
+        - "8000:8000"
+    links:
+        - db
+
+db:
+    image: postgres:latest
+    environment:
+        POSTGRES_PASSWORD: postgres
