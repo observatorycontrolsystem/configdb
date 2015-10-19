@@ -39,7 +39,7 @@ class Telescope(BaseModel):
 
 
 class FilterWheel(BaseModel):
-    filters = models.CharField(max_length=5000)
+    filters = models.CharField(max_length=5000, unique=True)
 
     def __str__(self):
         return self.filters
@@ -76,7 +76,6 @@ class Camera(BaseModel):
     @property
     def filters(self):
         return self.filter_wheel.filters
-
 
     def __str__(self):
         return '{0}.{1}'.format(self.camera_type, self.code)
