@@ -25,6 +25,7 @@ class CameraTypeSerializer(serializers.ModelSerializer):
 
 
 class CameraSerializer(serializers.ModelSerializer):
+    camera_type = CameraTypeSerializer()
 
     class Meta:
         fields = ('id', 'code', 'camera_type', 'filter_wheel', 'filters')
