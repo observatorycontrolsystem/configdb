@@ -120,4 +120,3 @@ try:
     ALLOWED_HOSTS += LOCAL_ALLOWED_HOSTS
 except:
     pass
-
