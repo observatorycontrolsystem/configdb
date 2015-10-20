@@ -78,7 +78,7 @@ class Camera(BaseModel):
         return self.filter_wheel.filters
 
     def __str__(self):
-        return '{0}.{1}'.format(self.camera_type, self.code)
+        return '{0}'.format(self.code)
 
 
 class Instrument(BaseModel):
@@ -94,4 +94,4 @@ class Instrument(BaseModel):
             return 'OffAxis'
 
     def __str__(self):
-        return '{0}.{1}'.format(self.telescope, self.pk)
+        return '{0}.{1}-{2}'.format(self.telescope, self.science_camera, self.autoguider_camera)
