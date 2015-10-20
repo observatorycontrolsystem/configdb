@@ -73,6 +73,9 @@ class Camera(BaseModel):
     code = models.CharField(max_length=200)
     filter_wheel = models.ForeignKey(FilterWheel)
 
+    class Meta:
+        ordering = ['code']
+
     @property
     def filters(self):
         return self.filter_wheel.filters
