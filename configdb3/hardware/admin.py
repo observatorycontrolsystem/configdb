@@ -12,39 +12,48 @@ class HardwareAdmin(admin.ModelAdmin):
 
 @admin.register(Site)
 class SiteAdmin(HardwareAdmin):
-    pass
+    list_display = ('code', 'name', 'timezone')
+    search_fields = ('code', 'name', 'timezone')
 
 
 @admin.register(Enclosure)
 class EnclosureAdmin(HardwareAdmin):
-    pass
+    list_display = ('__str__', 'name')
+    list_filter = ('site__code',)
+    search_fields = ('code', 'name', 'site__code')
 
 
 @admin.register(Telescope)
 class TelescopeAdmin(HardwareAdmin):
-    pass
+    list_display = ('__str__', 'name', 'lat', 'long')
+    list_filter = ('enclosure__site__code',)
+    search_fields = ('code', 'name', 'enclosure__site__code')
 
 
 @admin.register(Instrument)
 class InstrumentAdmin(HardwareAdmin):
-    pass
+    list_display = ('__str__', 'telescope', 'science_camera', 'autoguider_camera')
+    list_filter = ('telescope__enclosure__site__code',)
 
 
 @admin.register(Camera)
 class CameraAdmin(HardwareAdmin):
-    pass
+    list_display = ('code', 'camera_type', 'filters')
+    search_fields = ('code',)
 
 
 @admin.register(CameraType)
 class CameraTypeAdmin(HardwareAdmin):
-    pass
+    list_display = ('name', 'size', 'pscale', 'default_mode')
+    search_fields = ('name',)
 
 
 @admin.register(Mode)
 class ModeAdmin(HardwareAdmin):
-    pass
+    list_display = ('camera_type', 'binning', 'overhead')
 
 
 @admin.register(FilterWheel)
 class FilterWheelAdmin(HardwareAdmin):
-    pass
+    list_display = ('id', 'filters')
+    search_fields = ('filters',)

@@ -1,3 +1,6 @@
+# scratch directory
+scratch/
+
 # ignore local_settings.py
 local_settings.py
 

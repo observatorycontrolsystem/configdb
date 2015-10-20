@@ -75,10 +75,12 @@
                 <span class="text-muted"><h4>Filterwheels</h4></span>
               </div>
             </div>
+            <div class="row">
+              <center><a href="{% url 'camera-mappings' %}" class="btn btn-primary btn-lg" title="camera mappings">Camera Mappings File</a></center>
 
             <h2>API</h2>
             <p>
-              Configdb2 provides a RESTful api to query data. The data will be returned in JSON format unless accessed via browser, in which
+              Configdb3 provides a RESTful api to query data. The data will be returned in JSON format unless accessed via browser, in which
               case a user friendly interface will be provided.
             </p>
             <p>
@@ -109,12 +111,12 @@
             </ul>
             <p>Individual resources can be accessed by id:</p>
             <ul>
-              <li>Siding Spring: <a href="{% url 'site-detail' pk=6 %}">{% url 'site-detail' pk=6 %}</a></li>
-              <li>kb26: <a href="{% url 'camera-detail' pk=48 %}">{% url 'camera-detail' pk=48 %}</a></li>
+              <li>Maui: <a href="{% url 'site-detail' pk=7 %}">{% url 'site-detail' pk=7 %}</a></li>
+              <li>kb34: <a href="{% url 'camera-detail' pk=134 %}">{% url 'camera-detail' pk=134 %}</a></li>
             </ul>
             <p>Resources can also be filtered by properties:</p>
             <ul>
-              <li>Site(s) with code OGG: <a href="{% url 'site-list' %}?code=OGG">{% url 'site-list' %}?code=OGG</a></li>
+              <li>Site(s) with code ogg: <a href="{% url 'site-list' %}?code=ogg">{% url 'site-list' %}?code=ogg</a></li>
               <li>1 meter telescopes: <a href="{% url 'telescope-list' %}?code=1m0a">{% url 'telescope-list' %}?code=1m0a</a></li>
             {% endblock %}
           </div>

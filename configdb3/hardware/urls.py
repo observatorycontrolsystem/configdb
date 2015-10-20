@@ -16,7 +16,7 @@ router.register(r'mode', api_views.ModeViewSet)
 router.register(r'filterwheels', api_views.FilterWheelViewSet)
 
 urlpatterns = [
-    url(r'^camera_mappings/', camera_mappings),
+    url(r'^camera_mappings/', camera_mappings, name='camera-mappings'),
     url(r'^$', IndexView.as_view(), name='index'),
     url(r'^html/sites/$', ListView.as_view(model=Site), name='html-site-list'),
     url(r'^html/telescopes/$', ListView.as_view(model=Telescope), name='html-telescope-list'),
