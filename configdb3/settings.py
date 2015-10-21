@@ -38,6 +38,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'django_nose',
     'configdb3.hardware',
 )
 
@@ -108,6 +109,8 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
     'PAGE_SIZE': 10
 }
+
+TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
 # Import local_settings file
 try:

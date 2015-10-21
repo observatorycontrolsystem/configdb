@@ -5,3 +5,5 @@ django-extensions
 djangorestframework
 django-filter
 flake8
+nose
+django_nose
