@@ -85,16 +85,16 @@ class Camera(BaseModel):
 
 
 class Instrument(BaseModel):
+    AUTOGUIDER_TYPES = (
+        ("InCamera", "InCamera"),
+        ("OffAxis", "OffAxis"),
+        ("SelfGuide", "SelfGuide")
+    )
+
     telescope = models.ForeignKey(Telescope)
     science_camera = models.ForeignKey(Camera)
     autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for')
-
-    @property
-    def autoguider_type(self):
-        if self.science_camera == self.autoguider_camera:
-            return 'SelfGuide'
-        else:
-            return 'OffAxis'
+    autoguider_type = models.CharField(max_length=200, choices=AUTOGUIDER_TYPES, default="OffAxis")
 
     def __str__(self):
         return '{0}.{1}-{2}'.format(self.telescope, self.science_camera, self.autoguider_camera)
