@@ -2,7 +2,7 @@ django>=1.8,<1.9
 psycopg2
 ipython
 django-extensions
-djangorestframework
+djangorestframework==3.2.4
 django-filter
 flake8
 nose
