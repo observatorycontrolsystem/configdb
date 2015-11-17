@@ -41,7 +41,7 @@ class InstrumentSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('id', 'active', 'telescope', 'science_camera',
-                  'autoguider_camera')
+                  'autoguider_camera', '__str__')
         model = Instrument
 
 
@@ -50,7 +50,7 @@ class TelescopeSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('id', 'name', 'code', 'active', 'lat',
-                  'long', 'enclosure', 'instrument_set')
+                  'long', 'enclosure', 'instrument_set', '__str__')
         model = Telescope
 
 
@@ -59,7 +59,7 @@ class EnclosureSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('id', 'name', 'code', 'active', 'site',
-                  'telescope_set')
+                  'telescope_set', '__str__')
         model = Enclosure
 
 
@@ -68,5 +68,5 @@ class SiteSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('id', 'name', 'code', 'active', 'timezone',
-                  'enclosure_set')
+                  'enclosure_set', '__str__')
         model = Site
