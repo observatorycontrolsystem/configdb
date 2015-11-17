@@ -23,7 +23,7 @@ class CameraTypeSerializer(serializers.ModelSerializer):
     mode_set = ModeSerializer(many=True)
 
     class Meta:
-        fields = ('id', 'size', 'pscale', 'default_mode', 'name', 'mode_set')
+        fields = ('id', 'size', 'pscale', 'default_mode', 'name', 'code', 'mode_set')
         model = CameraType
 
 
