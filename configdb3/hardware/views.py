@@ -29,7 +29,7 @@ def camera_mappings_dict():
                         'observatory': enclosure.code,
                         'telescope': telescope.code,
                         'name': instrument.science_camera.code,
-                        'cameratype': instrument.science_camera.camera_type.name,
+                        'cameratype': instrument.science_camera.camera_type.code,
                         'size': instrument.science_camera.camera_type.size,
                         'plate_scale': instrument.science_camera.camera_type.pscale,
                         'binning': binning,

@@ -47,12 +47,13 @@ class FilterWheel(BaseModel):
 
 class CameraType(BaseModel):
     name = models.CharField(max_length=200, unique=True)
+    code = models.CharField(max_length=200)
     default_mode = models.ForeignKey('Mode', null=True, blank=True)
     size = models.CharField(max_length=200)
     pscale = models.FloatField()
 
     def __str__(self):
-        return self.name
+        return self.code
 
 
 class Mode(BaseModel):
