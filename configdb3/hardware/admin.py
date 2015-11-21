@@ -55,11 +55,10 @@ class ModeAdmin(HardwareAdmin):
 
 @admin.register(FilterWheel)
 class FilterWheelAdmin(HardwareAdmin):
-    list_display = ('id','__str__',)
+    list_display = ('id', '__str__',)
 
 
 @admin.register(Filter)
 class FilterAdmin(HardwareAdmin):
     list_display = ('name', 'code')
     search_fields = ('name',)
-
