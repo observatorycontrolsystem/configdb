@@ -37,7 +37,7 @@ def camera_mappings_dict():
                         'overhead': instrument.science_camera.camera_type.default_mode.overhead / 1000,  # in seconds
                         'autoguider': instrument.autoguider_camera.code,
                         'autoguider_type': instrument.autoguider_type,
-                        'filters': instrument.science_camera.filter_wheel.filters,
+                        'filters': str(instrument.science_camera.filter_wheel),
                     })
 
     return data

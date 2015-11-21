@@ -38,11 +38,20 @@ class Telescope(BaseModel):
         return '{0}.{1}'.format(self.enclosure, self.code)
 
 
-class FilterWheel(BaseModel):
-    filters = models.CharField(max_length=5000, unique=True)
+class Filter(BaseModel):
+    name = models.CharField(max_length=200)
+    code = models.CharField(max_length=200, unique=True)
 
     def __str__(self):
-        return self.filters
+        return self.code
+
+
+class FilterWheel(BaseModel):
+    filters = models.ManyToManyField(Filter)
+
+    def __str__(self):
+        filters_str = ','.join([filter.code for filter in self.filters.all()])
+        return filters_str
 
 
 class CameraType(BaseModel):

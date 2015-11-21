@@ -7,7 +7,7 @@ from .models import (Site, Enclosure, Telescope,
 class FilterWheelSerializer(serializers.ModelSerializer):
 
     class Meta:
-        fields = ('id', 'filters')
+        fields = ('id', 'filters', '__str__')
         model = FilterWheel
         depth = 1
 

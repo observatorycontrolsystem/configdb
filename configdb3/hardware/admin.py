@@ -1,6 +1,6 @@
 from django.contrib import admin
 from configdb3.hardware.models import (
-    Site, Enclosure,
+    Site, Enclosure, Filter,
     Telescope, Instrument, Camera, CameraType, Mode,
     FilterWheel
 )
@@ -38,7 +38,7 @@ class InstrumentAdmin(HardwareAdmin):
 
 @admin.register(Camera)
 class CameraAdmin(HardwareAdmin):
-    list_display = ('code', 'camera_type', 'filters')
+    list_display = ('code', 'camera_type')
     search_fields = ('code',)
 
 
@@ -55,5 +55,11 @@ class ModeAdmin(HardwareAdmin):
 
 @admin.register(FilterWheel)
 class FilterWheelAdmin(HardwareAdmin):
-    list_display = ('id', 'filters')
-    search_fields = ('filters',)
+    list_display = ('id','__str__',)
+
+
+@admin.register(Filter)
+class FilterAdmin(HardwareAdmin):
+    list_display = ('name', 'code')
+    search_fields = ('name',)
+
