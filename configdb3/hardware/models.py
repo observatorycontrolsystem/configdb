@@ -88,7 +88,7 @@ class Camera(BaseModel):
 
     @property
     def filters(self):
-        return self.filter_wheel.filters.split(',')
+        return str(self.filter_wheel)
 
     def __str__(self):
         return '{0}'.format(self.code)

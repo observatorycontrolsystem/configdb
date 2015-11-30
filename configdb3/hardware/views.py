@@ -1,5 +1,5 @@
 from django.http import HttpResponse
-from .models import Site, Telescope, Camera, FilterWheel
+from .models import Site, Telescope, Camera, FilterWheel, Filter
 from django.views.generic import TemplateView
 
 
@@ -12,6 +12,7 @@ class IndexView(TemplateView):
         context['telescope_count'] = Telescope.objects.count()
         context['camera_count'] = Camera.objects.count()
         context['filterwheel_count'] = FilterWheel.objects.count()
+        context['filter_count'] = Filter.objects.count()
         return context
 
 

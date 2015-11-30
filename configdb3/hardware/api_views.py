@@ -3,7 +3,7 @@ from configdb3.hardware import serializers
 import django_filters
 from .models import (Site, Enclosure, Telescope,
                      Instrument, Camera, Mode,
-                     FilterWheel, CameraType)
+                     FilterWheel, CameraType, Filter)
 
 
 class FilterableViewSet(viewsets.ModelViewSet):
@@ -85,3 +85,9 @@ class FilterWheelViewSet(FilterableViewSet):
     serializer_class = serializers.FilterWheelSerializer
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = FilterWheelFilter
+
+
+class FilterViewSet(FilterableViewSet):
+    queryset = Filter.objects.all()
+    serializer_class = serializers.FilterSerializer
+    filter_fields = ('id', 'name', 'code')

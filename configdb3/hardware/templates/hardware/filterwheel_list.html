@@ -15,7 +15,7 @@
       {% if filterwheel.active %}
       <tr>
         <td><a href="{% url 'filterwheel-detail' pk=filterwheel.pk %}">{{ filterwheel.id }}</a></td>
-        <td>{{ filterwheel.filters }}</td>
+        <td>{{ filterwheel }}</td>
       </tr>
       {% endif %}
     {% endfor %}
