@@ -60,5 +60,5 @@ class FilterWheelAdmin(HardwareAdmin):
 
 @admin.register(Filter)
 class FilterAdmin(HardwareAdmin):
-    list_display = ('name', 'code')
+    list_display = ('name', 'code', 'filter_type')
     search_fields = ('name',)

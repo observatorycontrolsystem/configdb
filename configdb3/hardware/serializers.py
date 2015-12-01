@@ -15,7 +15,7 @@ class FilterWheelSerializer(serializers.ModelSerializer):
 class FilterSerializer(serializers.ModelSerializer):
 
     class Meta:
-        fields = ('id', 'name', 'code')
+        fields = ('id', 'name', 'code', 'filter_type')
         model = Filter
         depth = 1
 

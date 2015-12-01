@@ -90,4 +90,4 @@ class FilterWheelViewSet(FilterableViewSet):
 class FilterViewSet(FilterableViewSet):
     queryset = Filter.objects.all()
     serializer_class = serializers.FilterSerializer
-    filter_fields = ('id', 'name', 'code')
+    filter_fields = ('id', 'name', 'code', 'filter_type')

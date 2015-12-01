@@ -39,8 +39,16 @@ class Telescope(BaseModel):
 
 
 class Filter(BaseModel):
+    FILTER_TYPES = (
+        ("Standard", "Standard"),
+        ("Engineering", "Engineering"),
+        ("Slit", "Slit"),
+        ("VirtualSlit", "VirtualSlit"),
+        ("Exotic", "Exotic")
+    )
     name = models.CharField(max_length=200)
     code = models.CharField(max_length=200, unique=True)
+    filter_type = models.CharField(max_length=200, choices=FILTER_TYPES, default="Standard")
 
     def __str__(self):
         return self.code
