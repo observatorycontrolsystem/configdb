@@ -39,7 +39,7 @@ class CameraSerializer(serializers.ModelSerializer):
     camera_type = CameraTypeSerializer()
 
     class Meta:
-        fields = ('id', 'active', 'code', 'camera_type', 'filter_wheel', 'filters')
+        fields = ('id', 'code', 'camera_type', 'filter_wheel', 'filters')
         model = Camera
 
 
@@ -48,7 +48,7 @@ class InstrumentSerializer(serializers.ModelSerializer):
     autoguider_camera = CameraSerializer()
 
     class Meta:
-        fields = ('id', 'active', 'telescope', 'science_camera',
+        fields = ('id', 'schedulable', 'telescope', 'science_camera',
                   'autoguider_camera', '__str__')
         model = Instrument
 

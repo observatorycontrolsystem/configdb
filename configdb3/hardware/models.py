@@ -101,6 +101,7 @@ class Instrument(BaseModel):
         ("SelfGuide", "SelfGuide")
     )
 
+    schedulable = models.BooleanField(default=True)
     telescope = models.ForeignKey(Telescope)
     science_camera = models.ForeignKey(Camera)
     autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for')

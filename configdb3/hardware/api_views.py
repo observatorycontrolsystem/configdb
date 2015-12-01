@@ -13,7 +13,7 @@ class FilterableViewSet(viewsets.ModelViewSet):
 class SiteViewSet(FilterableViewSet):
     queryset = Site.objects.all()
     serializer_class = serializers.SiteSerializer
-    filter_fields = ('name', 'code', 'active')
+    filter_fields = ('name', 'code')
 
 
 class EnclosureViewSet(FilterableViewSet):
@@ -25,7 +25,7 @@ class EnclosureViewSet(FilterableViewSet):
 class TelescopeViewSet(FilterableViewSet):
     queryset = Telescope.objects.all()
     serializer_class = serializers.TelescopeSerializer
-    filter_fields = ('name', 'code', 'active', 'lat', 'long',
+    filter_fields = ('name', 'code', 'lat', 'long',
                      'enclosure')
 
 
@@ -41,7 +41,7 @@ class InstrumentFilter(django_filters.FilterSet):
     class Meta:
         model = Instrument
         fields = ['telescope', 'science_camera', 'autoguider_camera',
-                  'camera_type', 'site', 'telescope', 'enclosure', 'active']
+                  'camera_type', 'site', 'telescope', 'enclosure', 'schedulable']
 
 
 class InstrumentViewSet(FilterableViewSet):
