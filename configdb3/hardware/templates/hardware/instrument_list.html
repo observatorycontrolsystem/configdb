@@ -1,0 +1,42 @@
+{% extends 'hardware/index.html' %}
+{% block title %}Instruments{% endblock %}
+{% block content %}
+<h1 class="page-header">Instruments</h1>
+<div class="table">
+  <table class="table table-striped" id="instruments">
+    <thead>
+      <tr>
+      <th>Schedulable</th>
+      <th>SciCam Code</th>
+      <th>SciCam Type</th>
+      <th>SciCam Filters</th>
+      <th>AutoGuider Code</th>
+      <th>AutoGuider Type</th>
+      <th>Telescope</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for instrument in object_list %}
+      <tr>
+        <td>{{ instrument.schedulable }}</td>
+        <td><a href="{% url 'camera-detail' pk=instrument.science_camera.pk %}">{{ instrument.science_camera.code }}</a></td>
+        <td><a href="{% url 'cameratype-detail' pk=instrument.science_camera.camera_type.pk %}">{{ instrument.science_camera.camera_type }}</a></td>
+        <td><a href="{% url 'filterwheel-detail' pk=instrument.science_camera.filter_wheel.pk %}">{{ instrument.science_camera.filters }}</a></td>
+        <td><a href="{% url 'camera-detail' pk=instrument.autoguider_camera.pk %}">{{ instrument.autoguider_camera.code }}</a></td>
+        <td>{{ instrument.autoguider_type }}</td>
+        <td><a href="{% url 'telescope-detail' pk=instrument.telescope.pk %}">{{ instrument.telescope }}</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+{% block extra_javascript %}
+<script type="text/javascript">
+  $(document).ready(function(){
+    $('#instruments').DataTable({
+      "order": [[0, "asc"]]
+    })
+  })
+</script>
+{% endblock %}

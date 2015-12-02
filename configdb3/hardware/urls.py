@@ -3,7 +3,7 @@ from django.conf.urls import url, include
 from .views import camera_mappings, IndexView
 from rest_framework import routers
 from django.views.generic.list import ListView
-from .models import Site, Telescope, Camera, FilterWheel, Filter
+from .models import Site, Telescope, Camera, FilterWheel, Instrument
 
 router = routers.SimpleRouter()
 router.register(r'sites', api_views.SiteViewSet)
@@ -22,6 +22,7 @@ urlpatterns = [
     url(r'^html/sites/$', ListView.as_view(model=Site), name='html-site-list'),
     url(r'^html/telescopes/$', ListView.as_view(model=Telescope), name='html-telescope-list'),
     url(r'^html/cameras/$', ListView.as_view(model=Camera), name='html-camera-list'),
+    url(r'^html/instruments/$', ListView.as_view(model=Instrument), name='html-instrument-list'),
     url(r'^html/filterwheels/$', ListView.as_view(model=FilterWheel), name='html-filterwheel-list'),
     url(r'^', include(router.urls))
 ]
