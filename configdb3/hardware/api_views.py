@@ -3,7 +3,7 @@ from configdb3.hardware import serializers
 import django_filters
 from .models import (Site, Enclosure, Telescope,
                      Instrument, Camera, Mode,
-                     FilterWheel, CameraType)
+                     FilterWheel, CameraType, Filter)
 
 
 class FilterableViewSet(viewsets.ModelViewSet):
@@ -13,7 +13,7 @@ class FilterableViewSet(viewsets.ModelViewSet):
 class SiteViewSet(FilterableViewSet):
     queryset = Site.objects.all()
     serializer_class = serializers.SiteSerializer
-    filter_fields = ('name', 'code', 'active')
+    filter_fields = ('name', 'code')
 
 
 class EnclosureViewSet(FilterableViewSet):
@@ -25,7 +25,7 @@ class EnclosureViewSet(FilterableViewSet):
 class TelescopeViewSet(FilterableViewSet):
     queryset = Telescope.objects.all()
     serializer_class = serializers.TelescopeSerializer
-    filter_fields = ('name', 'code', 'active', 'lat', 'long',
+    filter_fields = ('name', 'code', 'lat', 'long',
                      'enclosure')
 
 
@@ -41,7 +41,7 @@ class InstrumentFilter(django_filters.FilterSet):
     class Meta:
         model = Instrument
         fields = ['telescope', 'science_camera', 'autoguider_camera',
-                  'camera_type', 'site', 'telescope', 'enclosure', 'active']
+                  'camera_type', 'site', 'telescope', 'enclosure', 'schedulable']
 
 
 class InstrumentViewSet(FilterableViewSet):
@@ -85,3 +85,9 @@ class FilterWheelViewSet(FilterableViewSet):
     serializer_class = serializers.FilterWheelSerializer
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = FilterWheelFilter
+
+
+class FilterViewSet(FilterableViewSet):
+    queryset = Filter.objects.all()
+    serializer_class = serializers.FilterSerializer
+    filter_fields = ('id', 'name', 'code', 'filter_type')

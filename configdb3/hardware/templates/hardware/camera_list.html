@@ -13,13 +13,11 @@
     </thead>
     <tbody>
     {% for camera in object_list %}
-      {% if camera.active %}
       <tr>
         <td><a href="{% url 'camera-detail' pk=camera.pk %}">{{ camera.code }}</a></td>
         <td><a href="{% url 'cameratype-detail' pk=camera.camera_type.pk %}">{{ camera.camera_type }}</a></td>
         <td>{{ camera.filters }}</td>
       </tr>
-      {% endif %}
     {% endfor %}
     </tbody>
   </table>

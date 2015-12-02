@@ -1,5 +1,5 @@
 from django.http import HttpResponse
-from .models import Site, Telescope, Camera, FilterWheel
+from .models import Site, Telescope, Camera, FilterWheel, Filter, Instrument
 from django.views.generic import TemplateView
 
 
@@ -12,6 +12,8 @@ class IndexView(TemplateView):
         context['telescope_count'] = Telescope.objects.count()
         context['camera_count'] = Camera.objects.count()
         context['filterwheel_count'] = FilterWheel.objects.count()
+        context['filter_count'] = Filter.objects.count()
+        context['instrument_count'] = Instrument.objects.count()
         return context
 
 
@@ -20,7 +22,7 @@ def camera_mappings_dict():
     for site in Site.objects.filter(active=True):
         for enclosure in site.enclosure_set.filter(active=True):
             for telescope in enclosure.telescope_set.filter(active=True):
-                for instrument in telescope.instrument_set.filter(active=True):
+                for instrument in telescope.instrument_set.filter(schedulable=True):
                     binning = ','.join(
                         [mode.binning_str for mode in instrument.science_camera.camera_type.mode_set.all()]
                     )
@@ -37,7 +39,7 @@ def camera_mappings_dict():
                         'overhead': instrument.science_camera.camera_type.default_mode.overhead / 1000,  # in seconds
                         'autoguider': instrument.autoguider_camera.code,
                         'autoguider_type': instrument.autoguider_type,
-                        'filters': instrument.science_camera.filter_wheel.filters,
+                        'filters': str(instrument.science_camera.filter_wheel),
                     })
 
     return data

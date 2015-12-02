@@ -12,12 +12,10 @@
     </thead>
     <tbody>
     {% for filterwheel in object_list %}
-      {% if filterwheel.active %}
       <tr>
         <td><a href="{% url 'filterwheel-detail' pk=filterwheel.pk %}">{{ filterwheel.id }}</a></td>
-        <td>{{ filterwheel.filters }}</td>
+        <td>{{ filterwheel }}</td>
       </tr>
-      {% endif %}
     {% endfor %}
     </tbody>
   </table>

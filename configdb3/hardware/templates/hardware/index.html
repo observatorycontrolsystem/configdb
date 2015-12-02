@@ -44,8 +44,8 @@
               <li><a href="/">ConfigDB3</a></li>
               <li><a href="{% url 'html-site-list' %}">Sites</a></li>
               <li><a href="{% url 'html-telescope-list' %}">Telescopes</a></li>
-              <li><a href="{% url 'html-camera-list' %}">Cameras</a>
-              </li>
+              <li><a href="{% url 'html-instrument-list' %}">Instruments</a></li>
+              <li><a href="{% url 'html-camera-list' %}">Cameras</a></li>
               <li><a href="{% url 'html-filterwheel-list' %}">Filter Wheels</a></li>
             </ul>
           </div>
@@ -54,23 +54,27 @@
 
       <div class="container-fluid">
         <div class="row">
-          <div class="col-sm-12 col-md-11 main">
+          <div class="col-sm-15 col-md-12 main">
             {% block content %}
             <h1 class="page-header">Overview</h1>
             <div class="row placeholders">
-              <div class="col-xs-6 col-sm-3 placeholder">
+              <div class="col-xs-4 col-sm-2 placeholder">
                 <h2><a href="{% url 'html-site-list' %}">{{ site_count }}</a></h2>
                 <span class="text-muted"><h4>Sites</h4></span>
               </div>
-              <div class="col-xs-6 col-sm-3 placeholder">
+              <div class="col-xs-4 col-sm-2 placeholder">
                 <h2><a href="{% url 'html-telescope-list' %}">{{ telescope_count }}</a></h2>
                 <span class="text-muted"><h4>Telescopes</h4></span>
               </div>
-              <div class="col-xs-6 col-sm-3 placeholder">
+              <div class="col-xs-4 col-sm-2 placeholder">
+                <h2><a href="{% url 'html-instrument-list' %}">{{ instrument_count }}</a></h2>
+                <span class="text-muted"><h4>Instruments</h4></span>
+              </div>
+              <div class="col-xs-4 col-sm-2 placeholder">
                 <h2><a href="{% url 'html-camera-list' %}">{{ camera_count }}</a></h2>
                 <span class="text-muted"><h4>Cameras</h4></span>
               </div>
-              <div class="col-xs-6 col-sm-3 placeholder">
+              <div class="col-xs-4 col-sm-2 placeholder">
                 <h2><a href="{% url 'html-filterwheel-list' %}">{{ filterwheel_count }}</a></h2>
                 <span class="text-muted"><h4>Filterwheels</h4></span>
               </div>
@@ -108,11 +112,14 @@
               <li>
                 Filter Wheels: <a href="{% url 'filterwheel-list' %}">{% url 'filterwheel-list' %}</a>
               </li>
+              <li>
+                Filters: <a href="{% url 'filter-list' %}">{% url 'filter-list' %}</a>
+              </li>
             </ul>
             <p>Individual resources can be accessed by id:</p>
             <ul>
-              <li>Maui: <a href="{% url 'site-detail' pk=7 %}">{% url 'site-detail' pk=7 %}</a></li>
-              <li>kb34: <a href="{% url 'camera-detail' pk=134 %}">{% url 'camera-detail' pk=134 %}</a></li>
+              <li>Maui: <a href="{% url 'site-detail' pk=6 %}">{% url 'site-detail' pk=6 %}</a></li>
+              <li>kb34: <a href="{% url 'camera-detail' pk=35 %}">{% url 'camera-detail' pk=35 %}</a></li>
             </ul>
             <p>Resources can also be filtered by properties:</p>
             <ul>

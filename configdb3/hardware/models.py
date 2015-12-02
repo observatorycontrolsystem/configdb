@@ -2,11 +2,13 @@ from django.db import models
 
 
 class BaseModel(models.Model):
-    active = models.BooleanField(default=True)
     modified = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        abstract = True
 
 class Site(BaseModel):
+    active = models.BooleanField(default=True)
     code = models.CharField(max_length=3)
     name = models.CharField(default='', blank=True, max_length=200)
     timezone = models.IntegerField()
@@ -19,6 +21,7 @@ class Site(BaseModel):
 
 
 class Enclosure(BaseModel):
+    active = models.BooleanField(default=True)
     code = models.CharField(max_length=200)
     name = models.CharField(default='', blank=True, max_length=200)
     site = models.ForeignKey(Site)
@@ -28,6 +31,7 @@ class Enclosure(BaseModel):
 
 
 class Telescope(BaseModel):
+    active = models.BooleanField(default=True)
     code = models.CharField(max_length=200)
     name = models.CharField(default='', blank=True, max_length=200)
     lat = models.FloatField()
@@ -38,11 +42,28 @@ class Telescope(BaseModel):
         return '{0}.{1}'.format(self.enclosure, self.code)
 
 
-class FilterWheel(BaseModel):
-    filters = models.CharField(max_length=5000, unique=True)
+class Filter(BaseModel):
+    FILTER_TYPES = (
+        ("Standard", "Standard"),
+        ("Engineering", "Engineering"),
+        ("Slit", "Slit"),
+        ("VirtualSlit", "VirtualSlit"),
+        ("Exotic", "Exotic")
+    )
+    name = models.CharField(max_length=200)
+    code = models.CharField(max_length=200, unique=True)
+    filter_type = models.CharField(max_length=200, choices=FILTER_TYPES, default="Standard")
 
     def __str__(self):
-        return self.filters
+        return self.code
+
+
+class FilterWheel(BaseModel):
+    filters = models.ManyToManyField(Filter)
+
+    def __str__(self):
+        filters_str = ','.join([filter.code for filter in self.filters.all()])
+        return filters_str
 
 
 class CameraType(BaseModel):
@@ -79,7 +100,7 @@ class Camera(BaseModel):
 
     @property
     def filters(self):
-        return self.filter_wheel.filters.split(',')
+        return str(self.filter_wheel)
 
     def __str__(self):
         return '{0}'.format(self.code)
@@ -92,6 +113,7 @@ class Instrument(BaseModel):
         ("SelfGuide", "SelfGuide")
     )
 
+    schedulable = models.BooleanField(default=True)
     telescope = models.ForeignKey(Telescope)
     science_camera = models.ForeignKey(Camera)
     autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for')
