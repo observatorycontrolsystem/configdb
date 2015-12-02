@@ -2,11 +2,13 @@ from django.db import models
 
 
 class BaseModel(models.Model):
-    active = models.BooleanField(default=True)
     modified = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        abstract = True
 
 class Site(BaseModel):
+    active = models.BooleanField(default=True)
     code = models.CharField(max_length=3)
     name = models.CharField(default='', blank=True, max_length=200)
     timezone = models.IntegerField()
@@ -19,6 +21,7 @@ class Site(BaseModel):
 
 
 class Enclosure(BaseModel):
+    active = models.BooleanField(default=True)
     code = models.CharField(max_length=200)
     name = models.CharField(default='', blank=True, max_length=200)
     site = models.ForeignKey(Site)
@@ -28,6 +31,7 @@ class Enclosure(BaseModel):
 
 
 class Telescope(BaseModel):
+    active = models.BooleanField(default=True)
     code = models.CharField(max_length=200)
     name = models.CharField(default='', blank=True, max_length=200)
     lat = models.FloatField()
