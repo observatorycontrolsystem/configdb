@@ -7,6 +7,7 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
+
 class Site(BaseModel):
     active = models.BooleanField(default=True)
     code = models.CharField(max_length=3)

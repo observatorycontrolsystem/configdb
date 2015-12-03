@@ -1,4 +1,4 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 import requests
 from configdb3.hardware.models import *
 from os import getenv
@@ -22,7 +22,7 @@ def get_model_data(model_type):
     if not r.status_code == 200:
         raise Exception()
     json_results = r.json()
-    if not 'results' in json_results:
+    if 'results' not in json_results:
         raise Exception()
     return json_results['results']
 
@@ -79,9 +79,9 @@ class Command(BaseCommand):
                 if created:
                     print('created: ', mode)
             mode = Mode.objects.get(
-                    binning=camera_type['default_mode']['binning'],
-                    overhead=camera_type['default_mode']['overhead'],
-                    camera_type=ctype
+                binning=camera_type['default_mode']['binning'],
+                overhead=camera_type['default_mode']['overhead'],
+                camera_type=ctype
             )
             ctype.default_mode = mode
             ctype.save()
