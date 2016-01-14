@@ -1,9 +1,9 @@
-django>=1.8,<1.9
-psycopg2>=2.6,<2.7
+django>=1.9,<1.10
+psycopg2>=2.6
 ipython
 django-extensions
 djangorestframework>=3.0,<4.0
-django-filter>=0.11,<0.12
+django-filter>=0.11
 flake8
 nose
 django_nose

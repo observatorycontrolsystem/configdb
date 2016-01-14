@@ -1,4 +1,9 @@
 from django.contrib import admin
+from django.contrib.admin.models import LogEntry, DELETION, ADDITION, CHANGE
+from reversion import revisions as reversion
+from django.utils.html import escape
+from django.core.urlresolvers import reverse
+from reversion.admin import VersionAdmin
 from configdb3.hardware.models import (
     Site, Enclosure, Filter,
     Telescope, Instrument, Camera, CameraType, Mode,
@@ -6,7 +11,7 @@ from configdb3.hardware.models import (
 )
 
 
-class HardwareAdmin(admin.ModelAdmin):
+class HardwareAdmin(VersionAdmin):
     exclude = ('modified', )
 
 
@@ -63,3 +68,82 @@ class FilterWheelAdmin(HardwareAdmin):
 class FilterAdmin(HardwareAdmin):
     list_display = ('name', 'code', 'filter_type')
     search_fields = ('name',)
+
+
+@admin.register(LogEntry)
+class LogEntryAdmin(admin.ModelAdmin):
+
+    date_hierarchy = 'action_time'
+
+    readonly_fields = [f.name for f in LogEntry._meta.get_fields()]
+
+    list_filter = [
+        'user',
+        'content_type',
+    ]
+
+    search_fields = [
+        'object_repr',
+        'change_message'
+    ]
+
+    list_display = [
+        'action_time',
+        'user',
+        'content_type',
+        'object_link',
+        'recover_link',
+        'change_message',
+        'action',
+    ]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser and request.method != 'POST'
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def recover_link(self, obj):
+        ct = obj.content_type
+        if obj.action_flag == DELETION:
+            link = '<a href="{0}">Recover deleted objects</a>'.format(
+                reverse('admin:{0}_{1}_recoverlist'.format(ct.app_label, ct.model)),
+                escape(obj.object_repr)
+            )
+        else:
+            version = reversion.get_for_date(obj.get_edited_object(), obj.action_time)
+            link = '<a href="{0}">View Previous Version</a>'.format(
+                reverse('admin:{0}_{1}_recover'.format(ct.app_label, ct.model), args=[version.id]),
+            )
+        return link
+    recover_link.allow_tags = True
+
+    def object_link(self, obj):
+        ct = obj.content_type
+        if obj.action_flag == DELETION:
+            link = escape(obj.object_repr)
+        else:
+            link = '<a href="{0}">{1}</a>'.format(
+                reverse('admin:{0}_{1}_change'.format(ct.app_label, ct.model), args=[obj.object_id]),
+                escape(obj.object_repr),
+            )
+        return link
+    object_link.allow_tags = True
+    object_link.admin_order_field = 'object_repr'
+    object_link.short_description = 'object'
+
+    def action(self, obj):
+        if obj.action_flag == DELETION:
+            return 'Deleted'
+        elif obj.action_flag == ADDITION:
+            return 'Created'
+        elif obj.action_flag == CHANGE:
+            return 'Updated'
+        else:
+            return ''
+
+    def queryset(self, request):
+        return super().queryset(request).prefetch_related('content_type')

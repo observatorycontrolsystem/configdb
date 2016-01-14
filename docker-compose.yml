@@ -9,7 +9,7 @@ web:
         - db
 
 db:
-    image: postgres:latest
+    image: postgres:9.4
     environment:
         POSTGRES_PASSWORD: postgres
     ports:
