@@ -41,10 +41,12 @@ INSTALLED_APPS = (
     'rest_framework',
     'django_nose',
     'configdb3.hardware',
+    'corsheaders',
 )
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -110,6 +112,8 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
     'PAGE_SIZE': 1000
 }
+
+CORS_ORIGIN_ALLOW_ALL = True
 
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 

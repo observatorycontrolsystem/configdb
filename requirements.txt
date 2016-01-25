@@ -8,3 +8,4 @@ flake8
 nose
 django_nose
 django-reversion
+django-cors-headers
