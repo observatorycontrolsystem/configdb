@@ -76,5 +76,5 @@ class SiteSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('id', 'name', 'code', 'active', 'timezone',
-                  'enclosure_set', '__str__')
+                  'elevation', 'enclosure_set', '__str__')
         model = Site

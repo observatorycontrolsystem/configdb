@@ -9,6 +9,7 @@
       <th>Code</th>
       <th>Name</th>
       <th>UTC Offset</th>
+      <th>Elevation</th>
       </tr>
     </thead>
     <tbody>
@@ -18,6 +19,7 @@
         <td>{{ site.code }}</td>
         <td><a href="{% url 'site-detail' pk=site.pk %}">{{ site.name }}</a></td>
         <td>{{ site.timezone }}</td>
+        <td>{{ site.elevation }}</td>
       </tr>
       {% endif %}
     {% endfor %}

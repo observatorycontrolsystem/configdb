@@ -17,7 +17,7 @@ class HardwareAdmin(VersionAdmin):
 
 @admin.register(Site)
 class SiteAdmin(HardwareAdmin):
-    list_display = ('code', 'active', 'name', 'timezone')
+    list_display = ('code', 'active', 'name', 'timezone', 'elevation')
     search_fields = ('code', 'active', 'name', 'timezone')
     list_filter = ('active',)
 

@@ -12,6 +12,7 @@ class Site(BaseModel):
     active = models.BooleanField(default=True)
     code = models.CharField(max_length=3)
     name = models.CharField(default='', blank=True, max_length=200)
+    elevation = models.IntegerField(help_text='meters')
     timezone = models.IntegerField()
 
     class Meta:

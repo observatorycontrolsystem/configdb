@@ -1,3 +1,5 @@
+*.swp
+
 # ide stuff
 .idea/
 # scratch directory
