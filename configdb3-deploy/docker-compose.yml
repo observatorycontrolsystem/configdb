@@ -2,3 +2,4 @@ web:
     image: docker.lcogt.net/configdb3:latest
     ports:
         - "8800:80"
+    mem_limit: "512m"
