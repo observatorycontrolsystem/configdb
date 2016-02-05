@@ -11,19 +11,47 @@ class FilterableViewSet(viewsets.ModelViewSet):
 
 
 class SiteViewSet(FilterableViewSet):
-    queryset = Site.objects.all()
+    queryset = Site.objects.all().prefetch_related(
+        'enclosure_set__telescope_set__instrument_set__science_camera__camera_type__mode_set'
+    ).prefetch_related(
+        'enclosure_set__telescope_set__instrument_set__autoguider_camera__camera_type__mode_set'
+    ).prefetch_related(
+        'enclosure_set__telescope_set__instrument_set__science_camera__camera_type__default_mode'
+    ).prefetch_related(
+        'enclosure_set__telescope_set__instrument_set__autoguider_camera__camera_type__default_mode'
+    ).prefetch_related(
+        'enclosure_set__telescope_set__instrument_set__science_camera__filter_wheel__filters'
+    ).prefetch_related(
+        'enclosure_set__telescope_set__instrument_set__autoguider_camera__filter_wheel__filters'
+    )
     serializer_class = serializers.SiteSerializer
     filter_fields = ('name', 'code')
 
 
 class EnclosureViewSet(FilterableViewSet):
-    queryset = Enclosure.objects.all()
+    queryset = Enclosure.objects.all().select_related('site').prefetch_related(
+        'telescope_set__instrument_set__science_camera__camera_type__mode_set',
+        'telescope_set__instrument_set__autoguider_camera__camera_type__mode_set',
+        'telescope_set__instrument_set__science_camera__camera_type__default_mode',
+        'telescope_set__instrument_set__autoguider_camera__camera_type__default_mode',
+        'telescope_set__instrument_set__science_camera__filter_wheel__filters',
+        'telescope_set__instrument_set__autoguider_camera__filter_wheel__filters'
+    )
+
     serializer_class = serializers.EnclosureSerializer
     filter_fields = ('name', 'code', 'site')
 
 
 class TelescopeViewSet(FilterableViewSet):
-    queryset = Telescope.objects.all()
+    queryset = Telescope.objects.all().select_related('enclosure__site').prefetch_related(
+        'instrument_set__science_camera__camera_type__mode_set',
+        'instrument_set__autoguider_camera__camera_type__mode_set',
+        'instrument_set__science_camera__camera_type__default_mode',
+        'instrument_set__autoguider_camera__camera_type__default_mode',
+        'instrument_set__science_camera__filter_wheel__filters',
+        'instrument_set__autoguider_camera__filter_wheel__filters'
+
+    )
     serializer_class = serializers.TelescopeSerializer
     filter_fields = ('name', 'code', 'lat', 'long',
                      'enclosure')
@@ -45,7 +73,14 @@ class InstrumentFilter(django_filters.FilterSet):
 
 
 class InstrumentViewSet(FilterableViewSet):
-    queryset = Instrument.objects.all().distinct()
+    queryset = Instrument.objects.all().select_related('telescope__enclosure__site').prefetch_related(
+        'science_camera__camera_type__mode_set',
+        'autoguider_camera__camera_type__mode_set',
+        'science_camera__camera_type__default_mode',
+        'autoguider_camera__camera_type__default_mode',
+        'science_camera__filter_wheel__filters',
+        'autoguider_camera__filter_wheel__filters'
+    ).distinct()
     serializer_class = serializers.InstrumentSerializer
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = InstrumentFilter
@@ -58,7 +93,11 @@ class CameraTypeViewSet(FilterableViewSet):
 
 
 class CameraViewSet(FilterableViewSet):
-    queryset = Camera.objects.all()
+    queryset = Camera.objects.all().select_related('camera_type').prefetch_related(
+        'camera_type__mode_set',
+        'camera_type__default_mode',
+        'filter_wheel__filters',
+    )
     serializer_class = serializers.CameraSerializer
     filter_fields = ('code', 'filter_wheel', 'camera_type')
 
@@ -81,7 +120,7 @@ class FilterWheelFilter(django_filters.FilterSet):
 
 
 class FilterWheelViewSet(FilterableViewSet):
-    queryset = FilterWheel.objects.all().distinct()
+    queryset = FilterWheel.objects.all().prefetch_related('filters').distinct()
     serializer_class = serializers.FilterWheelSerializer
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = FilterWheelFilter
