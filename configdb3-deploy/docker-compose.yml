@@ -2,15 +2,3 @@ web:
     image: docker.lcogt.net/configdb3:latest
     ports:
         - "8800:80"
-    links:
-        - db
-
-db:
-    image: postgres:9.4
-    environment:
-        POSTGRES_PASSWORD: postgres
-        PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-        - "/home/eng/docker/configdb3/postgres:/var/lib/postgresql/data"
-    ports:
-        - "5432:5432"
