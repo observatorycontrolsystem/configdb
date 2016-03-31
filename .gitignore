@@ -6,9 +6,6 @@
 # scratch directory
 scratch/
 
-# ignore local_settings.py
-local_settings.py
-
 # sqlite2 database
 *.sqlite3
 
