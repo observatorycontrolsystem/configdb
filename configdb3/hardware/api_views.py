@@ -53,7 +53,7 @@ class TelescopeViewSet(FilterableViewSet):
 
     )
     serializer_class = serializers.TelescopeSerializer
-    filter_fields = ('name', 'code', 'lat', 'long',
+    filter_fields = ('name', 'code', 'lat', 'long', 'horizon',
                      'enclosure')
 
 

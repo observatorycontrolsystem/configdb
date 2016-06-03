@@ -38,6 +38,9 @@ class Telescope(BaseModel):
     name = models.CharField(default='', blank=True, max_length=200)
     lat = models.FloatField()
     long = models.FloatField()
+    horizon = models.FloatField()
+    ha_limit_neg = models.FloatField()
+    ha_limit_pos = models.FloatField()
     enclosure = models.ForeignKey(Enclosure)
 
     def __str__(self):
