@@ -58,7 +58,7 @@ class TelescopeSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('id', 'name', 'code', 'active', 'lat',
-                  'long', 'enclosure', 'instrument_set', '__str__')
+                  'long', 'enclosure', 'horizon', 'ha_limit_pos', 'ha_limit_neg', 'instrument_set', '__str__')
         model = Telescope
 
 
