@@ -43,7 +43,6 @@ INSTALLED_APPS = (
     'configdb3.hardware',
     'corsheaders',
     'django_extensions',
-    'debug_toolbar',
 )
 
 MIDDLEWARE_CLASSES = (
