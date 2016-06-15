@@ -41,7 +41,7 @@ class CameraSerializer(serializers.ModelSerializer):
     autoguides_for = serializers.HyperlinkedRelatedField(view_name='instrument-detail', read_only=True, many=True)
 
     class Meta:
-        fields = ('id', 'code', 'instrument_set','autoguides_for', 'camera_type', 'filter_wheel', 'filters')
+        fields = ('id', 'code', 'instrument_set', 'autoguides_for', 'camera_type', 'filter_wheel', 'filters')
         model = Camera
 
 
