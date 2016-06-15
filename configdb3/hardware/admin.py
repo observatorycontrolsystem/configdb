@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin.models import LogEntry, DELETION, ADDITION, CHANGE
-from reversion import revisions as reversion
+from reversion.models import Version
+from datetime import timedelta
 from django.utils.html import escape
 from django.core.urlresolvers import reverse
 from reversion.admin import VersionAdmin
@@ -114,10 +115,16 @@ class LogEntryAdmin(admin.ModelAdmin):
                 escape(obj.object_repr)
             )
         else:
-            version = reversion.get_for_date(obj.get_edited_object(), obj.action_time)
-            link = '<a href="{0}">View Previous Version</a>'.format(
-                reverse('admin:{0}_{1}_recover'.format(ct.app_label, ct.model), args=[version.id]),
+            versions = Version.objects.get_for_object(obj.get_edited_object()).filter(
+                # hacky but gets the version for this object just before it was saved
+                revision__date_created__lte=obj.action_time - timedelta(seconds=1)
             )
+            if versions:
+                link = '<a href="{0}">View Previous Version</a>'.format(
+                    reverse('admin:{0}_{1}_recover'.format(ct.app_label, ct.model), args=[versions[0].id]),
+                )
+            else:
+                link = 'No previous versions'
         return link
     recover_link.allow_tags = True
 

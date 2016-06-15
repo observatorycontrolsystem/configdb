@@ -42,6 +42,7 @@ INSTALLED_APPS = (
     'django_nose',
     'configdb3.hardware',
     'corsheaders',
+    'django_extensions'
 )
 
 MIDDLEWARE_CLASSES = (
@@ -88,7 +89,7 @@ WSGI_APPLICATION = 'configdb3.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.postgresql_psycopg2'),
-        'NAME': os.getenv('DB_NAME', 'archive'),
+        'NAME': os.getenv('DB_NAME', 'configdb3'),
         'USER': os.getenv('DB_USER', 'postgres'),
         'PASSWORD': os.getenv('DB_PASS', 'postgres'),
         'HOST': os.getenv('DB_HOST', '127.0.0.1'),
