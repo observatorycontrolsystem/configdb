@@ -37,15 +37,18 @@ class CameraTypeSerializer(serializers.ModelSerializer):
 
 class CameraSerializer(serializers.ModelSerializer):
     camera_type = CameraTypeSerializer()
+    instrument_set = serializers.HyperlinkedRelatedField(view_name='instrument-detail', read_only=True, many=True)
+    autoguides_for = serializers.HyperlinkedRelatedField(view_name='instrument-detail', read_only=True, many=True)
 
     class Meta:
-        fields = ('id', 'code', 'camera_type', 'filter_wheel', 'filters')
+        fields = ('id', 'code', 'instrument_set','autoguides_for', 'camera_type', 'filter_wheel', 'filters')
         model = Camera
 
 
 class InstrumentSerializer(serializers.ModelSerializer):
     science_camera = CameraSerializer()
     autoguider_camera = CameraSerializer()
+    telescope = serializers.HyperlinkedRelatedField(view_name='telescope-detail', read_only=True)
 
     class Meta:
         fields = ('id', 'schedulable', 'telescope', 'science_camera',
@@ -55,6 +58,7 @@ class InstrumentSerializer(serializers.ModelSerializer):
 
 class TelescopeSerializer(serializers.ModelSerializer):
     instrument_set = InstrumentSerializer(many=True)
+    enclosure = serializers.HyperlinkedRelatedField(view_name='enclosure-detail', read_only=True)
 
     class Meta:
         fields = ('id', 'name', 'code', 'active', 'lat',
@@ -64,6 +68,7 @@ class TelescopeSerializer(serializers.ModelSerializer):
 
 class EnclosureSerializer(serializers.ModelSerializer):
     telescope_set = TelescopeSerializer(many=True)
+    site = serializers.HyperlinkedRelatedField(view_name='site-detail', read_only=True)
 
     class Meta:
         fields = ('id', 'name', 'code', 'active', 'site',
