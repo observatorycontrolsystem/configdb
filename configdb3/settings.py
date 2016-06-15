@@ -42,7 +42,8 @@ INSTALLED_APPS = (
     'django_nose',
     'configdb3.hardware',
     'corsheaders',
-    'django_extensions'
+    'django_extensions',
+    'debug_toolbar',
 )
 
 MIDDLEWARE_CLASSES = (
