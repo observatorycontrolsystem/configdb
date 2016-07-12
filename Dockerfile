@@ -14,9 +14,9 @@ WORKDIR $APPLICATION_ROOT
 
 run echo "daemon off;" >> /etc/nginx/nginx.conf
 run rm /etc/nginx/sites-enabled/default
-run cp configdb3-deploy/nginx-app.conf /etc/nginx/sites-enabled/
-run cp configdb3-deploy/supervisor-app.conf /etc/supervisor/conf.d/
-run cp configdb3-deploy/local_settings.py $APPLICATION_ROOT/configdb3/
+run cp docker/nginx-app.conf /etc/nginx/sites-enabled/
+run cp docker/supervisor-app.conf /etc/supervisor/conf.d/
+run cp docker/local_settings.py $APPLICATION_ROOT/configdb3/
 
 RUN pip install uwsgi
 RUN pip install -r requirements.txt

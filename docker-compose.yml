@@ -1,22 +1,12 @@
 web:
-    build: .
-    command: python3 manage.py runserver 0.0.0.0:8000
+    image: docker.lcogt.net/configdb3:latest
+    ports:
+        - "6666:80"
     environment:
         DB_NAME: configdb3
-        DB_USER: postgres
-        DB_PASS: postgres
-        DB_HOST: db
+        DB_USER: configdb3
+        DB_PASS: configdb3
+        DB_HOST: db2.cple9sjsskrf.us-west-2.rds.amazonaws.com
         DB_PORT: 5432
-    volumes:
-        - .:/lco/configdb3
-    ports:
-        - "8000:8000"
-    links:
-        - db
-
-db:
-    image: postgres:9.4
-    environment:
-        POSTGRES_PASSWORD: postgres
-    ports:
-        - "5432:5432"
+    mem_limit: "512m"
+    restart: always
