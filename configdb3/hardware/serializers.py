@@ -47,11 +47,15 @@ class InstrumentSerializer(serializers.ModelSerializer):
     science_camera = CameraSerializer()
     autoguider_camera = CameraSerializer()
     telescope = serializers.HyperlinkedRelatedField(view_name='telescope-detail', read_only=True)
+    state = serializers.SerializerMethodField()
 
     class Meta:
-        fields = ('id', 'schedulable', 'telescope', 'science_camera',
+        fields = ('id', 'state', 'schedulable', 'telescope', 'science_camera',
                   'autoguider_camera', '__str__')
         model = Instrument
+
+    def get_state(self, obj):
+        return obj.get_state_display()
 
 
 class TelescopeSerializer(serializers.ModelSerializer):

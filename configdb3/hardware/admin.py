@@ -39,8 +39,8 @@ class TelescopeAdmin(HardwareAdmin):
 
 @admin.register(Instrument)
 class InstrumentAdmin(HardwareAdmin):
-    list_display = ('__str__', 'schedulable', 'telescope', 'science_camera', 'autoguider_camera')
-    list_filter = ('telescope__enclosure__site__code', 'schedulable')
+    list_display = ('__str__', 'state', 'schedulable', 'telescope', 'science_camera', 'autoguider_camera')
+    list_filter = ('telescope__enclosure__site__code', 'state', 'schedulable')
 
 
 @admin.register(Camera)

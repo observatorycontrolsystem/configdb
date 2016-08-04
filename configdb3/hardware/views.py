@@ -22,7 +22,7 @@ def camera_mappings_dict():
     for site in Site.objects.filter(active=True):
         for enclosure in site.enclosure_set.filter(active=True):
             for telescope in enclosure.telescope_set.filter(active=True):
-                for instrument in telescope.instrument_set.filter(schedulable=True):
+                for instrument in telescope.instrument_set.filter(state__gte=Instrument.SCHEDULABLE):
                     binning = ','.join(
                         [mode.binning_str for mode in instrument.science_camera.camera_type.mode_set.all()]
                     )

@@ -112,6 +112,16 @@ class Camera(BaseModel):
 
 
 class Instrument(BaseModel):
+    DISABLED = 0
+    ENABLED = 10
+    COMMISSIONING = 20
+    SCHEDULABLE = 30
+    STATE_CHOICES = (
+        (DISABLED, 'DISABLED'),
+        (ENABLED, 'ENABLED'),
+        (COMMISSIONING, 'COMMISSIONING'),
+        (SCHEDULABLE, 'SCHEDULABLE'),
+    )
     AUTOGUIDER_TYPES = (
         ("InCamera", "InCamera"),
         ("OffAxis", "OffAxis"),
@@ -119,6 +129,7 @@ class Instrument(BaseModel):
     )
 
     schedulable = models.BooleanField(default=True)
+    state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED)
     telescope = models.ForeignKey(Telescope)
     science_camera = models.ForeignKey(Camera)
     autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for')
