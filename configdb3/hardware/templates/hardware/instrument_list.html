@@ -2,6 +2,17 @@
 {% block title %}Instruments{% endblock %}
 {% block content %}
 <h1 class="page-header">Instruments</h1>
+<p>The <strong>state</strong> field on an instrument can be one of the following values:</p>
+<dl>
+    <dt>DISABLED</dt>
+    <dd>The instrument is in configdb, but does not physically exist or is sitting in a box somewhere</dd>
+    <dt>ENABLED</dt>
+    <dd>The instrument is plugged in, but not ready to do any science</dd>
+    <dt>COMMISSIONING</dt>
+    <dd>The instrument is currently comissioning, but should not yet be exposed to the network</dd>
+    <dt>SCHEDULABLE</dt>
+    <dd>The instrument is part of the network and is ready for normal operations</dd>
+</dl>
 <div class="table">
   <table class="table table-striped" id="instruments">
     <thead>
