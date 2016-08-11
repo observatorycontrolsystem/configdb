@@ -1,3 +1,7 @@
+1.1
+11-8-2016
+Remove schedulable field from Instrument.
+
 1.0
 4-8-2016
 Added state to Instrument model, pinned major versions in requirements.txt

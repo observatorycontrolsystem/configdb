@@ -50,7 +50,7 @@ class InstrumentSerializer(serializers.ModelSerializer):
     state = serializers.SerializerMethodField()
 
     class Meta:
-        fields = ('id', 'state', 'schedulable', 'telescope', 'science_camera',
+        fields = ('id', 'state', 'telescope', 'science_camera',
                   'autoguider_camera', '__str__')
         model = Instrument
 

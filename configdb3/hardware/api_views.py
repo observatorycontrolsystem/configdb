@@ -70,7 +70,7 @@ class InstrumentFilter(django_filters.FilterSet):
     class Meta:
         model = Instrument
         fields = ['telescope', 'science_camera', 'autoguider_camera',
-                  'camera_type', 'site', 'telescope', 'enclosure', 'state', 'schedulable']
+                  'camera_type', 'site', 'telescope', 'enclosure', 'state']
 
     def state_filter(self, queryset, value):
         ''' Allows us to do queries like ?state=ENABLED instead of ?state=10 '''

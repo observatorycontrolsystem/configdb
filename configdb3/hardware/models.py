@@ -128,7 +128,6 @@ class Instrument(BaseModel):
         ("SelfGuide", "SelfGuide")
     )
 
-    schedulable = models.BooleanField(default=True)
     state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED)
     telescope = models.ForeignKey(Telescope)
     science_camera = models.ForeignKey(Camera)
