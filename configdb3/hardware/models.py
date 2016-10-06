@@ -77,6 +77,12 @@ class CameraType(BaseModel):
     default_mode = models.ForeignKey('Mode', null=True, blank=True)
     size = models.CharField(max_length=200)
     pscale = models.FloatField()
+    fixed_overhead_per_exposure = models.FloatField(default=1)
+    front_padding = models.FloatField(default=90)
+    filter_change_time = models.FloatField(null=True, blank=True)
+    config_change_time = models.FloatField(null=True, blank=True)
+    acquire_exposure_time = models.FloatField(null=True, blank=True)
+    acquire_processing_time = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return self.code
@@ -85,6 +91,7 @@ class CameraType(BaseModel):
 class Mode(BaseModel):
     binning = models.IntegerField()
     overhead = models.IntegerField()
+    readout = models.FloatField(default=0)
     camera_type = models.ForeignKey(CameraType)
 
     @property
