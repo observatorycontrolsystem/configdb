@@ -22,7 +22,7 @@ class FilterSerializer(serializers.ModelSerializer):
 
 class ModeSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', 'binning', 'overhead')
+        fields = ('id', 'binning', 'overhead', 'readout')
         model = Mode
 
 
@@ -31,7 +31,9 @@ class CameraTypeSerializer(serializers.ModelSerializer):
     mode_set = ModeSerializer(many=True)
 
     class Meta:
-        fields = ('id', 'size', 'pscale', 'default_mode', 'name', 'code', 'mode_set')
+        fields = ('id', 'size', 'pscale', 'default_mode', 'name', 'code', 'mode_set', 'fixed_overhead_per_exposure',
+                  'front_padding', 'filter_change_time', 'config_change_time', 'acquire_exposure_time',
+                  'acquire_processing_time')
         model = CameraType
 
 
