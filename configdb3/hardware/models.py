@@ -79,10 +79,10 @@ class CameraType(BaseModel):
     pscale = models.FloatField()
     fixed_overhead_per_exposure = models.FloatField(default=1)
     front_padding = models.FloatField(default=90)
-    filter_change_time = models.FloatField(null=True, blank=True)
-    config_change_time = models.FloatField(null=True, blank=True)
-    acquire_exposure_time = models.FloatField(null=True, blank=True)
-    acquire_processing_time = models.FloatField(null=True, blank=True)
+    filter_change_time = models.FloatField(default=0)
+    config_change_time = models.FloatField(default=0)
+    acquire_exposure_time = models.FloatField(default=0)
+    acquire_processing_time = models.FloatField(default=0)
 
     def __str__(self):
         return self.code
