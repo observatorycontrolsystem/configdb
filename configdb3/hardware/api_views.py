@@ -1,13 +1,14 @@
 from rest_framework import viewsets, filters
 from configdb3.hardware import serializers
 import django_filters
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import (Site, Enclosure, Telescope,
                      Instrument, Camera, Mode,
                      FilterWheel, CameraType, Filter)
 
 
 class FilterableViewSet(viewsets.ModelViewSet):
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
 
 
 class SiteViewSet(FilterableViewSet):
@@ -57,7 +58,7 @@ class TelescopeViewSet(FilterableViewSet):
                      'enclosure')
 
 
-class InstrumentFilter(django_filters.FilterSet):
+class InstrumentFilter(django_filters.rest_framework.FilterSet):
     ''' Filter class used to specify a filterable attribute in the cameratype of science camera in this instrument.
         The added attribute to filter on is juse camera_type, which maps to the camera->camera_type->name parameter.
     '''
@@ -90,7 +91,7 @@ class InstrumentViewSet(FilterableViewSet):
         'autoguider_camera__filter_wheel__filters'
     ).distinct()
     serializer_class = serializers.InstrumentSerializer
-    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter,)
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = InstrumentFilter
 
 
@@ -116,7 +117,7 @@ class ModeViewSet(FilterableViewSet):
     filter_fields = ('binning', 'overhead', 'camera_type')
 
 
-class FilterWheelFilter(django_filters.FilterSet):
+class FilterWheelFilter(django_filters.rest_framework.FilterSet):
     ''' Filter class used to specify a filterable attribute in the cameratype of cameras that use this filterwheel.
         The added attribute to filter on is juse camera_type, which maps to the camera->camera_type->name parameter.
     '''
@@ -130,7 +131,7 @@ class FilterWheelFilter(django_filters.FilterSet):
 class FilterWheelViewSet(FilterableViewSet):
     queryset = FilterWheel.objects.all().prefetch_related('filters').distinct()
     serializer_class = serializers.FilterWheelSerializer
-    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter,)
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = FilterWheelFilter
 
 
