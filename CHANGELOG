@@ -1,3 +1,7 @@
+1.5
+16-11-2016
+Upgrade requests to 1.12
+
 1.4
 7-11-2016
 Upgrade django-cors-headers to 1.4
