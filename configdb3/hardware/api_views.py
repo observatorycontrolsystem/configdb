@@ -66,15 +66,16 @@ class InstrumentFilter(django_filters.rest_framework.FilterSet):
     telescope = django_filters.CharFilter(name="telescope__code")
     enclosure = django_filters.CharFilter(name="telescope__enclosure__code")
     site = django_filters.CharFilter(name="telescope__enclosure__site__code")
-    state = django_filters.MethodFilter(action='state_filter')
+    state = django_filters.CharFilter(method='state_filter')
 
     class Meta:
         model = Instrument
         fields = ['telescope', 'science_camera', 'autoguider_camera',
                   'camera_type', 'site', 'telescope', 'enclosure', 'state']
 
-    def state_filter(self, queryset, value):
+    def state_filter(self, queryset, name, value):
         ''' Allows us to do queries like ?state=ENABLED instead of ?state=10 '''
+        print(name)
         for state in Instrument.STATE_CHOICES:
             if value.upper() == state[1]:
                 return queryset.filter(state=state[0])
