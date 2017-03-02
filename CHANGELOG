@@ -1,3 +1,7 @@
+1.9
+2017-02-03
+Upgrade psyscopg2 to 2.7
+
 1.8
 25-01-2017
 Upgrade requests to 2.13
