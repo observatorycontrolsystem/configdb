@@ -1,6 +1,6 @@
 django>=1.10,<1.11
 psycopg2>=2.7,<2.8
-requests>=2.14,<2.15
+requests>=2.17,<2.18
 djangorestframework>=3.6,<3.7
 django-filter>=1.0,<1.1
 django-reversion>=2.0,<2.1
