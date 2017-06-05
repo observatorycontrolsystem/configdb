@@ -130,7 +130,7 @@ CORS_ORIGIN_ALLOW_ALL = True
 OAUTH_CLIENT_ID = 'VEthxuv1UjbSRWkCtTXkRcxQe1QYiLeVCgAYjnJO'
 OAUTH_CLIENT_SECRET = ('ejaq3EsazS118he35gqjbUxxrqPWvOhwaehSg5wR5edIttgEa4cLzyKJ3a8qUhyc6'
                        'czwCnk60tdFfxTAIjHHSjMrk2GmprNJq0G2JbWRKrBsnIEM8dU2QsEI81A1XHU6')
-OAUTH_TOKEN_URL = 'https://lco.global/observe/o/token/'
+OAUTH_TOKEN_URL = 'https://observe.lco.global/o/token/'
 
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
