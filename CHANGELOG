@@ -1,3 +1,7 @@
+1.12
+2017-08-05
+Ensure reversion does blow up on models that aren't registered (users)
+
 1.11
 2017-05-10
 Upgrade requests to 1.14
