@@ -1,3 +1,8 @@
+1.13
+2017-10-12
+Update DRF to 3.7
+Update Django to 1.11
+
 1.12
 2017-08-05
 Ensure reversion does blow up on models that aren't registered (users)
