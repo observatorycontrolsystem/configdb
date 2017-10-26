@@ -62,10 +62,10 @@ class InstrumentFilter(django_filters.rest_framework.FilterSet):
     ''' Filter class used to specify a filterable attribute in the cameratype of science camera in this instrument.
         The added attribute to filter on is juse camera_type, which maps to the camera->camera_type->name parameter.
     '''
-    camera_type = django_filters.CharFilter(name="science_camera__camera_type__code")
-    telescope = django_filters.CharFilter(name="telescope__code")
-    enclosure = django_filters.CharFilter(name="telescope__enclosure__code")
-    site = django_filters.CharFilter(name="telescope__enclosure__site__code")
+    camera_type = django_filters.CharFilter(field_name="science_camera__camera_type__code")
+    telescope = django_filters.CharFilter(field_name="telescope__code")
+    enclosure = django_filters.CharFilter(field_name="telescope__enclosure__code")
+    site = django_filters.CharFilter(field_name="telescope__enclosure__site__code")
     state = django_filters.CharFilter(method='state_filter')
 
     class Meta:
@@ -122,7 +122,7 @@ class FilterWheelFilter(django_filters.rest_framework.FilterSet):
     ''' Filter class used to specify a filterable attribute in the cameratype of cameras that use this filterwheel.
         The added attribute to filter on is juse camera_type, which maps to the camera->camera_type->name parameter.
     '''
-    camera_type = django_filters.CharFilter(name="camera__camera_type__code")
+    camera_type = django_filters.CharFilter(field_name="camera__camera_type__code")
 
     class Meta:
         model = FilterWheel
