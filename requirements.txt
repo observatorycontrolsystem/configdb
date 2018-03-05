@@ -4,7 +4,7 @@ requests>=2,<3
 djangorestframework>=3.7,<3.8
 django-filter>=1.1,<1.2
 django-reversion>=2.0,<2.1
-django-cors-headers>=2.1,<2.2
+django-cors-headers>=2.2,<2.3
 nose
 django_nose
 django-extensions
