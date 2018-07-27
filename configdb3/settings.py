@@ -10,6 +10,18 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.8/ref/settings/
 """
 
+def str2bool(value):
+    '''Convert a string value to a boolean'''
+    value = value.lower()
+
+    if value  in ('t', 'true', 'y', 'yes', '1', ):
+        return True
+
+    if value in ('f', 'false', 'n', 'no', '0', ):
+        return False
+
+    raise RuntimeError('Unable to parse {} as a boolean value'.format(value))
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 
@@ -20,12 +32,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'l(rzwz33#sbd-bo-l2gly$5#$=i15q#%8#*rbkh$c(kr$2$!q1'
+SECRET_KEY = os.getenv('SECRET_KEY', None)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = str2bool(os.getenv('DEBUG', 'false'))
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [ '*', ]
 
 
 # Application definition
@@ -117,6 +129,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticatedOrReadOnly',),
@@ -128,21 +141,8 @@ REST_FRAMEWORK = {
 
 CORS_ORIGIN_ALLOW_ALL = True
 
-OAUTH_CLIENT_ID = 'VEthxuv1UjbSRWkCtTXkRcxQe1QYiLeVCgAYjnJO'
-OAUTH_CLIENT_SECRET = ('ejaq3EsazS118he35gqjbUxxrqPWvOhwaehSg5wR5edIttgEa4cLzyKJ3a8qUhyc6'
-                       'czwCnk60tdFfxTAIjHHSjMrk2GmprNJq0G2JbWRKrBsnIEM8dU2QsEI81A1XHU6')
-OAUTH_TOKEN_URL = os.getenv('VALHALLA_URL', 'http://valhalla.lco.gtn/o/token/')
+OAUTH_CLIENT_ID = os.getenv('OAUTH_CLIENT_ID', '')
+OAUTH_CLIENT_SECRET = os.getenv('OAUTH_CLIENT_SECRET', '')
+OAUTH_TOKEN_URL = os.getenv('OAUTH_TOKEN_URL', '')
 
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-
-# Import local_settings file
-try:
-    from .local_settings import *
-except ImportError:
-    pass
-
-try:
-    INSTALLED_APPS += LOCAL_INSTALLED_APPS
-    ALLOWED_HOSTS += LOCAL_ALLOWED_HOSTS
-except Exception:
-    pass

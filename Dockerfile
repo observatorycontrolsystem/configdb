@@ -16,7 +16,6 @@ run echo "daemon off;" >> /etc/nginx/nginx.conf
 run rm /etc/nginx/sites-enabled/default
 run cp docker/nginx-app.conf /etc/nginx/sites-enabled/
 run cp docker/supervisor-app.conf /etc/supervisor/conf.d/
-run cp docker/local_settings.py $APPLICATION_ROOT/configdb3/
 
 RUN pip install uwsgi
 RUN pip install -r requirements.txt
