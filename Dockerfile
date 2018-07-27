@@ -1,29 +1,14 @@
-FROM python:3.5
+FROM python:3.6-alpine
 
-ENV DOCKERFILE_VERSION 7
-ENV PYTHONBUFFERED 1
-ENV APPLICATION_ROOT /lco/configdb3/
+EXPOSE 80
+ENTRYPOINT [ "/init" ]
 
-RUN apt-get update
-RUN apt-get install -y build-essential git
-RUN apt-get install -y nginx supervisor
+COPY requirements.txt /lco/configdb3/
+RUN apk --no-cache add bash postgresql-libs \
+        && apk --no-cache add --virtual .build-deps gcc postgresql-dev musl-dev \
+        && pip --no-cache-dir install -r /lco/configdb3/requirements.txt \
+        && apk --no-cache del .build-deps
 
-RUN mkdir -p $APPLICATION_ROOT
-ADD . $APPLICATION_ROOT
-WORKDIR $APPLICATION_ROOT
+COPY docker/ /
 
-run echo "daemon off;" >> /etc/nginx/nginx.conf
-run rm /etc/nginx/sites-enabled/default
-run cp docker/nginx-app.conf /etc/nginx/sites-enabled/
-run cp docker/supervisor-app.conf /etc/supervisor/conf.d/
-
-RUN pip install uwsgi
-RUN pip install -r requirements.txt
-
-RUN python3 manage.py collectstatic --noinput
-
-expose 80
-cmd ["supervisord", "-n"]
-
-
-
+COPY . /lco/configdb3/

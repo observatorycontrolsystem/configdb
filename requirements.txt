@@ -10,3 +10,5 @@ django_nose
 django-extensions
 flake8
 ipython
+gunicorn[gevent]==19.9.0
+whitenoise==3.3.1
