@@ -1,5 +1,5 @@
 web:
-    image: docker.lcogt.net/configdb3:latest
+    image: docker.lco.global/configdb3:latest
     ports:
         - "6666:80"
     environment:
