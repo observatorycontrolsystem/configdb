@@ -1,17 +1,32 @@
-web:
-    image: docker.lco.global/configdb3:latest
-    ports:
-        - "6666:80"
-    environment:
-        DB_NAME: "configdb3"
-        DB_USER: "configdb3"
-        DB_PASS: "configdb3"
-        DB_HOST: "db2.cple9sjsskrf.us-west-2.rds.amazonaws.com"
-        DB_PORT: 5432
-        SECRET_KEY: "vp5iw04gu7isi(cbbtf5mwi7&ha34165e-k&1apy6c2+losu4)"
-        DEBUG: "true"
-        OAUTH_CLIENT_ID: "VEthxuv1UjbSRWkCtTXkRcxQe1QYiLeVCgAYjnJO"
-        OAUTH_CLIENT_SECRET: "ejaq3EsazS118he35gqjbUxxrqPWvOhwaehSg5wR5edIttgEa4cLzyKJ3a8qUhyc6czwCnk60tdFfxTAIjHHSjMrk2GmprNJq0G2JbWRKrBsnIEM8dU2QsEI81A1XHU6"
-        OAUTH_TOKEN_URL: "http://valhalla.lco.gtn/o/token/"
-    mem_limit: "512m"
-    restart: always
+db:
+  image: postgres:10.4-alpine
+  ports:
+    - "5432:5432"
+  environment:
+    - POSTGRES_USER=configdb3test
+    - POSTGRES_DB=configdb3test
+    - POSTGRES_PASSWORD=configdb3test
+  volumes:
+    - ./data:/var/lib/postgresql/data
+  mem_limit: "2048m"
+  restart: always
+
+configdb3:
+  image: myconfigdb3:latest
+  ports:
+    - "8000:80"
+  environment:
+    - DB_HOST=db
+    - DB_NAME=configdb3test
+    - DB_USER=configdb3test
+    - DB_PASS=configdb3test
+    - DB_PORT=5432
+    - SECRET_KEY=vp5iw04gu7isi(cbbtf5mwi7&ha34165e-k&1apy6c2+losu4)
+    - DEBUG=true
+    - OAUTH_CLIENT_ID=VEthxuv1UjbSRWkCtTXkRcxQe1QYiLeVCgAYjnJO
+    - OAUTH_CLIENT_SECRET=ejaq3EsazS118he35gqjbUxxrqPWvOhwaehSg5wR5edIttgEa4cLzyKJ3a8qUhyc6czwCnk60tdFfxTAIjHHSjMrk2GmprNJq0G2JbWRKrBsnIEM8dU2QsEI81A1XHU6
+    - OAUTH_TOKEN_URL=http://valhalla.lco.gtn/o/token/
+  mem_limit: "512m"
+  restart: always
+  links:
+    - db:db
