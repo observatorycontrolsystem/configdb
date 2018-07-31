@@ -1,0 +1,9 @@
+.git
+CHANGELOG
+README.md
+LICENSE.txt
+data
+docker-compose.yml
+env
+env3
+venv
