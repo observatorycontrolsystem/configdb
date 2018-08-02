@@ -12,7 +12,7 @@ db:
   restart: always
 
 configdb3:
-  image: myconfigdb3:latest
+  image: docker.lco.global/configdb3:latest
   ports:
     - "8000:80"
   environment:
