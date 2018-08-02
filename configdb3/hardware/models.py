@@ -1,4 +1,5 @@
 from django.db import models
+import datetime
 
 
 class BaseModel(models.Model):
@@ -12,8 +13,18 @@ class Site(BaseModel):
     active = models.BooleanField(default=True)
     code = models.CharField(max_length=3)
     name = models.CharField(default='', blank=True, max_length=200)
+    lat = models.FloatField(default=0.0)
+    long = models.FloatField(default=0.0)
     elevation = models.IntegerField(help_text='meters')
+    # TODO FIXME:
+    # The timezone field does not accurately represent the world. It is supposed
+    # to represent the offset from UTC in hours. In many timezones, this changes
+    # several times per year (US/Pacific varies between -7 and -8, depending on
+    # daylight savings time). It is also incapable of representing many time zones
+    # around the world that have non-Integer offsets (example: Australia/Adelaide).
     timezone = models.IntegerField()
+    tz = models.CharField(default='Etc/UTC', max_length=64, help_text='Timezone Name')
+    restart = models.TimeField(default=datetime.time(hour=0, minute=0, second=0))
 
     class Meta:
         ordering = ['code']

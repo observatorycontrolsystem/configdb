@@ -84,6 +84,18 @@ class SiteSerializer(serializers.ModelSerializer):
     enclosure_set = EnclosureSerializer(many=True)
 
     class Meta:
-        fields = ('id', 'name', 'code', 'active', 'timezone',
-                  'elevation', 'enclosure_set', '__str__')
+        fields = (
+            'id',
+            'name',
+            'code',
+            'active',
+            'timezone',
+            'restart',
+            'tz',
+            'lat',
+            'long',
+            'elevation',
+            'enclosure_set',
+            '__str__',
+        )
         model = Site
