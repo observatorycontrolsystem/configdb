@@ -9,7 +9,8 @@ class StateField(serializers.IntegerField):
         state_to_number = {choice[1]: choice[0] for choice in Instrument.STATE_CHOICES}
         if data.upper() in state_to_number.keys():
             return state_to_number[data.upper()]
-        return Instrument.DISABLED
+        raise serializers.ValidationError('State {} is not valid. Valid states include [{}]'
+                                          .format(data.upper(), ', '.join(state_to_number.keys())))
 
     def to_representation(self, value):
         number_to_state = {choice[0]: choice[1] for choice in Instrument.STATE_CHOICES}
