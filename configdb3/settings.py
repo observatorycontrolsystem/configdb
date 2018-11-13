@@ -61,6 +61,7 @@ INSTALLED_APPS = (
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'reversion.middleware.RevisionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -72,8 +73,8 @@ MIDDLEWARE_CLASSES = (
 )
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
     'configdb3.auth_backends.OAuth2Backend',  # Allows Oauth login with username/pass
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 ROOT_URLCONF = 'configdb3.urls'
