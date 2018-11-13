@@ -52,10 +52,13 @@ class CameraTypeSerializer(serializers.ModelSerializer):
 
 
 class CameraSerializer(serializers.ModelSerializer):
-    camera_type = CameraTypeSerializer()
+    camera_type = CameraTypeSerializer(read_only=True)
+    camera_type_id = serializers.IntegerField(write_only=True)
+    filter_wheel_id = serializers.IntegerField(write_only=True)
+    filter_wheel = FilterWheelSerializer(read_only=True)
 
     class Meta:
-        fields = ('id', 'code', 'camera_type', 'filter_wheel', 'filters')
+        fields = ('id', 'code', 'camera_type', 'camera_type_id', 'filter_wheel', 'filter_wheel_id', 'filters')
         model = Camera
 
 
