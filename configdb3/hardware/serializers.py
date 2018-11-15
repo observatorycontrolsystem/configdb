@@ -4,6 +4,21 @@ from .models import (Site, Enclosure, Telescope,
                      FilterWheel, CameraType, Filter)
 
 
+class StateField(serializers.IntegerField):
+    def to_internal_value(self, data):
+        state_to_number = {choice[1]: choice[0] for choice in Instrument.STATE_CHOICES}
+        if data.upper() in state_to_number.keys():
+            return state_to_number[data.upper()]
+        raise serializers.ValidationError('State {} is not valid. Valid states include [{}]'
+                                          .format(data.upper(), ', '.join(state_to_number.keys())))
+
+    def to_representation(self, value):
+        number_to_state = {choice[0]: choice[1] for choice in Instrument.STATE_CHOICES}
+        if value in number_to_state:
+            return number_to_state[value]
+        return None
+
+
 class FilterWheelSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -38,50 +53,56 @@ class CameraTypeSerializer(serializers.ModelSerializer):
 
 
 class CameraSerializer(serializers.ModelSerializer):
-    camera_type = CameraTypeSerializer()
+    camera_type = CameraTypeSerializer(read_only=True)
+    camera_type_id = serializers.IntegerField(write_only=True)
+    filter_wheel_id = serializers.IntegerField(write_only=True)
+    filter_wheel = FilterWheelSerializer(read_only=True)
 
     class Meta:
-        fields = ('id', 'code', 'camera_type', 'filter_wheel', 'filters')
+        fields = ('id', 'code', 'camera_type', 'camera_type_id', 'filter_wheel', 'filter_wheel_id', 'filters')
         model = Camera
 
 
 class InstrumentSerializer(serializers.ModelSerializer):
-    science_camera = CameraSerializer()
-    autoguider_camera = CameraSerializer()
+    science_camera = CameraSerializer(read_only=True)
+    science_camera_id = serializers.IntegerField(write_only=True)
+    autoguider_camera = CameraSerializer(read_only=True)
+    autoguider_camera_id = serializers.IntegerField(write_only=True)
     telescope = serializers.HyperlinkedRelatedField(view_name='telescope-detail', read_only=True)
-    state = serializers.SerializerMethodField()
+    telescope_id = serializers.IntegerField(write_only=True)
+
+    state = StateField()
 
     class Meta:
-        fields = ('id', 'state', 'telescope', 'science_camera',
-                  'autoguider_camera', '__str__')
+        fields = ('id', 'state', 'telescope', 'science_camera', 'science_camera_id', 'autoguider_camera_id',
+                  'telescope_id', 'autoguider_camera', '__str__')
         model = Instrument
-
-    def get_state(self, obj):
-        return obj.get_state_display()
 
 
 class TelescopeSerializer(serializers.ModelSerializer):
-    instrument_set = InstrumentSerializer(many=True)
+    instrument_set = InstrumentSerializer(many=True, read_only=True)
     enclosure = serializers.HyperlinkedRelatedField(view_name='enclosure-detail', read_only=True)
+    enclosure_id = serializers.IntegerField(write_only=True)
 
     class Meta:
-        fields = ('id', 'name', 'code', 'active', 'lat',
+        fields = ('id', 'name', 'code', 'active', 'lat', 'enclosure_id',
                   'long', 'enclosure', 'horizon', 'ha_limit_pos', 'ha_limit_neg', 'instrument_set', '__str__')
         model = Telescope
 
 
 class EnclosureSerializer(serializers.ModelSerializer):
-    telescope_set = TelescopeSerializer(many=True)
+    telescope_set = TelescopeSerializer(many=True, read_only=True)
     site = serializers.HyperlinkedRelatedField(view_name='site-detail', read_only=True)
+    site_id = serializers.IntegerField(write_only=True)
 
     class Meta:
-        fields = ('id', 'name', 'code', 'active', 'site',
+        fields = ('id', 'name', 'code', 'active', 'site', 'site_id',
                   'telescope_set', '__str__')
         model = Enclosure
 
 
 class SiteSerializer(serializers.ModelSerializer):
-    enclosure_set = EnclosureSerializer(many=True)
+    enclosure_set = EnclosureSerializer(many=True, read_only=True)
 
     class Meta:
         fields = (
