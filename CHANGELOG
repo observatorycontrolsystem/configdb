@@ -1,3 +1,7 @@
+1.19
+2018-11-14
+Make the models API writable and updateable
+
 1.18
 2018-08-01
 Add new fields to Site object (lat, long, tz, restart)
