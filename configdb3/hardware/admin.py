@@ -9,7 +9,7 @@ from reversion.errors import RegistrationError
 from configdb3.hardware.models import (
     Site, Enclosure, Filter,
     Telescope, Instrument, Camera, CameraType, Mode,
-    FilterWheel
+    FilterWheel, OpticalElementGroup, OpticalElement
 )
 
 
@@ -70,6 +70,19 @@ class FilterWheelAdmin(HardwareAdmin):
 class FilterAdmin(HardwareAdmin):
     list_display = ('name', 'code', 'filter_type')
     search_fields = ('name',)
+
+
+@admin.register(OpticalElementGroup)
+class OpticalElementGroupAdmin(HardwareAdmin):
+    list_display = ('name', 'type', 'id')
+    search_fields = ('name', 'type')
+    list_filter = ('type',)
+
+
+@admin.register(OpticalElement)
+class OpticalElementAdmin(HardwareAdmin):
+    list_display = ('name', 'code', 'schedulable')
+    search_fields = ('name', 'code')
 
 
 @admin.register(LogEntry)

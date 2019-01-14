@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from .models import (Site, Enclosure, Telescope,
-                     Instrument, Camera, Mode,
+from .models import (Site, Enclosure, Telescope, OpticalElement,
+                     Instrument, Camera, Mode, OpticalElementGroup,
                      FilterWheel, CameraType, Filter)
 
 
@@ -19,11 +19,19 @@ class StateField(serializers.IntegerField):
         return None
 
 
-class FilterWheelSerializer(serializers.ModelSerializer):
+class OpticalElementSerializer(serializers.ModelSerializer):
 
     class Meta:
-        fields = ('id', 'filters', '__str__')
-        model = FilterWheel
+        model = OpticalElement
+        fields = ('name', 'code', 'schedulable')
+
+
+class OpticalElementGroupSerializer(serializers.ModelSerializer):
+    optical_elements = OpticalElementSerializer(many=True)
+
+    class Meta:
+        model = OpticalElementGroup
+        fields = ('id', 'name', 'type', 'optical_elements', 'element_change_overhead')
         depth = 1
 
 
@@ -32,6 +40,15 @@ class FilterSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('id', 'name', 'code', 'filter_type')
         model = Filter
+        depth = 1
+
+
+class FilterWheelSerializer(serializers.ModelSerializer):
+    filters = FilterSerializer(many=True)
+
+    class Meta:
+        fields = ('id', 'filters', '__str__')
+        model = FilterWheel
         depth = 1
 
 
@@ -57,9 +74,11 @@ class CameraSerializer(serializers.ModelSerializer):
     camera_type_id = serializers.IntegerField(write_only=True)
     filter_wheel_id = serializers.IntegerField(write_only=True)
     filter_wheel = FilterWheelSerializer(read_only=True)
+    optical_element_groups = OpticalElementGroupSerializer(many=True, read_only=True)
 
     class Meta:
-        fields = ('id', 'code', 'camera_type', 'camera_type_id', 'filter_wheel', 'filter_wheel_id', 'filters')
+        fields = ('id', 'code', 'camera_type', 'camera_type_id', 'filter_wheel', 'filter_wheel_id', 'filters',
+                  'optical_elements', 'optical_element_groups')
         model = Camera
 
 

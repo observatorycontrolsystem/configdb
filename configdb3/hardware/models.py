@@ -82,6 +82,29 @@ class FilterWheel(BaseModel):
         return filters_str
 
 
+class OpticalElement(BaseModel):
+    name = models.CharField(max_length=200)
+    code = models.CharField(max_length=200, unique=True)
+    schedulable = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.code
+
+
+class OpticalElementGroup(BaseModel):
+    name = models.CharField(max_length=200)
+    type = models.CharField(max_length=200)
+    optical_elements = models.ManyToManyField(OpticalElement)
+    element_change_overhead = models.FloatField(default=0)
+
+    def __str__(self):
+        optical_elements_str = self.name + ' - ' + self.type
+        return optical_elements_str
+
+    def optical_element_codes(self):
+        return ','.join([oe.code for oe in self.optical_elements.all()])
+
+
 class CameraType(BaseModel):
     name = models.CharField(max_length=200, unique=True)
     code = models.CharField(max_length=200)
@@ -117,6 +140,7 @@ class Camera(BaseModel):
     camera_type = models.ForeignKey(CameraType)
     code = models.CharField(max_length=200)
     filter_wheel = models.ForeignKey(FilterWheel)
+    optical_element_groups = models.ManyToManyField(OpticalElementGroup)
 
     class Meta:
         ordering = ['code']
@@ -124,6 +148,10 @@ class Camera(BaseModel):
     @property
     def filters(self):
         return str(self.filter_wheel)
+
+    @property
+    def optical_elements(self):
+        return {oeg.type: oeg.optical_element_codes() for oeg in self.optical_element_groups.all()}
 
     def __str__(self):
         return '{0}'.format(self.code)
