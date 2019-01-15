@@ -122,7 +122,7 @@ class CameraType(BaseModel):
     acquire_processing_time = models.FloatField(default=0)
 
     # New stuff for SOAR
-    configuration_types = ArrayField(models.CharField(max_length=20))
+    configuration_types = ArrayField(models.CharField(max_length=20), default=list)
     pixels_x = models.IntegerField(default=0)
     pixels_y = models.IntegerField(default=0)
     max_rois = models.IntegerField(default=0)
@@ -137,7 +137,7 @@ class GenericMode(BaseModel):
     code = models.CharField(max_length=200)
     type = models.CharField(max_length=200)
     overhead = models.FloatField()
-    params = JSONField(blank=True)
+    params = JSONField(default=dict, blank=True)
     default = models.BooleanField(default=False)
     camera_type = models.ForeignKey(CameraType, related_name='modes')
 
