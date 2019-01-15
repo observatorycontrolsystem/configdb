@@ -7,7 +7,7 @@ from django.core.urlresolvers import reverse
 from reversion.admin import VersionAdmin
 from reversion.errors import RegistrationError
 from configdb3.hardware.models import (
-    Site, Enclosure, Filter,
+    Site, Enclosure, Filter, GenericMode,
     Telescope, Instrument, Camera, CameraType, Mode,
     FilterWheel, OpticalElementGroup, OpticalElement
 )
@@ -40,7 +40,7 @@ class TelescopeAdmin(HardwareAdmin):
 
 @admin.register(Instrument)
 class InstrumentAdmin(HardwareAdmin):
-    list_display = ('__str__', 'state', 'telescope', 'science_camera', 'autoguider_camera')
+    list_display = ('__str__', 'state', 'telescope', 'code', 'science_camera', 'autoguider_camera')
     list_filter = ('telescope__enclosure__site__code', 'state')
 
 
@@ -59,6 +59,13 @@ class CameraTypeAdmin(HardwareAdmin):
 @admin.register(Mode)
 class ModeAdmin(HardwareAdmin):
     list_display = ('camera_type', 'binning', 'overhead')
+
+
+@admin.register(GenericMode)
+class GenericModeAdmin(HardwareAdmin):
+    list_display = ('camera_type', 'name', 'code', 'type', 'default', 'overhead')
+    search_fields = ('name', 'code')
+    list_filter = ('type', 'default')
 
 
 @admin.register(FilterWheel)
