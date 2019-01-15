@@ -50,6 +50,8 @@ class Telescope(BaseModel):
     name = models.CharField(default='', blank=True, max_length=200)
     serial_number = models.CharField(max_length=50, default='', help_text='Unique telescope serial number')
     slew_rate = models.FloatField(help_text='The rate in sec/arcsec at which the telescope slews between positions')
+    minimum_slew_overhead = models.FloatField(help_text='The minimum amount of time a slew can take in seconds')
+    instrument_change_overhead = models.FloatField(help_text='The maximum amount of time it takes to switch instruments')
     lat = models.FloatField()
     long = models.FloatField()
     horizon = models.FloatField()
