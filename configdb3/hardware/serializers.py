@@ -67,12 +67,6 @@ class GenericModeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Mode Params must be in the form of a dictionary")
         return json.dumps(value)
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        if isinstance(data['params'], str):
-            data['params'] = json.loads(data['params'])
-        return data
-
 
 class ModeSerializer(serializers.ModelSerializer):
     class Meta:
