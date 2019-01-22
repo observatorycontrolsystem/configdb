@@ -1,3 +1,7 @@
+1.20
+2019-01-22
+Add new fields for optical path elements, generic modes, and more for new observation portal
+
 1.19
 2018-11-14
 Make the models API writable and updateable
