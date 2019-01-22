@@ -9,12 +9,14 @@ https://docs.djangoproject.com/en/1.8/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.8/ref/settings/
 """
+import os
+
 
 def str2bool(value):
     '''Convert a string value to a boolean'''
     value = value.lower()
 
-    if value  in ('t', 'true', 'y', 'yes', '1', ):
+    if value in ('t', 'true', 'y', 'yes', '1', ):
         return True
 
     if value in ('f', 'false', 'n', 'no', '0', ):
@@ -22,11 +24,9 @@ def str2bool(value):
 
     raise RuntimeError('Unable to parse {} as a boolean value'.format(value))
 
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-import os
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
@@ -37,7 +37,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', None)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = str2bool(os.getenv('DEBUG', 'false'))
 
-ALLOWED_HOSTS = [ '*', ]
+ALLOWED_HOSTS = ['*', ]
 
 
 # Application definition
