@@ -180,7 +180,6 @@ class Camera(BaseModel):
     code = models.CharField(max_length=200)
     filter_wheel = models.ForeignKey(FilterWheel)
     optical_element_groups = models.ManyToManyField(OpticalElementGroup)
-    modes = models.ManyToManyField(GenericMode)
     host = models.CharField(max_length=200, default='',
                             help_text='The physical machine hostname that this camera is connected to')
 

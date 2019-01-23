@@ -106,6 +106,7 @@ class CameraViewSet(FilterableViewSet):
     queryset = Camera.objects.all().select_related('camera_type').prefetch_related(
         'camera_type__mode_set',
         'camera_type__default_mode',
+        'camera_type__modes',
         'filter_wheel__filters',
     )
     serializer_class = serializers.CameraSerializer
