@@ -215,7 +215,7 @@ class Instrument(BaseModel):
         ("SelfGuide", "SelfGuide")
     )
 
-    code = models.CharField(max_length=200, default='', help_text='Name of the instrument')
+    code = models.CharField(max_length=200, default='', blank=True, help_text='Name of the instrument')
     state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED)
     telescope = models.ForeignKey(Telescope)
     science_camera = models.ForeignKey(Camera)
