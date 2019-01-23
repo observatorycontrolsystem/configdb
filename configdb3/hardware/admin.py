@@ -81,7 +81,7 @@ class FilterAdmin(HardwareAdmin):
 
 @admin.register(OpticalElementGroup)
 class OpticalElementGroupAdmin(HardwareAdmin):
-    list_display = ('name', 'type', 'id')
+    list_display = ('id', 'name', 'type', '__str__')
     search_fields = ('name', 'type')
     list_filter = ('type',)
 

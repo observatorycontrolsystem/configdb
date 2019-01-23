@@ -106,7 +106,7 @@ class OpticalElementGroup(BaseModel):
     element_change_overhead = models.FloatField(default=0)
 
     def __str__(self):
-        optical_elements_str = self.name + ' - ' + self.type
+        optical_elements_str = self.name + ' - ' + self.type + ': ' + self.optical_element_codes()
         return optical_elements_str
 
     def optical_element_codes(self):
@@ -147,7 +147,7 @@ class GenericMode(BaseModel):
     camera_type = models.ForeignKey(CameraType, related_name='modes')
 
     def __str__(self):
-        return '{} mode: {}'.format(self.type, self.name)
+        return '{}: {}'.format(self.type, self.name)
 
     def save(self, *args, **kwargs):
         if self.default:
