@@ -16,7 +16,7 @@ class SimpleHardwareTest(TestCase):
         self.telescope = mixer.blend(Telescope, enclosure=self.enclosure)
 
         self.filter1 = mixer.blend(Filter)
-        self.filterwheel = mixer.blend(FilterWheel, filters=[self.filter1,])
+        self.filterwheel = mixer.blend(FilterWheel, filters=[self.filter1, ])
         self.camera_type = mixer.blend(CameraType)
         self.mode = mixer.blend(Mode, camera_type=self.camera_type)
         self.camera_type.default_mode = self.mode
@@ -43,6 +43,6 @@ class SimpleHardwareTest(TestCase):
 
         self.client.login(username='tst_user', password='tst_pass')
         self.client.patch('/instruments/{}/'.format(self.instrument.pk), json.dumps({'state': 'ENABLED'}),
-                                     content_type='application/json')
+                          content_type='application/json')
         self.instrument.refresh_from_db()
         self.assertEqual(self.instrument.state, Instrument.ENABLED)

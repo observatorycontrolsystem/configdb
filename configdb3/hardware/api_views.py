@@ -2,8 +2,8 @@ from rest_framework import viewsets, filters
 from configdb3.hardware import serializers
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import (Site, Enclosure, Telescope,
-                     Instrument, Camera, Mode,
+from .models import (Site, Enclosure, Telescope, OpticalElementGroup,
+                     Instrument, Camera, Mode, OpticalElement,
                      FilterWheel, CameraType, Filter)
 
 
@@ -106,6 +106,7 @@ class CameraViewSet(FilterableViewSet):
     queryset = Camera.objects.all().select_related('camera_type').prefetch_related(
         'camera_type__mode_set',
         'camera_type__default_mode',
+        'camera_type__modes',
         'filter_wheel__filters',
     )
     serializer_class = serializers.CameraSerializer
@@ -116,6 +117,18 @@ class ModeViewSet(FilterableViewSet):
     queryset = Mode.objects.all()
     serializer_class = serializers.ModeSerializer
     filter_fields = ('binning', 'overhead', 'camera_type')
+
+
+class OpticalElementGroupViewSet(FilterableViewSet):
+    queryset = OpticalElementGroup.objects.all().prefetch_related('optical_elements').distinct()
+    serializer_class = serializers.OpticalElementGroupSerializer
+    filter_fields = ('name', 'type', 'optical_elements')
+
+
+class OpticalElementViewSet(FilterableViewSet):
+    queryset = OpticalElement.objects.all()
+    serializer_class = serializers.OpticalElementSerializer
+    filter_fields = ('id', 'name', 'code', 'schedulable')
 
 
 class FilterWheelFilter(django_filters.rest_framework.FilterSet):

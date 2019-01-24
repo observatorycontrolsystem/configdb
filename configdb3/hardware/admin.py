@@ -7,14 +7,19 @@ from django.core.urlresolvers import reverse
 from reversion.admin import VersionAdmin
 from reversion.errors import RegistrationError
 from configdb3.hardware.models import (
-    Site, Enclosure, Filter,
+    Site, Enclosure, Filter, GenericMode, ModeType,
     Telescope, Instrument, Camera, CameraType, Mode,
-    FilterWheel
+    FilterWheel, OpticalElementGroup, OpticalElement
 )
 
 
 class HardwareAdmin(VersionAdmin):
     exclude = ('modified', )
+
+
+@admin.register(ModeType)
+class ModeTypeAdmin(HardwareAdmin):
+    list_display = ('id',)
 
 
 @admin.register(Site)
@@ -40,7 +45,7 @@ class TelescopeAdmin(HardwareAdmin):
 
 @admin.register(Instrument)
 class InstrumentAdmin(HardwareAdmin):
-    list_display = ('__str__', 'state', 'telescope', 'science_camera', 'autoguider_camera')
+    list_display = ('__str__', 'state', 'telescope', 'code', 'science_camera', 'autoguider_camera')
     list_filter = ('telescope__enclosure__site__code', 'state')
 
 
@@ -61,6 +66,13 @@ class ModeAdmin(HardwareAdmin):
     list_display = ('camera_type', 'binning', 'overhead')
 
 
+@admin.register(GenericMode)
+class GenericModeAdmin(HardwareAdmin):
+    list_display = ('camera_type', 'name', 'code', 'type', 'default', 'overhead')
+    search_fields = ('name', 'code')
+    list_filter = ('type', 'default')
+
+
 @admin.register(FilterWheel)
 class FilterWheelAdmin(HardwareAdmin):
     list_display = ('id', '__str__',)
@@ -70,6 +82,19 @@ class FilterWheelAdmin(HardwareAdmin):
 class FilterAdmin(HardwareAdmin):
     list_display = ('name', 'code', 'filter_type')
     search_fields = ('name',)
+
+
+@admin.register(OpticalElementGroup)
+class OpticalElementGroupAdmin(HardwareAdmin):
+    list_display = ('id', 'name', 'type', '__str__')
+    search_fields = ('name', 'type')
+    list_filter = ('type',)
+
+
+@admin.register(OpticalElement)
+class OpticalElementAdmin(HardwareAdmin):
+    list_display = ('name', 'code', 'schedulable')
+    search_fields = ('name', 'code')
 
 
 @admin.register(LogEntry)

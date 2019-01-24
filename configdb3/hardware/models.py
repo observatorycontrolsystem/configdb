@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.postgres.fields import JSONField, ArrayField
 import datetime
 
 
@@ -47,6 +48,13 @@ class Telescope(BaseModel):
     active = models.BooleanField(default=True)
     code = models.CharField(max_length=200)
     name = models.CharField(default='', blank=True, max_length=200)
+    serial_number = models.CharField(max_length=50, default='', help_text='Unique telescope serial number')
+    slew_rate = models.FloatField(default=0,
+                                  help_text='The rate in sec/arcsec at which the telescope slews between positions')
+    minimum_slew_overhead = models.FloatField(default=0,
+                                              help_text='The minimum amount of time a slew can take in seconds')
+    instrument_change_overhead = models.FloatField(
+        default=0, help_text='The maximum amount of time it takes to switch instruments')
     lat = models.FloatField()
     long = models.FloatField()
     horizon = models.FloatField()
@@ -82,6 +90,29 @@ class FilterWheel(BaseModel):
         return filters_str
 
 
+class OpticalElement(BaseModel):
+    name = models.CharField(max_length=200)
+    code = models.CharField(max_length=200, unique=True)
+    schedulable = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.code
+
+
+class OpticalElementGroup(BaseModel):
+    name = models.CharField(max_length=200)
+    type = models.CharField(max_length=200)
+    optical_elements = models.ManyToManyField(OpticalElement)
+    element_change_overhead = models.FloatField(default=0)
+
+    def __str__(self):
+        optical_elements_str = self.name + ' - ' + self.type + ': ' + self.optical_element_codes()
+        return optical_elements_str
+
+    def optical_element_codes(self):
+        return ','.join([oe.code for oe in self.optical_elements.all()])
+
+
 class CameraType(BaseModel):
     name = models.CharField(max_length=200, unique=True)
     code = models.CharField(max_length=200)
@@ -95,8 +126,46 @@ class CameraType(BaseModel):
     acquire_exposure_time = models.FloatField(default=0)
     acquire_processing_time = models.FloatField(default=0)
 
+    # New stuff for SOAR
+    configuration_types = ArrayField(models.CharField(max_length=20), default=list, blank=True)
+    pixels_x = models.IntegerField(default=0)
+    pixels_y = models.IntegerField(default=0)
+    max_rois = models.IntegerField(default=0)
+    default_acceptability_threshold = models.FloatField(default=90.0)
+
     def __str__(self):
         return self.code
+
+
+class ModeType(BaseModel):
+    id = models.CharField(max_length=200, primary_key=True)
+
+    def __str__(self):
+        return self.id
+
+
+class GenericMode(BaseModel):
+    name = models.CharField(max_length=200)
+    code = models.CharField(max_length=200)
+    type = models.ForeignKey(ModeType, null=True, on_delete=models.CASCADE)
+    overhead = models.FloatField()
+    params = JSONField(default=dict, blank=True)
+    default = models.BooleanField(default=False)
+    camera_type = models.ForeignKey(CameraType, related_name='modes')
+
+    def __str__(self):
+        return '{}: {}'.format(self.type, self.name)
+
+    def save(self, *args, **kwargs):
+        if self.default:
+            try:
+                set_mode = GenericMode.objects.get(camera_type=self.camera_type, type=self.type, default=True)
+                if self != set_mode:
+                    set_mode.default = False
+                    set_mode.save()
+            except GenericMode.DoesNotExist:
+                pass
+        super().save(*args, **kwargs)
 
 
 class Mode(BaseModel):
@@ -117,6 +186,9 @@ class Camera(BaseModel):
     camera_type = models.ForeignKey(CameraType)
     code = models.CharField(max_length=200)
     filter_wheel = models.ForeignKey(FilterWheel)
+    optical_element_groups = models.ManyToManyField(OpticalElementGroup)
+    host = models.CharField(max_length=200, default='', blank=True,
+                            help_text='The physical machine hostname that this camera is connected to')
 
     class Meta:
         ordering = ['code']
@@ -124,6 +196,10 @@ class Camera(BaseModel):
     @property
     def filters(self):
         return str(self.filter_wheel)
+
+    @property
+    def optical_elements(self):
+        return {oeg.type: oeg.optical_element_codes() for oeg in self.optical_element_groups.all()}
 
     def __str__(self):
         return '{0}'.format(self.code)
@@ -146,6 +222,7 @@ class Instrument(BaseModel):
         ("SelfGuide", "SelfGuide")
     )
 
+    code = models.CharField(max_length=200, default='', blank=True, help_text='Name of the instrument')
     state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED)
     telescope = models.ForeignKey(Telescope)
     science_camera = models.ForeignKey(Camera)

@@ -1,7 +1,10 @@
 from rest_framework import serializers
-from .models import (Site, Enclosure, Telescope,
-                     Instrument, Camera, Mode,
+from .models import (Site, Enclosure, Telescope, OpticalElement, GenericMode,
+                     Instrument, Camera, Mode, OpticalElementGroup,
                      FilterWheel, CameraType, Filter)
+
+import json
+import itertools
 
 
 class StateField(serializers.IntegerField):
@@ -19,11 +22,19 @@ class StateField(serializers.IntegerField):
         return None
 
 
-class FilterWheelSerializer(serializers.ModelSerializer):
+class OpticalElementSerializer(serializers.ModelSerializer):
 
     class Meta:
-        fields = ('id', 'filters', '__str__')
-        model = FilterWheel
+        model = OpticalElement
+        fields = ('name', 'code', 'schedulable')
+
+
+class OpticalElementGroupSerializer(serializers.ModelSerializer):
+    optical_elements = OpticalElementSerializer(many=True)
+
+    class Meta:
+        model = OpticalElementGroup
+        fields = ('name', 'type', 'optical_elements', 'element_change_overhead')
         depth = 1
 
 
@@ -35,6 +46,28 @@ class FilterSerializer(serializers.ModelSerializer):
         depth = 1
 
 
+class FilterWheelSerializer(serializers.ModelSerializer):
+    filters = FilterSerializer(many=True)
+
+    class Meta:
+        fields = ('id', 'filters', '__str__')
+        model = FilterWheel
+        depth = 1
+
+
+class GenericModeSerializer(serializers.ModelSerializer):
+    params = serializers.JSONField()
+
+    class Meta:
+        fields = ('name', 'overhead', 'code', 'type', 'default', 'params')
+        model = GenericMode
+
+    def validate_params(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Mode Params must be in the form of a dictionary")
+        return json.dumps(value)
+
+
 class ModeSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('id', 'binning', 'overhead', 'readout')
@@ -44,12 +77,21 @@ class ModeSerializer(serializers.ModelSerializer):
 class CameraTypeSerializer(serializers.ModelSerializer):
     default_mode = ModeSerializer()
     mode_set = ModeSerializer(many=True)
+    modes = GenericModeSerializer(many=True)
 
     class Meta:
         fields = ('id', 'size', 'pscale', 'default_mode', 'name', 'code', 'mode_set', 'fixed_overhead_per_exposure',
                   'front_padding', 'filter_change_time', 'config_change_time', 'acquire_exposure_time',
-                  'acquire_processing_time')
+                  'acquire_processing_time', 'modes', 'default_acceptability_threshold', 'pixels_x', 'pixels_y',
+                  'max_rois', 'configuration_types')
         model = CameraType
+
+    def to_representation(self, instance):
+        # modify the modes to group by their type
+        data = super().to_representation(instance)
+        mode_by_type = itertools.groupby(sorted(data['modes'], key=lambda x: x['type']), key=lambda x: x['type'])
+        data['modes'] = {t: list(m) for t, m in mode_by_type}
+        return data
 
 
 class CameraSerializer(serializers.ModelSerializer):
@@ -57,9 +99,11 @@ class CameraSerializer(serializers.ModelSerializer):
     camera_type_id = serializers.IntegerField(write_only=True)
     filter_wheel_id = serializers.IntegerField(write_only=True)
     filter_wheel = FilterWheelSerializer(read_only=True)
+    optical_element_groups = OpticalElementGroupSerializer(many=True, read_only=True)
 
     class Meta:
-        fields = ('id', 'code', 'camera_type', 'camera_type_id', 'filter_wheel', 'filter_wheel_id', 'filters')
+        fields = ('id', 'code', 'camera_type', 'camera_type_id', 'filter_wheel', 'filter_wheel_id', 'filters',
+                  'optical_elements', 'optical_element_groups', 'host')
         model = Camera
 
 
@@ -74,7 +118,7 @@ class InstrumentSerializer(serializers.ModelSerializer):
     state = StateField()
 
     class Meta:
-        fields = ('id', 'state', 'telescope', 'science_camera', 'science_camera_id', 'autoguider_camera_id',
+        fields = ('id', 'code', 'state', 'telescope', 'science_camera', 'science_camera_id', 'autoguider_camera_id',
                   'telescope_id', 'autoguider_camera', '__str__')
         model = Instrument
 
@@ -85,7 +129,7 @@ class TelescopeSerializer(serializers.ModelSerializer):
     enclosure_id = serializers.IntegerField(write_only=True)
 
     class Meta:
-        fields = ('id', 'name', 'code', 'active', 'lat', 'enclosure_id',
+        fields = ('id', 'serial_number', 'name', 'code', 'active', 'lat', 'enclosure_id', 'slew_rate',
                   'long', 'enclosure', 'horizon', 'ha_limit_pos', 'ha_limit_neg', 'instrument_set', '__str__')
         model = Telescope
 

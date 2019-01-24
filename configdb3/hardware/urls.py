@@ -15,6 +15,8 @@ router.register(r'cameratypes', api_views.CameraTypeViewSet)
 router.register(r'mode', api_views.ModeViewSet)
 router.register(r'filterwheels', api_views.FilterWheelViewSet)
 router.register(r'filters', api_views.FilterViewSet)
+router.register(r'opticalelementgroups', api_views.OpticalElementGroupViewSet)
+router.register(r'opticalelements', api_views.OpticalElementViewSet)
 
 urlpatterns = [
     url(r'^camera_mappings/', camera_mappings, name='camera-mappings'),
