@@ -7,7 +7,7 @@ from django.core.urlresolvers import reverse
 from reversion.admin import VersionAdmin
 from reversion.errors import RegistrationError
 from configdb3.hardware.models import (
-    Site, Enclosure, Filter, GenericMode,
+    Site, Enclosure, Filter, GenericMode, ModeType,
     Telescope, Instrument, Camera, CameraType, Mode,
     FilterWheel, OpticalElementGroup, OpticalElement
 )
@@ -15,6 +15,11 @@ from configdb3.hardware.models import (
 
 class HardwareAdmin(VersionAdmin):
     exclude = ('modified', )
+
+
+@admin.register(ModeType)
+class ModeTypeAdmin(HardwareAdmin):
+    list_display = ('id',)
 
 
 @admin.register(Site)

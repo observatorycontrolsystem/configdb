@@ -127,7 +127,7 @@ class CameraType(BaseModel):
     acquire_processing_time = models.FloatField(default=0)
 
     # New stuff for SOAR
-    configuration_types = ArrayField(models.CharField(max_length=20), default=list)
+    configuration_types = ArrayField(models.CharField(max_length=20), default=list, blank=True)
     pixels_x = models.IntegerField(default=0)
     pixels_y = models.IntegerField(default=0)
     max_rois = models.IntegerField(default=0)
@@ -137,10 +137,17 @@ class CameraType(BaseModel):
         return self.code
 
 
+class ModeType(BaseModel):
+    id = models.CharField(max_length=200, primary_key=True)
+
+    def __str__(self):
+        return self.id
+
+
 class GenericMode(BaseModel):
     name = models.CharField(max_length=200)
     code = models.CharField(max_length=200)
-    type = models.CharField(max_length=200)
+    type = models.ForeignKey(ModeType, null=True, on_delete=models.CASCADE)
     overhead = models.FloatField()
     params = JSONField(default=dict, blank=True)
     default = models.BooleanField(default=False)
@@ -180,7 +187,7 @@ class Camera(BaseModel):
     code = models.CharField(max_length=200)
     filter_wheel = models.ForeignKey(FilterWheel)
     optical_element_groups = models.ManyToManyField(OpticalElementGroup)
-    host = models.CharField(max_length=200, default='',
+    host = models.CharField(max_length=200, default='', blank=True,
                             help_text='The physical machine hostname that this camera is connected to')
 
     class Meta:
