@@ -1,3 +1,7 @@
+1.21
+2019-01-25
+Enable GZip middleware in django
+
 1.20
 2019-01-22
 Add new fields for optical path elements, generic modes, and more for new observation portal
