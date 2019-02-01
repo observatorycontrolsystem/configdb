@@ -13,16 +13,19 @@ class FilterableViewSet(viewsets.ModelViewSet):
 
 class SiteViewSet(FilterableViewSet):
     queryset = Site.objects.all().prefetch_related(
-        'enclosure_set__telescope_set__instrument_set__science_camera__camera_type__mode_set'
-    ).prefetch_related(
-        'enclosure_set__telescope_set__instrument_set__autoguider_camera__camera_type__mode_set'
-    ).prefetch_related(
-        'enclosure_set__telescope_set__instrument_set__science_camera__camera_type__default_mode'
-    ).prefetch_related(
-        'enclosure_set__telescope_set__instrument_set__autoguider_camera__camera_type__default_mode'
-    ).prefetch_related(
-        'enclosure_set__telescope_set__instrument_set__science_camera__filter_wheel__filters'
-    ).prefetch_related(
+        'enclosure_set__telescope_set__instrument_set__science_camera__camera_type__mode_set',
+        'enclosure_set__telescope_set__instrument_set__autoguider_camera__camera_type__mode_set',
+        'enclosure_set__telescope_set__instrument_set__science_camera__camera_type__mode_types',
+        'enclosure_set__telescope_set__instrument_set__autoguider_camera__camera_type__mode_types',
+        'enclosure_set__telescope_set__instrument_set__science_camera__camera_type__mode_types__modes',
+        'enclosure_set__telescope_set__instrument_set__autoguider_camera__camera_type__mode_types__modes',
+        'enclosure_set__telescope_set__instrument_set__science_camera__optical_element_groups',
+        'enclosure_set__telescope_set__instrument_set__autoguider_camera__optical_element_groups',
+        'enclosure_set__telescope_set__instrument_set__science_camera__optical_element_groups__optical_elements',
+        'enclosure_set__telescope_set__instrument_set__autoguider_camera__optical_element_groups__optical_elements',
+        'enclosure_set__telescope_set__instrument_set__science_camera__camera_type__default_mode',
+        'enclosure_set__telescope_set__instrument_set__autoguider_camera__camera_type__default_mode',
+        'enclosure_set__telescope_set__instrument_set__science_camera__filter_wheel__filters',
         'enclosure_set__telescope_set__instrument_set__autoguider_camera__filter_wheel__filters'
     )
     serializer_class = serializers.SiteSerializer
@@ -33,6 +36,14 @@ class EnclosureViewSet(FilterableViewSet):
     queryset = Enclosure.objects.all().select_related('site').prefetch_related(
         'telescope_set__instrument_set__science_camera__camera_type__mode_set',
         'telescope_set__instrument_set__autoguider_camera__camera_type__mode_set',
+        'telescope_set__instrument_set__science_camera__camera_type__mode_types',
+        'telescope_set__instrument_set__autoguider_camera__camera_type__mode_types',
+        'telescope_set__instrument_set__science_camera__camera_type__mode_types__modes',
+        'telescope_set__instrument_set__autoguider_camera__camera_type__mode_types__modes',
+        'telescope_set__instrument_set__science_camera__optical_element_groups',
+        'telescope_set__instrument_set__autoguider_camera__optical_element_groups',
+        'telescope_set__instrument_set__science_camera__optical_element_groups__optical_elements',
+        'telescope_set__instrument_set__autoguider_camera__optical_element_groups__optical_elements',
         'telescope_set__instrument_set__science_camera__camera_type__default_mode',
         'telescope_set__instrument_set__autoguider_camera__camera_type__default_mode',
         'telescope_set__instrument_set__science_camera__filter_wheel__filters',
@@ -47,6 +58,14 @@ class TelescopeViewSet(FilterableViewSet):
     queryset = Telescope.objects.all().select_related('enclosure__site').prefetch_related(
         'instrument_set__science_camera__camera_type__mode_set',
         'instrument_set__autoguider_camera__camera_type__mode_set',
+        'instrument_set__science_camera__camera_type__mode_types',
+        'instrument_set__autoguider_camera__camera_type__mode_types',
+        'instrument_set__science_camera__camera_type__mode_types__modes',
+        'instrument_set__autoguider_camera__camera_type__mode_types__modes',
+        'instrument_set__science_camera__optical_element_groups',
+        'instrument_set__autoguider_camera__optical_element_groups',
+        'instrument_set__science_camera__optical_element_groups__optical_elements',
+        'instrument_set__autoguider_camera__optical_element_groups__optical_elements',
         'instrument_set__science_camera__camera_type__default_mode',
         'instrument_set__autoguider_camera__camera_type__default_mode',
         'instrument_set__science_camera__filter_wheel__filters',
@@ -86,6 +105,14 @@ class InstrumentViewSet(FilterableViewSet):
     queryset = Instrument.objects.all().select_related('telescope__enclosure__site').prefetch_related(
         'science_camera__camera_type__mode_set',
         'autoguider_camera__camera_type__mode_set',
+        'science_camera__camera_type__mode_types',
+        'autoguider_camera__camera_type__mode_types',
+        'science_camera__camera_type__mode_types__modes',
+        'autoguider_camera__camera_type__mode_types__modes',
+        'science_camera__optical_element_groups',
+        'autoguider_camera__optical_element_groups',
+        'science_camera__optical_element_groups__optical_elements',
+        'autoguider_camera__optical_element_groups__optical_elements',
         'science_camera__camera_type__default_mode',
         'autoguider_camera__camera_type__default_mode',
         'science_camera__filter_wheel__filters',
@@ -106,8 +133,11 @@ class CameraViewSet(FilterableViewSet):
     queryset = Camera.objects.all().select_related('camera_type').prefetch_related(
         'camera_type__mode_set',
         'camera_type__default_mode',
-        'camera_type__modes',
+        'camera_type__mode_types',
+        'camera_type__mode_types__modes',
         'filter_wheel__filters',
+        'optical_element_groups',
+        'optical_element_groups__optical_elements'
     )
     serializer_class = serializers.CameraSerializer
     filter_fields = ('code', 'filter_wheel', 'camera_type')

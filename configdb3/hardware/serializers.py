@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (Site, Enclosure, Telescope, OpticalElement, GenericMode,
                      Instrument, Camera, Mode, OpticalElementGroup,
-                     FilterWheel, CameraType, Filter)
+                     FilterWheel, CameraType, Filter, GenericModeGroup)
 
 import json
 import itertools
@@ -31,11 +31,21 @@ class OpticalElementSerializer(serializers.ModelSerializer):
 
 class OpticalElementGroupSerializer(serializers.ModelSerializer):
     optical_elements = OpticalElementSerializer(many=True)
+    default = serializers.SerializerMethodField('get_default_code')
 
     class Meta:
         model = OpticalElementGroup
-        fields = ('name', 'type', 'optical_elements', 'element_change_overhead')
+        fields = ('name', 'type', 'optical_elements', 'element_change_overhead', 'default')
         depth = 1
+
+    def get_default_code(self, obj):
+        return obj.default.code if obj.default else ''
+
+    def validate(self, data):
+        if data['default'] not in [oe['code'] for oe in data['optical_elements']]:
+            raise serializers.ValidationError("Default must be the code of an optical element in this group")
+
+        return data
 
 
 class FilterSerializer(serializers.ModelSerializer):
@@ -59,13 +69,31 @@ class GenericModeSerializer(serializers.ModelSerializer):
     params = serializers.JSONField()
 
     class Meta:
-        fields = ('name', 'overhead', 'code', 'type', 'default', 'params')
+        fields = ('name', 'overhead', 'code', 'params')
         model = GenericMode
 
     def validate_params(self, value):
         if not isinstance(value, dict):
             raise serializers.ValidationError("Mode Params must be in the form of a dictionary")
         return json.dumps(value)
+
+
+class GenericModeGroupSerializer(serializers.ModelSerializer):
+    modes = GenericModeSerializer(many=True)
+    default = serializers.SerializerMethodField('get_default_code')
+
+    class Meta:
+        fields = ('type', 'modes', 'default')
+        model = GenericModeGroup
+
+    def get_default_code(self, obj):
+        return obj.default.code if obj.default else ''
+
+    def validate(self, data):
+        if data['default'] not in [mode['code'] for mode in data['modes']]:
+            raise serializers.ValidationError("Default must be the code of a mode in this group")
+
+        return data
 
 
 class ModeSerializer(serializers.ModelSerializer):
@@ -77,21 +105,14 @@ class ModeSerializer(serializers.ModelSerializer):
 class CameraTypeSerializer(serializers.ModelSerializer):
     default_mode = ModeSerializer()
     mode_set = ModeSerializer(many=True)
-    modes = GenericModeSerializer(many=True)
+    mode_types = GenericModeGroupSerializer(many=True)
 
     class Meta:
         fields = ('id', 'size', 'pscale', 'default_mode', 'name', 'code', 'mode_set', 'fixed_overhead_per_exposure',
                   'front_padding', 'filter_change_time', 'config_change_time', 'acquire_exposure_time',
-                  'acquire_processing_time', 'modes', 'default_acceptability_threshold', 'pixels_x', 'pixels_y',
+                  'acquire_processing_time', 'mode_types', 'default_acceptability_threshold', 'pixels_x', 'pixels_y',
                   'max_rois', 'configuration_types')
         model = CameraType
-
-    def to_representation(self, instance):
-        # modify the modes to group by their type
-        data = super().to_representation(instance)
-        mode_by_type = itertools.groupby(sorted(data['modes'], key=lambda x: x['type']), key=lambda x: x['type'])
-        data['modes'] = {t: list(m) for t, m in mode_by_type}
-        return data
 
 
 class CameraSerializer(serializers.ModelSerializer):

@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.postgres.fields import JSONField, ArrayField
+from django.core.exceptions import ValidationError
 import datetime
 
 
@@ -102,6 +103,7 @@ class OpticalElement(BaseModel):
 class OpticalElementGroup(BaseModel):
     name = models.CharField(max_length=200)
     type = models.CharField(max_length=200)
+    default = models.ForeignKey(OpticalElement, related_name='default', null=True, blank=True)
     optical_elements = models.ManyToManyField(OpticalElement)
     element_change_overhead = models.FloatField(default=0)
 
@@ -147,25 +149,28 @@ class ModeType(BaseModel):
 class GenericMode(BaseModel):
     name = models.CharField(max_length=200)
     code = models.CharField(max_length=200)
-    type = models.ForeignKey(ModeType, null=True, on_delete=models.CASCADE)
     overhead = models.FloatField()
     params = JSONField(default=dict, blank=True)
-    default = models.BooleanField(default=False)
-    camera_type = models.ForeignKey(CameraType, related_name='modes')
 
     def __str__(self):
-        return '{}: {}'.format(self.type, self.name)
+        return '{}: {}'.format(self.code, self.name)
 
-    def save(self, *args, **kwargs):
-        if self.default:
-            try:
-                set_mode = GenericMode.objects.get(camera_type=self.camera_type, type=self.type, default=True)
-                if self != set_mode:
-                    set_mode.default = False
-                    set_mode.save()
-            except GenericMode.DoesNotExist:
-                pass
-        super().save(*args, **kwargs)
+
+class GenericModeGroup(BaseModel):
+    camera_type = models.ForeignKey(CameraType, related_name='mode_types')
+    default = models.ForeignKey(GenericMode, related_name='default', null=True, blank=True)
+    type = models.ForeignKey(ModeType, null=True, on_delete=models.CASCADE)
+    modes = models.ManyToManyField(GenericMode)
+
+    class Meta:
+        unique_together = ['camera_type', 'type']
+        # TODO:: the unique_together should change to this in later versions of django
+        # constraints = [
+        #     models.constraints.UniqueConstraint(fields=['camera_type', 'type'], name='unique_mode_group')
+        # ]
+
+    def __str__(self):
+        return ','.join([mode.code for mode in self.modes.all()])
 
 
 class Mode(BaseModel):
@@ -186,7 +191,7 @@ class Camera(BaseModel):
     camera_type = models.ForeignKey(CameraType)
     code = models.CharField(max_length=200)
     filter_wheel = models.ForeignKey(FilterWheel)
-    optical_element_groups = models.ManyToManyField(OpticalElementGroup)
+    optical_element_groups = models.ManyToManyField(OpticalElementGroup, blank=True)
     host = models.CharField(max_length=200, default='', blank=True,
                             help_text='The physical machine hostname that this camera is connected to')
 
