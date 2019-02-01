@@ -21,8 +21,9 @@ class GenericModeGroupAdminForm(forms.ModelForm):
         fields = '__all__'
 
     def __init__(self, *args, **kwargs):
+        existing = 'instance' in kwargs and kwargs['instance']
         super().__init__(*args, **kwargs)
-        if self.instance:
+        if existing:
             self.fields['default'].queryset = self.instance.modes.all()
 
 
@@ -32,8 +33,9 @@ class OpticalElementGroupAdminForm(forms.ModelForm):
         fields = '__all__'
 
     def __init__(self, *args, **kwargs):
+        existing = 'instance' in kwargs and kwargs['instance']
         super().__init__(*args, **kwargs)
-        if self.instance:
+        if existing:
             self.fields['default'].queryset = self.instance.optical_elements.all()
 
 
