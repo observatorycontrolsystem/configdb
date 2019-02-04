@@ -4,13 +4,53 @@ from reversion.models import Version
 from datetime import timedelta
 from django.utils.html import escape
 from django.core.urlresolvers import reverse
+from django import forms
+from django.core.exceptions import ValidationError
 from reversion.admin import VersionAdmin
 from reversion.errors import RegistrationError
 from configdb3.hardware.models import (
-    Site, Enclosure, Filter, GenericMode, ModeType,
+    Site, Enclosure, Filter, GenericMode, ModeType, GenericModeGroup,
     Telescope, Instrument, Camera, CameraType, Mode,
     FilterWheel, OpticalElementGroup, OpticalElement
 )
+
+
+class GenericModeGroupAdminForm(forms.ModelForm):
+    class Meta:
+        model = GenericModeGroup
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        existing = 'instance' in kwargs and kwargs['instance']
+        super().__init__(*args, **kwargs)
+        if existing:
+            self.fields['default'].queryset = self.instance.modes.all()
+
+
+class OpticalElementGroupAdminForm(forms.ModelForm):
+    class Meta:
+        model = OpticalElementGroup
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        existing = 'instance' in kwargs and kwargs['instance']
+        super().__init__(*args, **kwargs)
+        if existing:
+            self.fields['default'].queryset = self.instance.optical_elements.all()
+
+
+class CameraAdminForm(forms.ModelForm):
+    class Meta:
+        model = Camera
+        fields = '__all__'
+
+    def clean(self):
+        if 'optical_element_groups' in self.cleaned_data:
+            group_types = [oeg.type for oeg in self.cleaned_data['optical_element_groups'].all()]
+            if len(group_types) != len(set(group_types)):
+                raise ValidationError("Can only have 1 optical element group of each type associated with a Camera")
+
+        return self.cleaned_data
 
 
 class HardwareAdmin(VersionAdmin):
@@ -51,6 +91,7 @@ class InstrumentAdmin(HardwareAdmin):
 
 @admin.register(Camera)
 class CameraAdmin(HardwareAdmin):
+    form = CameraAdminForm
     list_display = ('code', 'camera_type')
     search_fields = ('code',)
 
@@ -66,11 +107,18 @@ class ModeAdmin(HardwareAdmin):
     list_display = ('camera_type', 'binning', 'overhead')
 
 
+@admin.register(GenericModeGroup)
+class GenericModeGroupAdmin(HardwareAdmin):
+    form = GenericModeGroupAdminForm
+    list_display = ('camera_type', 'type', 'default', '__str__')
+    search_fields = ('camera_type', 'type')
+    list_filter = ('type', 'camera_type')
+
+
 @admin.register(GenericMode)
 class GenericModeAdmin(HardwareAdmin):
-    list_display = ('camera_type', 'name', 'code', 'type', 'default', 'overhead')
+    list_display = ('name', 'code', 'overhead')
     search_fields = ('name', 'code')
-    list_filter = ('type', 'default')
 
 
 @admin.register(FilterWheel)
@@ -86,7 +134,8 @@ class FilterAdmin(HardwareAdmin):
 
 @admin.register(OpticalElementGroup)
 class OpticalElementGroupAdmin(HardwareAdmin):
-    list_display = ('id', 'name', 'type', '__str__')
+    form = OpticalElementGroupAdminForm
+    list_display = ('id', 'name', 'type', '__str__', 'default')
     search_fields = ('name', 'type')
     list_filter = ('type',)
 
