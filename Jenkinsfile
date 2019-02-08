@@ -25,7 +25,7 @@ pipeline {
             stage('Test') {
                 steps {
                     script {
-                        docker.image('postgres:9.6').withRun('--entrypoint='' -e "POSTGRES_DB=configdb3" -e "POSTGRES_PASSWORD=postgres"') { c ->
+                        docker.image('postgres:9.6').withRun('--entrypoint="" -e "POSTGRES_DB=configdb3" -e "POSTGRES_PASSWORD=postgres"') { c ->
                             docker.image("${imageName}:${gitRevision}").inside("--link ${c.id}:db") {
                                 /*
                                  * Run some tests which require Postgres, and assume that it is
