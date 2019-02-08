@@ -2,6 +2,7 @@ FROM python:3.6-alpine
 
 EXPOSE 80
 ENTRYPOINT [ "/init" ]
+WORKDIR /lco/configdb3/
 
 COPY requirements.txt /lco/configdb3/
 RUN apk --no-cache add bash postgresql-libs \
@@ -12,3 +13,4 @@ RUN apk --no-cache add bash postgresql-libs \
 COPY docker/ /
 
 COPY . /lco/configdb3/
+
