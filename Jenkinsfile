@@ -26,15 +26,12 @@ pipeline {
                 steps {
                     script {
                         docker.image('postgres:9.6').withRun('-e "POSTGRES_DB=configdb3" -e "POSTGRES_PASSWORD=postgres"') { c ->
-                            docker.image('postgres:9.6').inside("--link ${c.id}:db") {
-                                /* Wait until postgres service is up */
-                                sh 'while ! pg_isready; do sleep 1; done'
-                            }
                             docker.image("${dockerImage}").inside("--link ${c.id}:db") {
                                 /*
                                  * Run some tests which require Postgres, and assume that it is
                                  * available on the host name `db`
                                  */
+                                // sh 'while ! pg_isready -hdb; do sleep 1; done'
                                 sh 'DB_HOST=db SECRET_KEY=asdf python /lco/configdb3/manage.py test'
                             }
                         }
