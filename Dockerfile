@@ -13,4 +13,3 @@ RUN apk --no-cache add bash postgresql-libs \
 COPY docker/ /
 
 COPY . /lco/configdb3/
-
