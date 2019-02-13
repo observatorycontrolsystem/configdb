@@ -140,7 +140,7 @@ class InstrumentSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('id', 'code', 'state', 'telescope', 'science_camera', 'science_camera_id', 'autoguider_camera_id',
-                  'telescope_id', 'autoguider_camera', '__str__')
+                  'telescope_id', 'autoguider_camera', 'allow_self_guiding', '__str__')
         model = Instrument
 
 

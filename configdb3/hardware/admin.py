@@ -85,7 +85,8 @@ class TelescopeAdmin(HardwareAdmin):
 
 @admin.register(Instrument)
 class InstrumentAdmin(HardwareAdmin):
-    list_display = ('__str__', 'state', 'telescope', 'code', 'science_camera', 'autoguider_camera')
+    list_display = ('__str__', 'state', 'telescope', 'code', 'science_camera', 'autoguider_camera',
+                    'allow_self_guiding')
     list_filter = ('telescope__enclosure__site__code', 'state')
 
 

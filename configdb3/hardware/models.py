@@ -232,6 +232,7 @@ class Instrument(BaseModel):
     telescope = models.ForeignKey(Telescope)
     science_camera = models.ForeignKey(Camera)
     autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for')
+    allow_self_guiding = models.BooleanField(default=True, blank=True)
     autoguider_type = models.CharField(max_length=200, choices=AUTOGUIDER_TYPES, default="OffAxis")
 
     def __str__(self):
