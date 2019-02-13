@@ -134,6 +134,7 @@ class CameraType(BaseModel):
     pixels_y = models.IntegerField(default=0)
     max_rois = models.IntegerField(default=0)
     default_acceptability_threshold = models.FloatField(default=90.0)
+    allow_self_guiding = models.BooleanField(default=True, blank=True)
 
     def __str__(self):
         return self.code
@@ -232,7 +233,6 @@ class Instrument(BaseModel):
     telescope = models.ForeignKey(Telescope)
     science_camera = models.ForeignKey(Camera)
     autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for')
-    allow_self_guiding = models.BooleanField(default=True, blank=True)
     autoguider_type = models.CharField(max_length=200, choices=AUTOGUIDER_TYPES, default="OffAxis")
 
     def __str__(self):

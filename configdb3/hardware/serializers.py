@@ -111,7 +111,7 @@ class CameraTypeSerializer(serializers.ModelSerializer):
         fields = ('id', 'size', 'pscale', 'default_mode', 'name', 'code', 'mode_set', 'fixed_overhead_per_exposure',
                   'front_padding', 'filter_change_time', 'config_change_time', 'acquire_exposure_time',
                   'acquire_processing_time', 'mode_types', 'default_acceptability_threshold', 'pixels_x', 'pixels_y',
-                  'max_rois', 'configuration_types')
+                  'max_rois', 'allow_self_guiding', 'configuration_types')
         model = CameraType
 
 
@@ -140,7 +140,7 @@ class InstrumentSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('id', 'code', 'state', 'telescope', 'science_camera', 'science_camera_id', 'autoguider_camera_id',
-                  'telescope_id', 'autoguider_camera', 'allow_self_guiding', '__str__')
+                  'telescope_id', 'autoguider_camera', '__str__')
         model = Instrument
 
 
