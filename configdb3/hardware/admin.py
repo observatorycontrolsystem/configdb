@@ -98,7 +98,7 @@ class CameraAdmin(HardwareAdmin):
 
 @admin.register(CameraType)
 class CameraTypeAdmin(HardwareAdmin):
-    list_display = ('name', 'size', 'pscale', 'default_mode')
+    list_display = ('name', 'size', 'pscale', 'default_mode', 'allow_self_guiding')
     search_fields = ('name',)
 
 
