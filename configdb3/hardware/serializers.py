@@ -111,7 +111,7 @@ class CameraTypeSerializer(serializers.ModelSerializer):
         fields = ('id', 'size', 'pscale', 'default_mode', 'name', 'code', 'mode_set', 'fixed_overhead_per_exposure',
                   'front_padding', 'filter_change_time', 'config_change_time', 'acquire_exposure_time',
                   'acquire_processing_time', 'mode_types', 'default_acceptability_threshold', 'pixels_x', 'pixels_y',
-                  'max_rois', 'configuration_types')
+                  'max_rois', 'allow_self_guiding', 'configuration_types')
         model = CameraType
 
 
@@ -151,7 +151,8 @@ class TelescopeSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('id', 'serial_number', 'name', 'code', 'active', 'lat', 'enclosure_id', 'slew_rate',
-                  'long', 'enclosure', 'horizon', 'ha_limit_pos', 'ha_limit_neg', 'instrument_set', '__str__')
+                  'minimum_slew_overhead', 'instrument_change_overhead', 'long', 'enclosure', 'horizon',
+                  'ha_limit_pos', 'ha_limit_neg', 'instrument_set', '__str__')
         model = Telescope
 
 

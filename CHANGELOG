@@ -1,3 +1,11 @@
+1.23
+2019-02-21
+Add allow_self_guiding field to instruments
+
+1.22
+2019-02-04
+Refactor the generic modes a bit to add a generic modes group
+
 1.21
 2019-01-25
 Enable GZip middleware in django

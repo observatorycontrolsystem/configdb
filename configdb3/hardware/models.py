@@ -134,6 +134,7 @@ class CameraType(BaseModel):
     pixels_y = models.IntegerField(default=0)
     max_rois = models.IntegerField(default=0)
     default_acceptability_threshold = models.FloatField(default=90.0)
+    allow_self_guiding = models.BooleanField(default=True, blank=True)
 
     def __str__(self):
         return self.code
