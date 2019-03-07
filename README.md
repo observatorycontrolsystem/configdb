@@ -68,20 +68,16 @@ Now you can connect to your development environment at
 
     http://127.0.0.1:8000/
 
-### Deployment
+## Build
 
-This project is deployed in production as a Docker container on the Las Cumbres
-Observatory Docker cluster. Please contact the LCO Software Team or the LCO IT
-Team for further details.
+This project is built automatically by the [LCO Jenkins Server](http://jenkins.lco.gtn/).
+Please see the [Jenkinsfile](Jenkinsfile) for details.
 
-The Las Cumbres Observatory Jenkins build system is configured to automatically
-build each tagged release of this application into a Docker container.
+## Production Deployment
 
-If you need to do this yourself, you can take these steps:
-
-    DOCKER_IMAGE_NAME="docker.lco.global/configdb3:$(git describe --tags)"
-    docker build --pull -t "$DOCKER_IMAGE_NAME" .
-    docker push "$DOCKER_IMAGE_NAME"
+This project is deployed in the LCO Kubernetes Cluster. Please see the
+[LCO Helm Charts Repository](https://github.com/LCOGT/helm-charts) for details
+about the production deployment.
 
 ## Configuration
 
