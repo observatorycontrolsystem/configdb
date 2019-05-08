@@ -10,7 +10,7 @@ from reversion.admin import VersionAdmin
 from reversion.errors import RegistrationError
 from configdb3.hardware.models import (
     Site, Enclosure, Filter, GenericMode, ModeType, GenericModeGroup,
-    Telescope, Instrument, Camera, CameraType, Mode,
+    Telescope, Instrument, Camera, CameraType, Mode, Observatory,
     FilterWheel, OpticalElementGroup, OpticalElement
 )
 
@@ -78,9 +78,14 @@ class EnclosureAdmin(HardwareAdmin):
 
 @admin.register(Telescope)
 class TelescopeAdmin(HardwareAdmin):
-    list_display = ('__str__', 'active', 'name', 'lat', 'long')
-    list_filter = ('enclosure__site__code',)
-    search_fields = ('code', 'name', 'active', 'enclosure__site__code')
+    list_display = ('__str__', 'active', 'name', 'lat', 'long', 'observatory')
+    list_filter = ('enclosure__site__code', 'observatory')
+    search_fields = ('code', 'name', 'active', 'enclosure__site__code', 'observatory')
+
+
+@admin.register(Observatory)
+class ObservatoryAdmin(HardwareAdmin):
+    list_display = ('name', 'code')
 
 
 @admin.register(Instrument)

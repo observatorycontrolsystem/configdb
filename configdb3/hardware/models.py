@@ -11,6 +11,14 @@ class BaseModel(models.Model):
         abstract = True
 
 
+class Observatory(BaseModel):
+    name = models.CharField(max_length=200)
+    code = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.code
+
+
 class Site(BaseModel):
     active = models.BooleanField(default=True)
     code = models.CharField(max_length=3)
@@ -62,6 +70,7 @@ class Telescope(BaseModel):
     ha_limit_neg = models.FloatField()
     ha_limit_pos = models.FloatField()
     enclosure = models.ForeignKey(Enclosure)
+    observatory = models.ForeignKey(Observatory)
 
     def __str__(self):
         return '{0}.{1}'.format(self.enclosure, self.code)

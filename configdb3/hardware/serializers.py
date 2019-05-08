@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import (Site, Enclosure, Telescope, OpticalElement, GenericMode,
-                     Instrument, Camera, Mode, OpticalElementGroup,
+                     Instrument, Camera, Mode, OpticalElementGroup, Observatory,
                      FilterWheel, CameraType, Filter, GenericModeGroup)
 
 import json
@@ -152,7 +152,7 @@ class TelescopeSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('id', 'serial_number', 'name', 'code', 'active', 'lat', 'enclosure_id', 'slew_rate',
                   'minimum_slew_overhead', 'instrument_change_overhead', 'long', 'enclosure', 'horizon',
-                  'ha_limit_pos', 'ha_limit_neg', 'instrument_set', '__str__')
+                  'ha_limit_pos', 'ha_limit_neg', 'instrument_set', '__str__', 'observatory')
         model = Telescope
 
 
