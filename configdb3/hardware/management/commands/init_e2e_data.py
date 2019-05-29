@@ -1,7 +1,8 @@
 from django.core.management.base import BaseCommand
 
-from configdb3.hardware.models import (Site, Enclosure, Telescope, Instrument, Camera, CameraType, GenericMode, \
-    GenericModeGroup, OpticalElement, OpticalElementGroup, ModeType, Filter, FilterWheel)
+from configdb3.hardware.models import (Site, Enclosure, Telescope, Instrument, Camera, CameraType, GenericMode,
+                                       GenericModeGroup, OpticalElement, OpticalElementGroup, ModeType, Filter,
+                                       FilterWheel)
 
 import logging
 import sys
