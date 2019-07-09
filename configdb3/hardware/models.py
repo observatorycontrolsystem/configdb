@@ -228,8 +228,14 @@ class Instrument(BaseModel):
         ("SelfGuide", "SelfGuide")
     )
 
+    state_help_text = """<div><ul><li>DISABLED - this is what disabled means.</li>
+    <li>MANUAL - this is what manual means.</li>
+    <li>COMMISSIONING - this is what commissioning means.</li>
+    <li>STANDBY - this is what standby means.</li>
+    <li>SCHEDULABLE - this is what schedulable means.</li></ul></div>
+    """
     code = models.CharField(max_length=200, default='', blank=True, help_text='Name of the instrument')
-    state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED)
+    state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED, help_text=state_help_text)
     telescope = models.ForeignKey(Telescope)
     science_camera = models.ForeignKey(Camera)
     autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for')
