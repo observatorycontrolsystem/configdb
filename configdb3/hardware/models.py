@@ -61,6 +61,8 @@ class Telescope(BaseModel):
     horizon = models.FloatField()
     ha_limit_neg = models.FloatField()
     ha_limit_pos = models.FloatField()
+    zenith_blind_spot = models.FloatField(
+        default=0.0, help_text='For AltAz telescopes, radius of zenith blind spot in degrees')
     enclosure = models.ForeignKey(Enclosure)
 
     def __str__(self):
