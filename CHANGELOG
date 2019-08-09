@@ -1,3 +1,11 @@
+1.25
+2019-07-31
+Add zenith blind spot to telescope model
+
+1.24
+2019-05-29
+Add management command for end to end tests
+
 1.23
 2019-02-21
 Add allow_self_guiding field to instruments
