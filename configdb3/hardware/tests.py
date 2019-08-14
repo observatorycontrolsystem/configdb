@@ -42,7 +42,7 @@ class SimpleHardwareTest(TestCase):
         self.assertEqual(self.instrument.state, Instrument.DISABLED)
 
         self.client.login(username='tst_user', password='tst_pass')
-        self.client.patch('/instruments/{}/'.format(self.instrument.pk), json.dumps({'state': 'ENABLED'}),
+        self.client.patch('/instruments/{}/'.format(self.instrument.pk), json.dumps({'state': 'MANUAL'}),
                           content_type='application/json')
         self.instrument.refresh_from_db()
-        self.assertEqual(self.instrument.state, Instrument.ENABLED)
+        self.assertEqual(self.instrument.state, Instrument.MANUAL)

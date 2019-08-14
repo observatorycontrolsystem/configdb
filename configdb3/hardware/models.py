@@ -215,13 +215,15 @@ class Camera(BaseModel):
 
 class Instrument(BaseModel):
     DISABLED = 0
-    ENABLED = 10
+    MANUAL = 10
     COMMISSIONING = 20
+    STANDBY = 25
     SCHEDULABLE = 30
     STATE_CHOICES = (
         (DISABLED, 'DISABLED'),
-        (ENABLED, 'ENABLED'),
+        (MANUAL, 'MANUAL'),
         (COMMISSIONING, 'COMMISSIONING'),
+        (STANDBY, 'STANDBY'),
         (SCHEDULABLE, 'SCHEDULABLE'),
     )
     AUTOGUIDER_TYPES = (

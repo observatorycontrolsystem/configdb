@@ -93,7 +93,7 @@ class InstrumentFilter(django_filters.rest_framework.FilterSet):
                   'camera_type', 'site', 'telescope', 'enclosure', 'state']
 
     def state_filter(self, queryset, name, value):
-        ''' Allows us to do queries like ?state=ENABLED instead of ?state=10 '''
+        ''' Allows us to do queries like ?state=MANUAL instead of ?state=10 '''
         print(name)
         for state in Instrument.STATE_CHOICES:
             if value.upper() == state[1]:

@@ -82,7 +82,7 @@ class Command(BaseCommand):
 
         instrument, _ = Instrument.objects.get_or_create(code='xx04', telescope=telescope, science_camera=camera,
                                                          autoguider_camera=camera)
-        instrument.state = Instrument.ENABLED
+        instrument.state = Instrument.MANUAL
         instrument.save()
 
         sys.exit(0)
