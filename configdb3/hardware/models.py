@@ -232,11 +232,11 @@ class Instrument(BaseModel):
         ("SelfGuide", "SelfGuide")
     )
 
-    state_help_text = """<div><ul><li>DISABLED - this is what disabled means.</li>
-    <li>MANUAL - this is what manual means.</li>
-    <li>COMMISSIONING - this is what commissioning means.</li>
-    <li>STANDBY - this is what standby means.</li>
-    <li>SCHEDULABLE - this is what schedulable means.</li></ul></div>
+    state_help_text = """<div><ul><li>DISABLED - The instrument is in configdb, but does not physically exist or is sitting in a box somewhere.</li>
+    <li>MANUAL - The instrument is plugged in, but not ready to do any science.</li>
+    <li>COMMISSIONING - The instrument is currently commissioning, but should not yet be exposed to the network.</li>
+    <li>STANDBY - The instrument has been commissioned and is ready to be switched into SCHEDULABLE when needed.</li>
+    <li>SCHEDULABLE - The instrument is part of the network and is ready for normal operations</li></ul></div>
     """
     code = models.CharField(max_length=200, default='', blank=True, help_text='Name of the instrument')
     state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED, help_text=state_help_text)
