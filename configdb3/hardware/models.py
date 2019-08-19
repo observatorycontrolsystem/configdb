@@ -215,13 +215,15 @@ class Camera(BaseModel):
 
 class Instrument(BaseModel):
     DISABLED = 0
-    ENABLED = 10
+    MANUAL = 10
     COMMISSIONING = 20
+    STANDBY = 25
     SCHEDULABLE = 30
     STATE_CHOICES = (
         (DISABLED, 'DISABLED'),
-        (ENABLED, 'ENABLED'),
+        (MANUAL, 'MANUAL'),
         (COMMISSIONING, 'COMMISSIONING'),
+        (STANDBY, 'STANDBY'),
         (SCHEDULABLE, 'SCHEDULABLE'),
     )
     AUTOGUIDER_TYPES = (
@@ -230,8 +232,14 @@ class Instrument(BaseModel):
         ("SelfGuide", "SelfGuide")
     )
 
+    state_help_text = """<div><ul><li>DISABLED - The instrument is in configdb, but does not physically exist or is sitting in a box somewhere.</li>
+    <li>MANUAL - The instrument is plugged in, but not ready to do any science.</li>
+    <li>COMMISSIONING - The instrument is currently commissioning, but should not yet be exposed to the network.</li>
+    <li>STANDBY - The instrument has been commissioned and is ready to be switched into SCHEDULABLE when needed.</li>
+    <li>SCHEDULABLE - The instrument is part of the network and is ready for normal operations</li></ul></div>
+    """
     code = models.CharField(max_length=200, default='', blank=True, help_text='Name of the instrument')
-    state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED)
+    state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED, help_text=state_help_text)
     telescope = models.ForeignKey(Telescope)
     science_camera = models.ForeignKey(Camera)
     autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for')
