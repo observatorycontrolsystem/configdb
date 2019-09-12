@@ -1,5 +1,0 @@
-#!/bin/bash
-
-cd /lco/configdb3
-python manage.py collectstatic --noinput
-exec gunicorn -k gevent -b 0.0.0.0:80 -w 4 --access-logfile - --error-logfile - configdb3.wsgi:application

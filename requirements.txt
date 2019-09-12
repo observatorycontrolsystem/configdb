@@ -11,6 +11,4 @@ django-extensions
 flake8
 ipython
 gunicorn[gevent]==19.9.0
-whitenoise==3.3.1
-
 mixer==6.1.3

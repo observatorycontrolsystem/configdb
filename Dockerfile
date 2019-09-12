@@ -1,14 +1,13 @@
 FROM python:3.6-alpine
 
-EXPOSE 80
-ENTRYPOINT [ "/init" ]
+WORKDIR /app
 
-COPY requirements.txt /lco/configdb3/
+COPY requirements.txt .
 RUN apk --no-cache add bash postgresql-libs \
         && apk --no-cache add --virtual .build-deps gcc postgresql-dev musl-dev \
-        && pip --no-cache-dir install -r /lco/configdb3/requirements.txt \
+        && pip --no-cache-dir install -r requirements.txt \
         && apk --no-cache del .build-deps
 
-COPY docker/ /
+COPY . .
 
-COPY . /lco/configdb3/
+CMD [ "gunicorn", "--bind=0.0.0.0:8080", "--worker-class=gevent", "--workers=4", "--access-logfile=-", "--error-logfile=-", "configdb3.wsgi:application" ]
