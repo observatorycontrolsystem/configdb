@@ -24,10 +24,12 @@ class Command(BaseCommand):
         parser.add_argument('--longitude', required=True, type=float,
                             help='Site longitude in degrees')
 
-    def add_telescope(self, site, longitude, latitude, obs, tel, ins):
+    def handle(self, *args, **options):
+        longitude = options['longitude']
+        latitude = options['latitude']
+        site_str = options['site']
 
-
-        site, _ = Site.objects.get_or_create(code=site, defaults={'elevation': 0, 'timezone': 0})
+        site, _ = Site.objects.get_or_create(code=site_str, defaults={'elevation': 0, 'timezone': 0})
         site.lat = latitude
         site.long = longitude
         site.elevation = 0
@@ -35,11 +37,11 @@ class Command(BaseCommand):
         site.timezone = 0
         site.save()
 
-        enclosure, _ = Enclosure.objects.get_or_create(code=obs, site=site)
+        enclosure, _ = Enclosure.objects.get_or_create(code='doma', site=site)
         enclosure.active = True
         enclosure.save()
 
-        telescope, _ = Telescope.objects.get_or_create(code=tel, enclosure=enclosure,
+        telescope, _ = Telescope.objects.get_or_create(code='1m0a', enclosure=enclosure,
                                                        defaults={'lat': latitude, 'long': longitude, 'horizon': 15,
                                                                  'ha_limit_pos': 4.6, 'ha_limit_neg': -4.6})
 
@@ -78,19 +80,9 @@ class Command(BaseCommand):
         camera.optical_element_groups.add(optical_element_group)
         camera.save()
 
-        instrument, _ = Instrument.objects.get_or_create(code=ins, telescope=telescope, science_camera=camera,
+        instrument, _ = Instrument.objects.get_or_create(code='xx04', telescope=telescope, science_camera=camera,
                                                          autoguider_camera=camera)
         instrument.state = Instrument.MANUAL
         instrument.save()
 
-
-    def handle(self, *args, **options):
-
-        longitude = options['longitude']
-        latitude = options['latitude']
-        site_str = options['site']
-        self.add_telescope(site=site_str, longitude=longitude, latitude=latitude, obs="doma", tel="1m0a", ins="xx04")
-        self.add_telescope(site=site_str, longitude=longitude, latitude=latitude, obs="clma", tel="2m0a", ins="xx05")
-        
         sys.exit(0)
-
