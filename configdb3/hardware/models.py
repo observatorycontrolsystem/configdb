@@ -109,6 +109,9 @@ class OpticalElementGroup(BaseModel):
     optical_elements = models.ManyToManyField(OpticalElement)
     element_change_overhead = models.FloatField(default=0)
 
+    class Meta:
+        ordering = ['id']
+
     def __str__(self):
         optical_elements_str = self.name + ' - ' + self.type + ': ' + self.optical_element_codes()
         return optical_elements_str
