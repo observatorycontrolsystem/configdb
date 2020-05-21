@@ -1,103 +1,95 @@
-# ConfigDB3
+# Observatory Configuration
 
-Configdb3 is a simple frontend to a relational database where we attempt to
-represent the physical state of the LCO Telescope Network. It provides a
-RESTful API as well as HTML views of the data. It also generates a
-`camera_mappings` file for use by older applications.
+Observatory Configration Database is a simple frontend to a relational database where we attempt to
+represent the physical state of a Telescope Network. It provides a
+RESTful API as well as HTML views of the data. This is used by other applications in the observatory control system to understand what components make up the observatory, and to allow for automatted validation of component properties.
 
-Applications that need to know which cameras are where, what filters they have
-available, on what telescope, etc. should query this API.
+## Prerequisites
+-   Python>=3.6
+-   PostgreSQL
 
-Configdb3 is currently being served at
-[configdb.lco.gtn](http://configdb.lco.gtn)
-
-## Getting Started
-
-These instructions will get you a copy of this project up and running on your
-local machine for development and testing purposes. See the Deployment section
-for instructions on how to deploy the project on a production system.
-
-### Prerequisites
-
-* Python 3.6
-* PostgreSQL server
-* Familiarity with the [Django](https://www.djangoproject.com/) web development framework
-
-### Development Environment
-
-Configure your development environment credentials
-
-    export SECRET_KEY="changeme"
-    export DEBUG="true"
-    export DB_HOST="$(hostname --fqdn)"
-    export DB_NAME="configdb3"
-    export DB_USER="configdb3"
-    export DB_PASS="configdb3"
-
-Configure a PostgreSQL database with a set of credentials for your development
-environment
-
-    docker run -d --name=postgres \
-        -e POSTGRES_USER="$DB_USER" \
-        -e POSTGRES_PASSWORD="$DB_PASS" \
-        -e POSTGRES_DB="$DB_NAME" \
-        -p 5432:5432 \
-        postgres:10-alpine
-
-Create a Python virtual environment
-
-    python3.6 -m venv env
-
-Activate the Python virtual environment
-
-    source env/bin/activate
-
-Install required Python dependencies into the virtual environment
-
-    pip install -r requirements.txt
-
-Run initial database setup
-
-    python manage.py migrate
-
-Start the development server on port 8000
-
-    python manage.py runserver 8000
-
-Now you can connect to your development environment at
-
-    http://127.0.0.1:8000/
-
-## Build
-
-This project is built automatically by the [LCO Jenkins Server](http://jenkins.lco.gtn/).
-Please see the [Jenkinsfile](Jenkinsfile) for details.
-
-## Production Deployment
-
-This project is deployed in the LCO Kubernetes Cluster. Please see the
-[LCO Helm Charts Repository](https://github.com/LCOGT/helm-charts) for details
-about the production deployment.
+The application requires a PostgreSQL database backend because it uses JSONFields in the model.
 
 ## Configuration
 
-This project is configured using environment variables. This is done so that it
-is very easy to use different configurations in different environments (such as
-development vs. production environments).
+This project is configured using environment variables.
 
-- **`SECRET_KEY`** - Django secret key (no default is provided)
-- **`DEBUG`** - Enable Django debugging features (default: `false`)
-- **`DB_ENGINE`** - Database Engine (default: `django.db.backends.postgresql_psycopg2`)
-- **`DB_HOST`** - Database hostname (default: `127.0.0.1`)
-- **`DB_NAME`** - Database name (default: `configdb3`)
-- **`DB_USER`** - Database username (default: `postgres`)
-- **`DB_PASS`** - Database password (default: `postgres`)
-- **`DB_PORT`** - Database port number (default: `5432`)
-- **`OAUTH_CLIENT_ID`** - ???
-- **`OAUTH_CLIENT_SECRET`** - ???
-- **`OAUTH_TOKEN_URL`** - ???
+| Variable             | Description                                                                        | Default                      |
+| -------------------- | ---------------------------------------------------------------------------------- | ---------------------------- |
+| `SECRET_KEY`      | Django Secret Key                                                                  | `### CHANGE ME ###`          |
+| `DEBUG`         | Enable Django debugging features                                                                   | `False`          |
+| `DB_ENGINE`          | Database Engine, set to `django.db.backends.postgresql` to use PostgreSQL | `django.db.backends.postgresql` |
+| `DB_NAME`            | Database Name                                                                      | `configdb`                 |
+| `DB_HOST`            | Database Hostname, set this when using PostgreSQL                                  | `127.0.0.1`                |
+| `DB_USER`            | Database Username, set this when using PostgreSQL                                  | `postgres`               |
+| `DB_PASS`            | Database Password, set this when using PostgreSQL                                  |  `postgres`               |
+| `DB_PORT`            | Database Port, set this when using PostgreSQL                                      | `5432`                       |
+| `OAUTH_CLIENT_ID`            | Application client_id in the Observation Portal app                                   | `### CHANGE ME ###`                       |
+| `OAUTH_CLIENT_SECRET`            | Application client_secret in the Observation Portal app                                      | `### CHANGE ME ###`                       |
+| `OAUTH_TOKEN_URL`            | Observation Portal app                                      | `https://observation-portal-base-url/o/token/`                       |
 
-## License
+## Local Development
 
-This project is licensed under the GNU GPL v3 License - see the
-[LICENSE.txt](LICENSE.txt) file for details.
+### **Set up a virtual environment**
+
+Using a virtual environment is highly recommended. Run the following commands from the base of this project. `(env)`
+is used to denote commands that should be run using your virtual environment.
+
+    python3 -m venv env
+    source env/bin/activate
+    (env) pip install -r requirements.txt
+
+### **Set up the database**
+
+This application requires the use of a PostgreSQL database (or another database that supports JSONField in Django). If using PostgreSQL, the following command uses the [PostgreSQL Docker image](https://hub.docker.com/_/postgres) to
+create a test PostgreSQL database. Make sure that the options that you use to set up your database correspond with your configured database setting environment variables.
+
+    docker run --name configdb-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=configdb -v/var/lib/postgresql/data -p5432:5432 -d postgres:11.1
+
+Run database migrations to set up the tables in the database.
+
+    (env) python manage.py migrate
+
+### Run the tests
+
+    (env) python manage.py test
+
+### Run the application
+
+    (env) python manage.py runserver
+
+The application should now be accessible from <http://127.0.0.1:8000>!
+
+### Authentication
+The application connects to a running Observation Portal for oauth2 authentication to access the admin interface. Staff accounts should have access to the admin interface. If no Observation Portal is connected during development, creating a local superuser account should work to access the admin interface as well:
+
+    (env) python manage.py createsuperuser
+
+### Filling in Observatory Data
+The admin interface is used to define the components of the Observatory. It is accessible by going to <http://127.0.0.1:8000/admin/>. The different components of the Observatory should be defined one-by-one, and will often reference each other when creating them. A sensible order to initially create the components of an Observatory is:
+
+1. Site - The geographic location with one or more enclosures
+2. Enclosure - A physical building containing one or more telescopes
+3. Telescope - A single light collection system
+4. Camera type - The generic properties of a single type of camera
+5. Optical element - A single component within the optical path of a camera
+6. Optical element group - A logical grouping of one or more optical elements of a single type that can be selected on a camera
+7. Camera - A specific instance of a camera type with a set of optical element groups
+8. Generic modes - A generic definition for a single mode, including an associated overhead and validation schema
+9. Generic mode group - A grouping of one or more generic modes of a single type associated with a camera type. The type is user definable, but some examples used in the Observation Portal include `readout`, `acquisition`, `guiding`, `exposure`, and `rotator`
+10. Instrument - A combination of one or more science cameras and a guide camera on a specific Telescope
+
+## Example queries
+Every component has an endpoint to query, but to get the entire structure of the Observatory, it is common to query the sites endpoint and parse the data from within your client application
+
+Return all observatory configuration information
+
+    GET /sites/
+
+Return a specific camera's configuration
+
+    GET /cameras/?code=my_camera_code
+
+Return all instruments that are in the SCHEDULABLE state
+
+    GET /instruments/?state=SCHEDULABLE
