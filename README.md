@@ -1,8 +1,8 @@
 # Observatory Configuration
 
-Observatory Configration Database is a simple frontend to a relational database where we attempt to
+Observatory Configuration Database is a simple frontend to a relational database where we attempt to
 represent the physical state of a Telescope Network. It provides a
-RESTful API as well as HTML views of the data. This is used by other applications in the observatory control system to understand what components make up the observatory, and to allow for automatted validation of component properties.
+RESTful API as well as HTML views of the data. This is used by other applications in the observatory control system to understand what components make up the observatory, and to allow for automated validation of component properties.
 
 ## Prerequisites
 -   Python>=3.6
@@ -80,7 +80,7 @@ The admin interface is used to define the components of the Observatory. It is a
 10. Instrument - A combination of one or more science cameras and a guide camera on a specific Telescope
 
 ## Example queries
-Every component has an endpoint to query, but to get the entire structure of the Observatory, it is common to query the sites endpoint and parse the data from within your client application
+Every component has an endpoint to query, but to get the entire structure of the Observatory, it is common to query the sites endpoint and parse the data from within your client application.
 
 Return all observatory configuration information
 
