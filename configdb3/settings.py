@@ -66,7 +66,6 @@ MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -148,3 +147,8 @@ OAUTH_CLIENT_SECRET = os.getenv('OAUTH_CLIENT_SECRET', '')
 OAUTH_TOKEN_URL = os.getenv('OAUTH_TOKEN_URL', '')
 
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+
+try:
+    from local_settings import *  # noqa
+except ImportError:
+    pass

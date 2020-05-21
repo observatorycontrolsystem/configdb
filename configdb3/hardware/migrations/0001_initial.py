@@ -79,8 +79,8 @@ class Migration(migrations.Migration):
                 ('modified', models.DateTimeField(auto_now=True)),
                 ('schedulable', models.BooleanField(default=True)),
                 ('autoguider_type', models.CharField(default='OffAxis', choices=[('InCamera', 'InCamera'), ('OffAxis', 'OffAxis'), ('SelfGuide', 'SelfGuide')], max_length=200)),
-                ('autoguider_camera', models.ForeignKey(related_name='autoguides_for', to='hardware.Camera')),
-                ('science_camera', models.ForeignKey(to='hardware.Camera')),
+                ('autoguider_camera', models.ForeignKey(related_name='autoguides_for', to='hardware.Camera', on_delete=models.CASCADE)),
+                ('science_camera', models.ForeignKey(to='hardware.Camera', on_delete=models.CASCADE)),
             ],
             options={
                 'abstract': False,
@@ -93,7 +93,7 @@ class Migration(migrations.Migration):
                 ('modified', models.DateTimeField(auto_now=True)),
                 ('binning', models.IntegerField()),
                 ('overhead', models.IntegerField()),
-                ('camera_type', models.ForeignKey(to='hardware.CameraType')),
+                ('camera_type', models.ForeignKey(to='hardware.CameraType', on_delete=models.CASCADE)),
             ],
             options={
                 'abstract': False,
@@ -123,7 +123,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(default='', blank=True, max_length=200)),
                 ('lat', models.FloatField()),
                 ('long', models.FloatField()),
-                ('enclosure', models.ForeignKey(to='hardware.Enclosure')),
+                ('enclosure', models.ForeignKey(to='hardware.Enclosure', on_delete=models.CASCADE)),
             ],
             options={
                 'abstract': False,
@@ -132,26 +132,26 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='instrument',
             name='telescope',
-            field=models.ForeignKey(to='hardware.Telescope'),
+            field=models.ForeignKey(to='hardware.Telescope', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='enclosure',
             name='site',
-            field=models.ForeignKey(to='hardware.Site'),
+            field=models.ForeignKey(to='hardware.Site', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='cameratype',
             name='default_mode',
-            field=models.ForeignKey(blank=True, null=True, to='hardware.Mode'),
+            field=models.ForeignKey(blank=True, null=True, to='hardware.Mode', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='camera',
             name='camera_type',
-            field=models.ForeignKey(to='hardware.CameraType'),
+            field=models.ForeignKey(to='hardware.CameraType', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='camera',
             name='filter_wheel',
-            field=models.ForeignKey(to='hardware.FilterWheel'),
+            field=models.ForeignKey(to='hardware.FilterWheel', on_delete=models.CASCADE),
         ),
     ]

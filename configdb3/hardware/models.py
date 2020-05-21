@@ -39,7 +39,7 @@ class Enclosure(BaseModel):
     active = models.BooleanField(default=True)
     code = models.CharField(max_length=200)
     name = models.CharField(default='', blank=True, max_length=200)
-    site = models.ForeignKey(Site)
+    site = models.ForeignKey(Site, on_delete=models.CASCADE)
 
     def __str__(self):
         return '{0}.{1}'.format(self.site, self.code)
@@ -63,7 +63,7 @@ class Telescope(BaseModel):
     ha_limit_pos = models.FloatField()
     zenith_blind_spot = models.FloatField(
         default=0.0, help_text='For AltAz telescopes, radius of zenith blind spot in degrees')
-    enclosure = models.ForeignKey(Enclosure)
+    enclosure = models.ForeignKey(Enclosure, on_delete=models.CASCADE)
 
     def __str__(self):
         return '{0}.{1}'.format(self.enclosure, self.code)
@@ -105,7 +105,7 @@ class OpticalElement(BaseModel):
 class OpticalElementGroup(BaseModel):
     name = models.CharField(max_length=200)
     type = models.CharField(max_length=200)
-    default = models.ForeignKey(OpticalElement, related_name='default', null=True, blank=True)
+    default = models.ForeignKey(OpticalElement, related_name='default', null=True, blank=True, on_delete=models.PROTECT)
     optical_elements = models.ManyToManyField(OpticalElement)
     element_change_overhead = models.FloatField(default=0)
 
@@ -123,7 +123,7 @@ class OpticalElementGroup(BaseModel):
 class CameraType(BaseModel):
     name = models.CharField(max_length=200, unique=True)
     code = models.CharField(max_length=200)
-    default_mode = models.ForeignKey('Mode', null=True, blank=True)
+    default_mode = models.ForeignKey('Mode', null=True, blank=True, on_delete=models.PROTECT)
     size = models.CharField(max_length=200)
     pscale = models.FloatField()
     fixed_overhead_per_exposure = models.FloatField(default=1)
@@ -163,9 +163,9 @@ class GenericMode(BaseModel):
 
 
 class GenericModeGroup(BaseModel):
-    camera_type = models.ForeignKey(CameraType, related_name='mode_types')
-    default = models.ForeignKey(GenericMode, related_name='default', null=True, blank=True)
-    type = models.ForeignKey(ModeType, null=True, on_delete=models.CASCADE)
+    camera_type = models.ForeignKey(CameraType, related_name='mode_types', on_delete=models.CASCADE)
+    default = models.ForeignKey(GenericMode, related_name='default', null=True, blank=True, on_delete=models.PROTECT)
+    type = models.ForeignKey(ModeType, null=True, on_delete=models.PROTECT)
     modes = models.ManyToManyField(GenericMode)
 
     class Meta:
@@ -183,7 +183,7 @@ class Mode(BaseModel):
     binning = models.IntegerField()
     overhead = models.IntegerField()
     readout = models.FloatField(default=0)
-    camera_type = models.ForeignKey(CameraType)
+    camera_type = models.ForeignKey(CameraType, on_delete=models.CASCADE)
 
     @property
     def binning_str(self):
@@ -194,9 +194,9 @@ class Mode(BaseModel):
 
 
 class Camera(BaseModel):
-    camera_type = models.ForeignKey(CameraType)
+    camera_type = models.ForeignKey(CameraType, on_delete=models.CASCADE)
     code = models.CharField(max_length=200)
-    filter_wheel = models.ForeignKey(FilterWheel)
+    filter_wheel = models.ForeignKey(FilterWheel, on_delete=models.CASCADE)
     optical_element_groups = models.ManyToManyField(OpticalElementGroup, blank=True)
     host = models.CharField(max_length=200, default='', blank=True,
                             help_text='The physical machine hostname that this camera is connected to')
@@ -243,9 +243,9 @@ class Instrument(BaseModel):
     """
     code = models.CharField(max_length=200, default='', blank=True, help_text='Name of the instrument')
     state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED, help_text=state_help_text)
-    telescope = models.ForeignKey(Telescope)
-    science_camera = models.ForeignKey(Camera)
-    autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for')
+    telescope = models.ForeignKey(Telescope, on_delete=models.CASCADE)
+    science_camera = models.ForeignKey(Camera, on_delete=models.CASCADE)
+    autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for', on_delete=models.CASCADE)
     autoguider_type = models.CharField(max_length=200, choices=AUTOGUIDER_TYPES, default="OffAxis")
 
     def __str__(self):
