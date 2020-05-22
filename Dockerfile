@@ -10,4 +10,4 @@ RUN apk --no-cache add bash postgresql-libs libffi-dev make \
 
 COPY . .
 
-CMD [ "gunicorn", "--bind=0.0.0.0:8080", "--worker-class=gevent", "--workers=4", "--timeout=60", "--access-logfile=-", "--error-logfile=-", "configdb3.wsgi:application" ]
+CMD [ "gunicorn", "--bind=0.0.0.0:8080", "--worker-class=gevent", "--workers=4", "--access-logfile=-", "--error-logfile=-", "configdb3.wsgi:application" ]
