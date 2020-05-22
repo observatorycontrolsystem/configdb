@@ -3,7 +3,7 @@ from django.contrib.admin.models import LogEntry, DELETION, ADDITION, CHANGE
 from reversion.models import Version
 from datetime import timedelta
 from django.utils.html import escape
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django import forms
 from django.core.exceptions import ValidationError
 from reversion.admin import VersionAdmin
