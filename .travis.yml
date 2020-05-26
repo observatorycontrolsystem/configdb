@@ -1,0 +1,27 @@
+language: python
+dist: xenial
+python:
+- '3.6'
+- '3.7'
+- '3.8'
+env:
+  global:
+  - DOCKER_USERNAME='ocstravisci'
+  - secure: WgTeTie9V0Lgl3ccYTjMDcSS/3yrC+YmYcZUkDaxQaEmfWdqrESt9eGVB0V6pjpcbQw14kgYMQU83B5aDQi6pdg1xuNajXcCjXCWRBv3+1f0h7a2yNq16jsMA/8BWzTn5jtD0klje3hW70pwG3sGNmJcT4t1euudCYStG0ruUAcN4XtsNv0ahJg5SureNDA33g0QCH4g/trJlvhBrvJlvWIfkBZBlqkkdavJpBFWK8iG0Ifay1ssG/mdxKgIVjnFqRjLh3R1fIySDiGWWCkFpRnna0RxAV99l0rzGWOz6j3ogp43+OXyKfPdtcdJhsxa4XHlttY001QwhNxvh1QyL4+ygQ5YxkQGkeIKfQtN/CEl6W4BHZ4jpOvraxOn/f2raV386ZjKwOSheIvgD30jpAv09OC+JZ9dGwozmrBZy5yG59OMMMqjDtpLNV8qgGUNtfMoBY38fpCsBhuG+aE5L8JhDbCvuXvoj91AQW7Lu+Pom8ShGqPD25nf+GKzLwFHtWV9Hfj0yjrRCUhY5M9Xqb8HhEetCOcc8SA14Yb1G7atheLcy5Wyexd0QkW/nGAQdXDl7Lyoacr+tO9SfiLk0BS3UrfGEMY362mA0COfVlNQNkGskd3T3txBdVLQvbWLrWmhgGvDGTMtKFQsNTYi2M/GmgqhaF5OPPcYBujMg2g=
+services:
+- docker
+install:
+- pip install -U coverage coveralls
+- pip install -r requirements.txt
+script: coverage run manage.py test
+after_success: coveralls
+before_deploy:
+- echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+- export IMAGE=observatorycontrolsystem/configdb:${TRAVIS_TAG}
+- docker build -t $IMAGE .
+deploy:
+- provider: script
+  script: docker push $IMAGE
+  skip_cleanup: true
+  on:
+    tags: true
