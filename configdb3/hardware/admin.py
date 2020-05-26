@@ -186,8 +186,7 @@ class LogEntryAdmin(admin.ModelAdmin):
         ct = obj.content_type
         if obj.action_flag == DELETION:
             link = '<a href="{0}">Recover deleted objects</a>'.format(
-                reverse('admin:{0}_{1}_recoverlist'.format(ct.app_label, ct.model)),
-                escape(obj.object_repr)
+                reverse('admin:{0}_{1}_recoverlist'.format(ct.app_label, ct.model))
             )
         else:
             try:
@@ -200,7 +199,7 @@ class LogEntryAdmin(admin.ModelAdmin):
 
             if versions:
                 link = '<a href="{0}">View Previous Version</a>'.format(
-                    reverse('admin:{0}_{1}_recover'.format(ct.app_label, ct.model), args=[versions[0].id]),
+                    reverse('admin:{0}_{1}_recover'.format(ct.app_label, ct.model), args=[versions[0].id])
                 )
             else:
                 link = 'No previous versions'
