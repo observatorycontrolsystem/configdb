@@ -4,7 +4,6 @@ from .models import (Site, Enclosure, Telescope, OpticalElement, GenericMode,
                      FilterWheel, CameraType, Filter, GenericModeGroup)
 
 import json
-import itertools
 
 
 class StateField(serializers.IntegerField):

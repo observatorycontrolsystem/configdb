@@ -1,0 +1,8 @@
+[run]
+source = schedule
+
+[report]
+omit =
+    */migrations/*
+    */commands/*
+    *apps.py
