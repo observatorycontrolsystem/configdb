@@ -1,6 +1,6 @@
 from configdb3.hardware import api_views
 from django.conf.urls import url, include
-from .views import camera_mappings, IndexView
+from .views import IndexView
 from rest_framework import routers
 from django.views.generic.list import ListView
 from .models import Site, Telescope, Camera, FilterWheel, Instrument
@@ -19,7 +19,6 @@ router.register(r'opticalelementgroups', api_views.OpticalElementGroupViewSet)
 router.register(r'opticalelements', api_views.OpticalElementViewSet)
 
 urlpatterns = [
-    url(r'^camera_mappings/', camera_mappings, name='camera-mappings'),
     url(r'^$', IndexView.as_view(), name='index'),
     url(r'^html/sites/$', ListView.as_view(model=Site), name='html-site-list'),
     url(r'^html/telescopes/$', ListView.as_view(model=Telescope), name='html-telescope-list'),
