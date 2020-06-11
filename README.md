@@ -82,8 +82,8 @@ The admin interface is used to define the components of the Observatory. It is a
 #### Generic Mode Validation Schema
 GenericMode structures have a field called `validation_schema` which accepts a dictionary [Cerberus Validation Schema](https://docs.python-cerberus.org/en/stable/schemas.html). This validation schema will be used to provide automatic validation and setting of defaults within the [Observation Portal](https://github.com/observatorycontrolsystem/observation-portal). The validation schema will act on the structure in which the GenericMode is a part of. For example:
 
-| Mode type   |What structure validation applies to |
-|-------------|-------------------------------------|
+| Mode type   | What structure validation applies to |
+| ----------- | ----------------------------------- |
 | readout     | InstrumentConfig                    |
 | exposure    | InstrumentConfig                    |
 | rotator     | InstrumentConfig                    |
