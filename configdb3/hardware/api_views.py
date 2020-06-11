@@ -1,10 +1,12 @@
 from rest_framework import viewsets, filters
-from configdb3.hardware import serializers
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import (Site, Enclosure, Telescope, OpticalElementGroup,
-                     Instrument, Camera, Mode, OpticalElement,
-                     FilterWheel, CameraType, Filter)
+
+from configdb3.hardware import serializers
+from .models import (
+    Site, Enclosure, Telescope, OpticalElementGroup, Instrument, Camera, OpticalElement,
+    CameraType, GenericMode, GenericModeGroup
+)
 
 
 class FilterableViewSet(viewsets.ModelViewSet):
@@ -13,8 +15,6 @@ class FilterableViewSet(viewsets.ModelViewSet):
 
 class SiteViewSet(FilterableViewSet):
     queryset = Site.objects.all().prefetch_related(
-        'enclosure_set__telescope_set__instrument_set__science_camera__camera_type__mode_set',
-        'enclosure_set__telescope_set__instrument_set__autoguider_camera__camera_type__mode_set',
         'enclosure_set__telescope_set__instrument_set__science_camera__camera_type__mode_types',
         'enclosure_set__telescope_set__instrument_set__autoguider_camera__camera_type__mode_types',
         'enclosure_set__telescope_set__instrument_set__science_camera__camera_type__mode_types__modes',
@@ -23,10 +23,6 @@ class SiteViewSet(FilterableViewSet):
         'enclosure_set__telescope_set__instrument_set__autoguider_camera__optical_element_groups',
         'enclosure_set__telescope_set__instrument_set__science_camera__optical_element_groups__optical_elements',
         'enclosure_set__telescope_set__instrument_set__autoguider_camera__optical_element_groups__optical_elements',
-        'enclosure_set__telescope_set__instrument_set__science_camera__camera_type__default_mode',
-        'enclosure_set__telescope_set__instrument_set__autoguider_camera__camera_type__default_mode',
-        'enclosure_set__telescope_set__instrument_set__science_camera__filter_wheel__filters',
-        'enclosure_set__telescope_set__instrument_set__autoguider_camera__filter_wheel__filters'
     )
     serializer_class = serializers.SiteSerializer
     filter_fields = ('name', 'code')
@@ -34,8 +30,6 @@ class SiteViewSet(FilterableViewSet):
 
 class EnclosureViewSet(FilterableViewSet):
     queryset = Enclosure.objects.all().select_related('site').prefetch_related(
-        'telescope_set__instrument_set__science_camera__camera_type__mode_set',
-        'telescope_set__instrument_set__autoguider_camera__camera_type__mode_set',
         'telescope_set__instrument_set__science_camera__camera_type__mode_types',
         'telescope_set__instrument_set__autoguider_camera__camera_type__mode_types',
         'telescope_set__instrument_set__science_camera__camera_type__mode_types__modes',
@@ -44,10 +38,6 @@ class EnclosureViewSet(FilterableViewSet):
         'telescope_set__instrument_set__autoguider_camera__optical_element_groups',
         'telescope_set__instrument_set__science_camera__optical_element_groups__optical_elements',
         'telescope_set__instrument_set__autoguider_camera__optical_element_groups__optical_elements',
-        'telescope_set__instrument_set__science_camera__camera_type__default_mode',
-        'telescope_set__instrument_set__autoguider_camera__camera_type__default_mode',
-        'telescope_set__instrument_set__science_camera__filter_wheel__filters',
-        'telescope_set__instrument_set__autoguider_camera__filter_wheel__filters'
     )
 
     serializer_class = serializers.EnclosureSerializer
@@ -56,8 +46,6 @@ class EnclosureViewSet(FilterableViewSet):
 
 class TelescopeViewSet(FilterableViewSet):
     queryset = Telescope.objects.all().select_related('enclosure__site').prefetch_related(
-        'instrument_set__science_camera__camera_type__mode_set',
-        'instrument_set__autoguider_camera__camera_type__mode_set',
         'instrument_set__science_camera__camera_type__mode_types',
         'instrument_set__autoguider_camera__camera_type__mode_types',
         'instrument_set__science_camera__camera_type__mode_types__modes',
@@ -66,11 +54,6 @@ class TelescopeViewSet(FilterableViewSet):
         'instrument_set__autoguider_camera__optical_element_groups',
         'instrument_set__science_camera__optical_element_groups__optical_elements',
         'instrument_set__autoguider_camera__optical_element_groups__optical_elements',
-        'instrument_set__science_camera__camera_type__default_mode',
-        'instrument_set__autoguider_camera__camera_type__default_mode',
-        'instrument_set__science_camera__filter_wheel__filters',
-        'instrument_set__autoguider_camera__filter_wheel__filters'
-
     )
     serializer_class = serializers.TelescopeSerializer
     filter_fields = ('name', 'code', 'lat', 'long', 'horizon',
@@ -103,8 +86,6 @@ class InstrumentFilter(django_filters.rest_framework.FilterSet):
 
 class InstrumentViewSet(FilterableViewSet):
     queryset = Instrument.objects.all().select_related('telescope__enclosure__site').prefetch_related(
-        'science_camera__camera_type__mode_set',
-        'autoguider_camera__camera_type__mode_set',
         'science_camera__camera_type__mode_types',
         'autoguider_camera__camera_type__mode_types',
         'science_camera__camera_type__mode_types__modes',
@@ -113,10 +94,6 @@ class InstrumentViewSet(FilterableViewSet):
         'autoguider_camera__optical_element_groups',
         'science_camera__optical_element_groups__optical_elements',
         'autoguider_camera__optical_element_groups__optical_elements',
-        'science_camera__camera_type__default_mode',
-        'autoguider_camera__camera_type__default_mode',
-        'science_camera__filter_wheel__filters',
-        'autoguider_camera__filter_wheel__filters'
     ).distinct()
     serializer_class = serializers.InstrumentSerializer
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
@@ -131,22 +108,13 @@ class CameraTypeViewSet(FilterableViewSet):
 
 class CameraViewSet(FilterableViewSet):
     queryset = Camera.objects.all().select_related('camera_type').prefetch_related(
-        'camera_type__mode_set',
-        'camera_type__default_mode',
         'camera_type__mode_types',
         'camera_type__mode_types__modes',
-        'filter_wheel__filters',
         'optical_element_groups',
         'optical_element_groups__optical_elements'
     )
     serializer_class = serializers.CameraSerializer
-    filter_fields = ('code', 'filter_wheel', 'camera_type')
-
-
-class ModeViewSet(FilterableViewSet):
-    queryset = Mode.objects.all()
-    serializer_class = serializers.ModeSerializer
-    filter_fields = ('binning', 'overhead', 'camera_type')
+    filter_fields = ('code', 'camera_type')
 
 
 class OpticalElementGroupViewSet(FilterableViewSet):
@@ -161,25 +129,11 @@ class OpticalElementViewSet(FilterableViewSet):
     filter_fields = ('id', 'name', 'code', 'schedulable')
 
 
-class FilterWheelFilter(django_filters.rest_framework.FilterSet):
-    ''' Filter class used to specify a filterable attribute in the cameratype of cameras that use this filterwheel.
-        The added attribute to filter on is juse camera_type, which maps to the camera->camera_type->name parameter.
-    '''
-    camera_type = django_filters.CharFilter(field_name="camera__camera_type__code")
-
-    class Meta:
-        model = FilterWheel
-        fields = ['filters', 'id', 'camera_type']
+class GenericModeGroupViewSet(FilterableViewSet):
+    queryset = GenericModeGroup.objects.all()
+    serializer_class = serializers.GenericModeGroupSerializer
 
 
-class FilterWheelViewSet(FilterableViewSet):
-    queryset = FilterWheel.objects.all().prefetch_related('filters').distinct()
-    serializer_class = serializers.FilterWheelSerializer
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
-    filter_class = FilterWheelFilter
-
-
-class FilterViewSet(FilterableViewSet):
-    queryset = Filter.objects.all()
-    serializer_class = serializers.FilterSerializer
-    filter_fields = ('id', 'name', 'code', 'filter_type')
+class GenericModeViewSet(FilterableViewSet):
+    queryset = GenericMode.objects.all()
+    serializer_class = serializers.GenericModeSerializer

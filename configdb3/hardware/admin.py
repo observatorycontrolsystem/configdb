@@ -1,17 +1,18 @@
+from datetime import timedelta
+
 from django.contrib import admin
 from django.contrib.admin.models import LogEntry, DELETION, ADDITION, CHANGE
-from reversion.models import Version
-from datetime import timedelta
 from django.utils.html import escape
 from django.urls import reverse
 from django import forms
 from django.core.exceptions import ValidationError
+from reversion.models import Version
 from reversion.admin import VersionAdmin
 from reversion.errors import RegistrationError
+
 from configdb3.hardware.models import (
-    Site, Enclosure, Filter, GenericMode, ModeType, GenericModeGroup,
-    Telescope, Instrument, Camera, CameraType, Mode,
-    FilterWheel, OpticalElementGroup, OpticalElement
+    Site, Enclosure, GenericMode, ModeType, GenericModeGroup, Telescope, Instrument, Camera, CameraType,
+    OpticalElementGroup, OpticalElement
 )
 
 
@@ -98,13 +99,8 @@ class CameraAdmin(HardwareAdmin):
 
 @admin.register(CameraType)
 class CameraTypeAdmin(HardwareAdmin):
-    list_display = ('name', 'size', 'pscale', 'default_mode', 'allow_self_guiding')
+    list_display = ('name', 'size', 'pscale', 'allow_self_guiding')
     search_fields = ('name',)
-
-
-@admin.register(Mode)
-class ModeAdmin(HardwareAdmin):
-    list_display = ('camera_type', 'binning', 'overhead')
 
 
 @admin.register(GenericModeGroup)
@@ -119,17 +115,6 @@ class GenericModeGroupAdmin(HardwareAdmin):
 class GenericModeAdmin(HardwareAdmin):
     list_display = ('name', 'code', 'overhead')
     search_fields = ('name', 'code')
-
-
-@admin.register(FilterWheel)
-class FilterWheelAdmin(HardwareAdmin):
-    list_display = ('id', '__str__',)
-
-
-@admin.register(Filter)
-class FilterAdmin(HardwareAdmin):
-    list_display = ('name', 'code', 'filter_type')
-    search_fields = ('name',)
 
 
 @admin.register(OpticalElementGroup)

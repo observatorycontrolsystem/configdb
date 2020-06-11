@@ -1,11 +1,12 @@
-from django.core.management.base import BaseCommand
-
-from configdb3.hardware.models import (Site, Enclosure, Telescope, Instrument, Camera, CameraType, GenericMode,
-                                       GenericModeGroup, OpticalElement, OpticalElementGroup, ModeType, Filter,
-                                       FilterWheel)
-
 import logging
 import sys
+
+from django.core.management.base import BaseCommand
+
+from configdb3.hardware.models import (
+    Site, Enclosure, Telescope, Instrument, Camera, CameraType, GenericMode, GenericModeGroup,
+    OpticalElement, OpticalElementGroup, ModeType
+)
 
 logger = logging.getLogger()
 
@@ -25,7 +26,6 @@ class Command(BaseCommand):
                             help='Site longitude in degrees')
 
     def add_telescope(self, site, longitude, latitude, obs, tel, ins):
-
 
         site, _ = Site.objects.get_or_create(code=site, defaults={'elevation': 0, 'timezone': 0})
         site.lat = latitude
@@ -58,16 +58,9 @@ class Command(BaseCommand):
         readout_mode_group.modes.add(readout_mode)
         readout_mode_group.save()
 
-        # Filter wheel can be removed when we delete that section of the model
-        camera_filter, _ = Filter.objects.get_or_create(code='air', defaults={'name': 'Air'})
-        filter_wheel = FilterWheel.objects.create()
-        filter_wheel.filters.add(camera_filter)
-        filter_wheel.save()
-
         # Now set up the camera
-        camera, _ = Camera.objects.get_or_create(code='xx04', camera_type=camera_type, defaults={
-            'filter_wheel': filter_wheel
-        })
+        camera, _ = Camera.objects.get_or_create(code='xx04', camera_type=camera_type)
+
         # Set the optical elements
         optical_element_group, _ = OpticalElementGroup.objects.get_or_create(name='Test Filter', type='filters')
         for filter_code in FILTERS:
@@ -83,9 +76,7 @@ class Command(BaseCommand):
         instrument.state = Instrument.MANUAL
         instrument.save()
 
-
     def handle(self, *args, **options):
-
         longitude = options['longitude']
         latitude = options['latitude']
         site_str = options['site']
@@ -93,4 +84,3 @@ class Command(BaseCommand):
         self.add_telescope(site=site_str, longitude=longitude, latitude=latitude, obs="clma", tel="2m0a", ins="xx05")
         
         sys.exit(0)
-

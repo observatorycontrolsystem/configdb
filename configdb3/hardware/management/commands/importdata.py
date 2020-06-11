@@ -1,7 +1,9 @@
-from django.core.management.base import BaseCommand
-import requests
-from configdb3.hardware.models import *
 from os import getenv
+
+import requests
+from django.core.management.base import BaseCommand
+
+from configdb3.hardware.models import Site, Enclosure, Telescope, Instrument, Camera, CameraType
 
 
 CONFIGDB_URL = getenv('CONFIGDB_URL', 'http://172.16.5.173:8000/')
@@ -30,35 +32,9 @@ def get_model_data(model_type):
 class Command(BaseCommand):
 
     def handle(self, *args, **options):
+        # TODO: Create optical elements and modes
 
-        # load in the filters first
-        camera_filters = get_model_data('filters')
-        for camera_filter in camera_filters:
-            filter, created = Filter.objects.get_or_create(
-                name=camera_filter['name'],
-                code=camera_filter['code'],
-                filter_type=camera_filter['filter_type']
-            )
-            if created:
-                print('created: ', filter)
-
-        # then create the filter wheels, which use a manyToMany field of filters
-        filter_wheels = get_model_data('filterwheels')
-        # must delete the filterwheels first, as we are recreating them all
-        FilterWheel.objects.all().delete()
-        for filter_wheel in filter_wheels:
-            f_wheel = FilterWheel.objects.create()
-            for camera_filter in filter_wheel['filters']:
-                filter = Filter.objects.get(
-                    name=camera_filter['name'],
-                    code=camera_filter['code'],
-                    filter_type=camera_filter['filter_type']
-                )
-                f_wheel.filters.add(filter)
-            f_wheel.save()
-            print("created: ", f_wheel)
-
-        # then loop through the cameras, creating the camera_types, modes, and finally the cameras
+        # Loop through the cameras, creating the camera_types, modes, and finally the cameras
         cameras = get_model_data('cameras')
         for camera in cameras:
             camera_type = camera['camera_type']
@@ -70,38 +46,13 @@ class Command(BaseCommand):
             )
             if created:
                 print('created: ', ctype)
-            for camera_mode in camera_type['mode_set']:
-                mode, created = Mode.objects.get_or_create(
-                    binning=camera_mode['binning'],
-                    overhead=camera_mode['overhead'],
-                    camera_type=ctype
-                )
-                if created:
-                    print('created: ', mode)
-            mode = Mode.objects.get(
-                binning=camera_type['default_mode']['binning'],
-                overhead=camera_type['default_mode']['overhead'],
-                camera_type=ctype
-            )
-            ctype.default_mode = mode
-            ctype.save()
 
-            for filter_wheel in FilterWheel.objects.all():
-                filter_wheel_filter_set = set()
-                for f in str(filter_wheel).split(','):
-                    filter_wheel_filter_set.add(f)
-                camera_filter_set = set()
-                for f in camera['filters'].split(','):
-                    camera_filter_set.add(f)
-                if filter_wheel_filter_set == camera_filter_set:
-                    cam, created = Camera.objects.get_or_create(
-                        code=camera['code'],
-                        camera_type=ctype,
-                        filter_wheel=filter_wheel
-                    )
-                    if created:
-                        print("created: ", cam)
-                    break
+            cam, created = Camera.objects.get_or_create(
+                code=camera['code'],
+                camera_type=ctype,
+            )
+            if created:
+                print("created: ", cam)
 
         # now go through the sites and create the sites, enclosures, telescopes, and instruments
         sites = get_model_data('sites')

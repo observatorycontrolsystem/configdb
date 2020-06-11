@@ -1,9 +1,11 @@
+import json
+
 from django.test import TestCase
 from django.test import Client
 from django.contrib.auth.models import User
-from .models import Site, Instrument, Enclosure, Telescope, Camera, CameraType, Filter, FilterWheel, Mode
 from mixer.backend.django import mixer
-import json
+
+from .models import Site, Instrument, Enclosure, Telescope, Camera, CameraType
 
 
 class SimpleHardwareTest(TestCase):
@@ -15,13 +17,9 @@ class SimpleHardwareTest(TestCase):
         self.enclosure = mixer.blend(Enclosure, site=self.site)
         self.telescope = mixer.blend(Telescope, enclosure=self.enclosure)
 
-        self.filter1 = mixer.blend(Filter)
-        self.filterwheel = mixer.blend(FilterWheel, filters=[self.filter1, ])
         self.camera_type = mixer.blend(CameraType)
-        self.mode = mixer.blend(Mode, camera_type=self.camera_type)
-        self.camera_type.default_mode = self.mode
         self.camera_type.save()
-        self.camera = mixer.blend(Camera, camera_type=self.camera_type, filter_wheel=self.filterwheel)
+        self.camera = mixer.blend(Camera, camera_type=self.camera_type)
         self.instrument = mixer.blend(Instrument, science_camera=self.camera, autoguider_camera=self.camera,
                                       telescope=self.telescope)
 

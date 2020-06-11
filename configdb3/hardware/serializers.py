@@ -1,9 +1,11 @@
-from rest_framework import serializers
-from .models import (Site, Enclosure, Telescope, OpticalElement, GenericMode,
-                     Instrument, Camera, Mode, OpticalElementGroup,
-                     FilterWheel, CameraType, Filter, GenericModeGroup)
-
 import json
+
+from rest_framework import serializers
+
+from .models import (
+    Site, Enclosure, Telescope, OpticalElement, GenericMode, Instrument, Camera, OpticalElementGroup,
+    CameraType, GenericModeGroup
+)
 
 
 class StateField(serializers.IntegerField):
@@ -47,23 +49,6 @@ class OpticalElementGroupSerializer(serializers.ModelSerializer):
         return data
 
 
-class FilterSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        fields = ('id', 'name', 'code', 'filter_type')
-        model = Filter
-        depth = 1
-
-
-class FilterWheelSerializer(serializers.ModelSerializer):
-    filters = FilterSerializer(many=True)
-
-    class Meta:
-        fields = ('id', 'filters', '__str__')
-        model = FilterWheel
-        depth = 1
-
-
 class GenericModeSerializer(serializers.ModelSerializer):
     params = serializers.JSONField()
 
@@ -95,21 +80,13 @@ class GenericModeGroupSerializer(serializers.ModelSerializer):
         return data
 
 
-class ModeSerializer(serializers.ModelSerializer):
-    class Meta:
-        fields = ('id', 'binning', 'overhead', 'readout')
-        model = Mode
-
-
 class CameraTypeSerializer(serializers.ModelSerializer):
-    default_mode = ModeSerializer()
-    mode_set = ModeSerializer(many=True)
     mode_types = GenericModeGroupSerializer(many=True)
 
     class Meta:
-        fields = ('id', 'size', 'pscale', 'default_mode', 'name', 'code', 'mode_set', 'fixed_overhead_per_exposure',
-                  'front_padding', 'filter_change_time', 'config_change_time', 'acquire_exposure_time',
-                  'acquire_processing_time', 'mode_types', 'default_acceptability_threshold', 'pixels_x', 'pixels_y',
+        fields = ('id', 'size', 'pscale', 'name', 'code', 'fixed_overhead_per_exposure',
+                  'front_padding', 'config_change_time', 'acquire_exposure_time',
+                  'mode_types', 'default_acceptability_threshold', 'pixels_x', 'pixels_y',
                   'max_rois', 'allow_self_guiding', 'configuration_types')
         model = CameraType
 
@@ -117,12 +94,10 @@ class CameraTypeSerializer(serializers.ModelSerializer):
 class CameraSerializer(serializers.ModelSerializer):
     camera_type = CameraTypeSerializer(read_only=True)
     camera_type_id = serializers.IntegerField(write_only=True)
-    filter_wheel_id = serializers.IntegerField(write_only=True)
-    filter_wheel = FilterWheelSerializer(read_only=True)
     optical_element_groups = OpticalElementGroupSerializer(many=True, read_only=True)
 
     class Meta:
-        fields = ('id', 'code', 'camera_type', 'camera_type_id', 'filter_wheel', 'filter_wheel_id', 'filters',
+        fields = ('id', 'code', 'camera_type', 'camera_type_id',
                   'optical_elements', 'optical_element_groups', 'host')
         model = Camera
 

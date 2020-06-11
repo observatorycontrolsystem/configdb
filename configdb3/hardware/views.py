@@ -1,6 +1,6 @@
 from django.views.generic import TemplateView
 
-from .models import Site, Telescope, Camera, FilterWheel, Filter, Instrument
+from .models import Site, Telescope, Camera, Instrument, OpticalElementGroup, GenericModeGroup
 
 
 class IndexView(TemplateView):
@@ -11,7 +11,7 @@ class IndexView(TemplateView):
         context['site_count'] = Site.objects.count()
         context['telescope_count'] = Telescope.objects.count()
         context['camera_count'] = Camera.objects.count()
-        context['filterwheel_count'] = FilterWheel.objects.count()
-        context['filter_count'] = Filter.objects.count()
         context['instrument_count'] = Instrument.objects.count()
+        context['opticalelementgroup_count'] = OpticalElementGroup.objects.count()
+        context['genericmodegroup_count'] = GenericModeGroup.objects.count()
         return context
