@@ -1,15 +1,16 @@
 import requests
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.contrib.auth.backends import BaseBackend
 
 
-class OAuth2Backend(object):
+class OAuth2Backend(BaseBackend):
     """
     Authenticate against the Oauth backend, using
     grant_type: password
     """
 
-    def authenticate(self, username=None, password=None):
+    def authenticate(self, request, username=None, password=None):
         if username == 'eng':
             return None  # anonymous eng account disabled
         response = requests.post(

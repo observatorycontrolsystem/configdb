@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from cerberus import Validator
 from .models import (Site, Enclosure, Telescope, OpticalElement, GenericMode,
                      Instrument, Camera, Mode, OpticalElementGroup,
                      FilterWheel, CameraType, Filter, GenericModeGroup)
@@ -66,14 +67,23 @@ class FilterWheelSerializer(serializers.ModelSerializer):
 
 class GenericModeSerializer(serializers.ModelSerializer):
     params = serializers.JSONField()
+    validation_schema = serializers.JSONField()
 
     class Meta:
-        fields = ('name', 'overhead', 'code', 'params')
+        fields = ('name', 'overhead', 'code', 'params', 'validation_schema')
         model = GenericMode
 
     def validate_params(self, value):
         if not isinstance(value, dict):
             raise serializers.ValidationError("Mode Params must be in the form of a dictionary")
+        return json.dumps(value)
+
+    def validate_validation_schema(self, value):
+        try:
+            Validator(value)
+        except Exception as e:
+            raise serializers.ValidationError(f"Invalid cerberus validation_schema: {repr(e)}")
+
         return json.dumps(value)
 
 

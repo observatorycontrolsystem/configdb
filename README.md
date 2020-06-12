@@ -79,6 +79,17 @@ The admin interface is used to define the components of the Observatory. It is a
 9. Generic mode group - A grouping of one or more generic modes of a single type associated with a camera type. The type is user definable, but some examples used in the Observation Portal include `readout`, `acquisition`, `guiding`, `exposure`, and `rotator`
 10. Instrument - A combination of one or more science cameras and a guide camera on a specific Telescope
 
+#### Generic Mode Validation Schema
+GenericMode structures have a field called `validation_schema` which accepts a dictionary [Cerberus Validation Schema](https://docs.python-cerberus.org/en/stable/schemas.html). This validation schema will be used to provide automatic validation and setting of defaults within the [Observation Portal](https://github.com/observatorycontrolsystem/observation-portal). The validation schema will act on the structure in which the GenericMode is a part of. For example:
+
+| Mode type   | What structure validation applies to |
+| ----------- | ------------------------------------ |
+| readout     | InstrumentConfig                     |
+| exposure    | InstrumentConfig                     |
+| rotator     | InstrumentConfig                     |
+| acquisition | AcquisitionConfig                    |
+| guiding     | GuidingConfig                        |
+
 ## Example queries
 Every component has an endpoint to query, but to get the entire structure of the Observatory, it is common to query the sites endpoint and parse the data from within your client application.
 
