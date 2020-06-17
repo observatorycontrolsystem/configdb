@@ -2,7 +2,7 @@ from django.conf.urls import url, include
 from django.views.generic.list import ListView
 from rest_framework import routers
 
-from configdb3.hardware import api_views
+from configdb.hardware import api_views
 from .views import IndexView
 from .models import Site, Telescope, Camera, Instrument, OpticalElementGroup, GenericModeGroup
 

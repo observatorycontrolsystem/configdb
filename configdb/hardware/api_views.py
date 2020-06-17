@@ -2,7 +2,7 @@ from rest_framework import viewsets, filters
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 
-from configdb3.hardware import serializers
+from configdb.hardware import serializers
 from .models import (
     Site, Enclosure, Telescope, OpticalElementGroup, Instrument, Camera, OpticalElement,
     CameraType, GenericMode, GenericModeGroup

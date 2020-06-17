@@ -3,7 +3,7 @@ import sys
 
 from django.core.management.base import BaseCommand
 
-from configdb3.hardware.models import (
+from configdb.hardware.models import (
     Site, Enclosure, Telescope, Instrument, Camera, CameraType, GenericMode, GenericModeGroup,
     OpticalElement, OpticalElementGroup, ModeType
 )

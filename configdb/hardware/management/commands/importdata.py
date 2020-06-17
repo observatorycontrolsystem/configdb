@@ -3,7 +3,7 @@ from os import getenv
 import requests
 from django.core.management.base import BaseCommand
 
-from configdb3.hardware.models import Site, Enclosure, Telescope, Instrument, Camera, CameraType
+from configdb.hardware.models import Site, Enclosure, Telescope, Instrument, Camera, CameraType
 
 
 CONFIGDB_URL = getenv('CONFIGDB_URL', 'http://172.16.5.173:8000/')

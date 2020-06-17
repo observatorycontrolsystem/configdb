@@ -10,7 +10,7 @@ from reversion.models import Version
 from reversion.admin import VersionAdmin
 from reversion.errors import RegistrationError
 
-from configdb3.hardware.models import (
+from configdb.hardware.models import (
     Site, Enclosure, GenericMode, ModeType, GenericModeGroup, Telescope, Instrument, Camera, CameraType,
     OpticalElementGroup, OpticalElement
 )
