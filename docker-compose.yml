@@ -12,7 +12,7 @@ db:
   restart: always
 
 configdb:
-  image: docker.lco.global/configdb:test
+  image: observatorycontrolsystem/configdb
   ports:
     - "8000:80"
   environment:
