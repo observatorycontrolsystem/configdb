@@ -127,6 +127,9 @@ class GenericMode(BaseModel):
     name = models.CharField(max_length=200)
     code = models.CharField(max_length=200)
     overhead = models.FloatField()
+    validation_schema = JSONField(default=dict, blank=True,
+        help_text='A cerberus styled validation schema that will be used to validate the structure this mode applies to'
+    )
     params = JSONField(default=dict, blank=True)
 
     def __str__(self):

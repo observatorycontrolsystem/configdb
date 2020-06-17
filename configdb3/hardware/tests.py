@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from mixer.backend.django import mixer
 
 from .models import Site, Instrument, Enclosure, Telescope, Camera, CameraType
+from .serializers import GenericModeSerializer
 
 
 class SimpleHardwareTest(TestCase):
@@ -44,3 +45,9 @@ class SimpleHardwareTest(TestCase):
                           content_type='application/json')
         self.instrument.refresh_from_db()
         self.assertEqual(self.instrument.state, Instrument.MANUAL)
+
+    def test_reject_invalid_cerberus_schema(self):
+        bad_generic_mode_data = {'name': 'Readout Mode', 'overhead': 10.0, 'code': 'readout_mode_1', 'params': {}, 'validation_schema': {'test': 'invalid'}}
+        gms = GenericModeSerializer(data=bad_generic_mode_data)
+        self.assertFalse(gms.is_valid())
+        self.assertIn('SchemaError', gms.errors.get('validation_schema')[0])
