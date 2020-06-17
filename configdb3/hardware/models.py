@@ -130,7 +130,6 @@ class GenericMode(BaseModel):
     validation_schema = JSONField(default=dict, blank=True,
         help_text='A cerberus styled validation schema that will be used to validate the structure this mode applies to'
     )
-    params = JSONField(default=dict, blank=True)
 
     def __str__(self):
         return '{}: {}'.format(self.code, self.name)
