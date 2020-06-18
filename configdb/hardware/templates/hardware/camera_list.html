@@ -9,6 +9,7 @@
       <th>Code</th>
       <th>Type</th>
       <th>Optical Element Groups</th>
+      <th>Host</th>
       </tr>
     </thead>
     <tbody>
@@ -21,6 +22,7 @@
           <div><a href="{% url 'opticalelementgroup-detail' pk=optical_element_group.pk %}">{{ optical_element_group }}</a></div>
         {% endfor %}
         </td>
+        <td>{{ camera.host }}</td>
       </tr>
     {% endfor %}
     </tbody>

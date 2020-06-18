@@ -7,8 +7,9 @@
     <thead>
       <tr>
       <th>Id</th>
-      <th>Optical Element Groups</th>
-      <th>Default Optical Element</th>
+      <th>Optical Element Group</th>
+      <th>Default Element</th>
+      <th>Element Change Overhead</th>
       </tr>
     </thead>
     <tbody>
@@ -17,6 +18,7 @@
         <td><a href="{% url 'opticalelementgroup-detail' pk=optical_element_group.pk %}">{{ optical_element_group.id }}</a></td>
         <td>{{ optical_element_group }}</td>
         <td>{{ optical_element_group.default }}</td>
+        <td>{{ optical_element_group.element_change_overhead }}</td>
       </tr>
     {% endfor %}
     </tbody>

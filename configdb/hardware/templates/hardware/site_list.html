@@ -6,10 +6,12 @@
   <table class="table table-striped" id="sites">
     <thead>
       <tr>
-      <th>Code</th>
-      <th>Name</th>
-      <th>UTC Offset</th>
-      <th>Elevation</th>
+        <th>Code</th>
+        <th>Name</th>
+        <th>Latitude</th>
+        <th>Longitude</th>
+        <th>Elevation</th>
+        <th>UTC Offset</th>
       </tr>
     </thead>
     <tbody>
@@ -18,8 +20,10 @@
       <tr>
         <td>{{ site.code }}</td>
         <td><a href="{% url 'site-detail' pk=site.pk %}">{{ site.name }}</a></td>
-        <td>{{ site.timezone }}</td>
+        <td>{{ site.lat }}</td>
+        <td>{{ site.long }}</td>
         <td>{{ site.elevation }}</td>
+        <td>{{ site.timezone }}</td>
       </tr>
       {% endif %}
     {% endfor %}
