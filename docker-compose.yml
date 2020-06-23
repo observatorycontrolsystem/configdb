@@ -3,23 +3,23 @@ db:
   ports:
     - "5432:5432"
   environment:
-    - POSTGRES_USER=configdb3test
-    - POSTGRES_DB=configdb3test
-    - POSTGRES_PASSWORD=configdb3test
+    - POSTGRES_USER=configdbtest
+    - POSTGRES_DB=configdbtest
+    - POSTGRES_PASSWORD=configdbtest
   volumes:
     - ./data:/var/lib/postgresql/data
   mem_limit: "2048m"
   restart: always
 
-configdb3:
-  image: docker.lco.global/configdb3:test
+configdb:
+  image: observatorycontrolsystem/configdb
   ports:
     - "8000:80"
   environment:
     - DB_HOST=db
-    - DB_NAME=configdb3test
-    - DB_USER=configdb3test
-    - DB_PASS=configdb3test
+    - DB_NAME=configdbtest
+    - DB_USER=configdbtest
+    - DB_PASS=configdbtest
     - DB_PORT=5432
     - SECRET_KEY=CHANGE_ME
     - DEBUG=true

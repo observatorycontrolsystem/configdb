@@ -1,5 +1,9 @@
 # Observatory Configuration
 
+[![Build Status](https://travis-ci.com/observatorycontrolsystem/configdb.svg?branch=master)](https://travis-ci.com/observatorycontrolsystem/configdb)
+[![Coverage Status](https://coveralls.io/repos/github/observatorycontrolsystem/configdb/badge.svg)](https://coveralls.io/github/observatorycontrolsystem/configdb)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/dda63ab6370247a68aa78e0e186f819d)](https://www.codacy.com/gh/observatorycontrolsystem/configdb?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=observatorycontrolsystem/configdb&amp;utm_campaign=Badge_Grade)
+
 Observatory Configuration Database is a simple frontend to a relational database where we attempt to
 represent the physical state of a Telescope Network. It provides a
 RESTful API as well as HTML views of the data. This is used by other applications in the observatory control system to understand what components make up the observatory, and to allow for automated validation of component properties.

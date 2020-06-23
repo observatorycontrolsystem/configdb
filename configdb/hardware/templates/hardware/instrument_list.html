@@ -22,7 +22,7 @@
       <th>State</th>
       <th>SciCam Code</th>
       <th>SciCam Type</th>
-      <th>SciCam Filters</th>
+      <th>SciCam Optical Element Groups</th>
       <th>AutoGuider Code</th>
       <th>AutoGuider Type</th>
       <th>Telescope</th>
@@ -34,7 +34,11 @@
         <td>{{ instrument.get_state_display }}</td>
         <td><a href="{% url 'camera-detail' pk=instrument.science_camera.pk %}">{{ instrument.science_camera.code }}</a></td>
         <td><a href="{% url 'cameratype-detail' pk=instrument.science_camera.camera_type.pk %}">{{ instrument.science_camera.camera_type }}</a></td>
-        <td><a href="{% url 'filterwheel-detail' pk=instrument.science_camera.filter_wheel.pk %}">{{ instrument.science_camera.filters }}</a></td>
+        <td>
+            {% for optical_element_group in instrument.science_camera.optical_element_groups.all %}
+            <div><a href="{% url 'opticalelementgroup-detail' pk=optical_element_group.pk %}">{{ optical_element_group }}</a></div>
+            {% endfor %}
+        </td>
         <td><a href="{% url 'camera-detail' pk=instrument.autoguider_camera.pk %}">{{ instrument.autoguider_camera.code }}</a></td>
         <td>{{ instrument.autoguider_type }}</td>
         <td><a href="{% url 'telescope-detail' pk=instrument.telescope.pk %}">{{ instrument.telescope }}</a></td>

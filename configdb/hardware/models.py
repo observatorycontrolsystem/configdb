@@ -1,6 +1,7 @@
+import datetime
+
 from django.db import models
 from django.contrib.postgres.fields import JSONField, ArrayField
-import datetime
 
 
 class BaseModel(models.Model):
@@ -68,30 +69,6 @@ class Telescope(BaseModel):
         return '{0}.{1}'.format(self.enclosure, self.code)
 
 
-class Filter(BaseModel):
-    FILTER_TYPES = (
-        ("Standard", "Standard"),
-        ("Engineering", "Engineering"),
-        ("Slit", "Slit"),
-        ("VirtualSlit", "VirtualSlit"),
-        ("Exotic", "Exotic")
-    )
-    name = models.CharField(max_length=200)
-    code = models.CharField(max_length=200, unique=True)
-    filter_type = models.CharField(max_length=200, choices=FILTER_TYPES, default="Standard")
-
-    def __str__(self):
-        return self.code
-
-
-class FilterWheel(BaseModel):
-    filters = models.ManyToManyField(Filter)
-
-    def __str__(self):
-        filters_str = ','.join([filter.code for filter in self.filters.all()])
-        return filters_str
-
-
 class OpticalElement(BaseModel):
     name = models.CharField(max_length=200)
     code = models.CharField(max_length=200, unique=True)
@@ -122,17 +99,12 @@ class OpticalElementGroup(BaseModel):
 class CameraType(BaseModel):
     name = models.CharField(max_length=200, unique=True)
     code = models.CharField(max_length=200)
-    default_mode = models.ForeignKey('Mode', null=True, blank=True, on_delete=models.PROTECT)
     size = models.CharField(max_length=200)
     pscale = models.FloatField()
     fixed_overhead_per_exposure = models.FloatField(default=1)
     front_padding = models.FloatField(default=90)
-    filter_change_time = models.FloatField(default=0)
     config_change_time = models.FloatField(default=0)
     acquire_exposure_time = models.FloatField(default=0)
-    acquire_processing_time = models.FloatField(default=0)
-
-    # New stuff for SOAR
     configuration_types = ArrayField(models.CharField(max_length=20), default=list, blank=True)
     pixels_x = models.IntegerField(default=0)
     pixels_y = models.IntegerField(default=0)
@@ -158,7 +130,6 @@ class GenericMode(BaseModel):
     validation_schema = JSONField(default=dict, blank=True,
         help_text='A cerberus styled validation schema that will be used to validate the structure this mode applies to'
     )
-    params = JSONField(default=dict, blank=True)
 
     def __str__(self):
         return '{}: {}'.format(self.code, self.name)
@@ -181,34 +152,15 @@ class GenericModeGroup(BaseModel):
         return ','.join([mode.code for mode in self.modes.all()])
 
 
-class Mode(BaseModel):
-    binning = models.IntegerField()
-    overhead = models.IntegerField()
-    readout = models.FloatField(default=0)
-    camera_type = models.ForeignKey(CameraType, on_delete=models.CASCADE)
-
-    @property
-    def binning_str(self):
-        return '{0}x{0}'.format(self.binning)
-
-    def __str__(self):
-        return '{0}.{1}'.format(self.camera_type, self.binning_str)
-
-
 class Camera(BaseModel):
     camera_type = models.ForeignKey(CameraType, on_delete=models.CASCADE)
     code = models.CharField(max_length=200)
-    filter_wheel = models.ForeignKey(FilterWheel, on_delete=models.CASCADE)
     optical_element_groups = models.ManyToManyField(OpticalElementGroup, blank=True)
     host = models.CharField(max_length=200, default='', blank=True,
                             help_text='The physical machine hostname that this camera is connected to')
 
     class Meta:
         ordering = ['code']
-
-    @property
-    def filters(self):
-        return str(self.filter_wheel)
 
     @property
     def optical_elements(self):

@@ -8,7 +8,8 @@
       <tr>
       <th>Code</th>
       <th>Type</th>
-      <th>Filters</th>
+      <th>Optical Element Groups</th>
+      <th>Host</th>
       </tr>
     </thead>
     <tbody>
@@ -16,7 +17,12 @@
       <tr>
         <td><a href="{% url 'camera-detail' pk=camera.pk %}">{{ camera.code }}</a></td>
         <td><a href="{% url 'cameratype-detail' pk=camera.camera_type.pk %}">{{ camera.camera_type }}</a></td>
-        <td>{{ camera.filters }}</td>
+        <td>
+        {% for optical_element_group in camera.optical_element_groups.all %}
+          <div><a href="{% url 'opticalelementgroup-detail' pk=optical_element_group.pk %}">{{ optical_element_group }}</a></div>
+        {% endfor %}
+        </td>
+        <td>{{ camera.host }}</td>
       </tr>
     {% endfor %}
     </tbody>

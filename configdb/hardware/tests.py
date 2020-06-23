@@ -1,10 +1,12 @@
+import json
+
 from django.test import TestCase
 from django.test import Client
 from django.contrib.auth.models import User
-from .models import Site, Instrument, Enclosure, Telescope, Camera, CameraType, Filter, FilterWheel, Mode
-from .serializers import GenericModeSerializer
 from mixer.backend.django import mixer
-import json
+
+from .models import Site, Instrument, Enclosure, Telescope, Camera, CameraType
+from .serializers import GenericModeSerializer
 
 
 class SimpleHardwareTest(TestCase):
@@ -16,13 +18,9 @@ class SimpleHardwareTest(TestCase):
         self.enclosure = mixer.blend(Enclosure, site=self.site)
         self.telescope = mixer.blend(Telescope, enclosure=self.enclosure)
 
-        self.filter1 = mixer.blend(Filter)
-        self.filterwheel = mixer.blend(FilterWheel, filters=[self.filter1, ])
         self.camera_type = mixer.blend(CameraType)
-        self.mode = mixer.blend(Mode, camera_type=self.camera_type)
-        self.camera_type.default_mode = self.mode
         self.camera_type.save()
-        self.camera = mixer.blend(Camera, camera_type=self.camera_type, filter_wheel=self.filterwheel)
+        self.camera = mixer.blend(Camera, camera_type=self.camera_type)
         self.instrument = mixer.blend(Instrument, science_camera=self.camera, autoguider_camera=self.camera,
                                       telescope=self.telescope)
 
@@ -49,7 +47,7 @@ class SimpleHardwareTest(TestCase):
         self.assertEqual(self.instrument.state, Instrument.MANUAL)
 
     def test_reject_invalid_cerberus_schema(self):
-        bad_generic_mode_data = {'name': 'Readout Mode', 'overhead': 10.0, 'code': 'readout_mode_1', 'params': {}, 'validation_schema': {'test': 'invalid'}}
+        bad_generic_mode_data = {'name': 'Readout Mode', 'overhead': 10.0, 'code': 'readout_mode_1', 'validation_schema': {'test': 'invalid'}}
         gms = GenericModeSerializer(data=bad_generic_mode_data)
         self.assertFalse(gms.is_valid())
         self.assertIn('SchemaError', gms.errors.get('validation_schema')[0])

@@ -1,0 +1,34 @@
+{% extends 'hardware/index.html' %}
+{% block title %}Generic Mode Groups{% endblock %}
+{% block content %}
+<h1 class="page-header">Generic Mode Groups</h1>
+<div class="table">
+  <table class="table table-striped" id="generic-mode-groups">
+    <thead>
+      <tr>
+      <th>Id</th>
+      <th>Mode Type</th>
+      <th>Modes in Group</th>
+      <th>Default Mode</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for generic_mode_group in object_list %}
+      <tr>
+        <td><a href="{% url 'genericmodegroup-detail' pk=generic_mode_group.pk %}">{{ generic_mode_group.id }}</a></td>
+        <td>{{ generic_mode_group.type }}</td>
+        <td>{{ generic_mode_group }}</td>
+        <td>{{ generic_mode_group.default.code }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+{% block extra_javascript %}
+<script type="text/javascript">
+  $(document).ready(function(){
+    $('#generic-mode-groups').DataTable()
+  })
+</script>
+{% endblock %}
