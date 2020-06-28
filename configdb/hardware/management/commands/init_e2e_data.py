@@ -51,8 +51,7 @@ class Command(BaseCommand):
         # Now set up the modes for the camera_type
         readout_mode_type, _ = ModeType.objects.get_or_create(id='readout')
         readout_mode, _ = GenericMode.objects.get_or_create(code='default',
-            defaults={'name': 'Sinistro Readout Mode',
-                      'overhead': 0, 'params': {'binning': 1},
+            defaults={'name': 'Sinistro Readout Mode', 'overhead': 0,
                       'validation_schema': {"binning": {"type": "integer", "allowed": [1], "default": 1}}}
         )
         readout_mode_group, _ = GenericModeGroup.objects.get_or_create(camera_type=camera_type, type=readout_mode_type,
