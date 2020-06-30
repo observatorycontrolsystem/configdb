@@ -5,7 +5,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from configdb.hardware import serializers
 from .models import (
     Site, Enclosure, Telescope, OpticalElementGroup, Instrument, Camera, OpticalElement,
-    CameraType, GenericMode, GenericModeGroup
+    CameraType, GenericMode, GenericModeGroup, InstrumentType
 )
 
 
@@ -23,6 +23,12 @@ class SiteViewSet(FilterableViewSet):
         'enclosure_set__telescope_set__instrument_set__autoguider_camera__optical_element_groups',
         'enclosure_set__telescope_set__instrument_set__science_camera__optical_element_groups__optical_elements',
         'enclosure_set__telescope_set__instrument_set__autoguider_camera__optical_element_groups__optical_elements',
+        'enclosure_set__telescope_set__instrument_set__science_cameras__camera_type__mode_types',
+        'enclosure_set__telescope_set__instrument_set__science_cameras__camera_type__mode_types__modes',
+        'enclosure_set__telescope_set__instrument_set__science_cameras__optical_element_groups',
+        'enclosure_set__telescope_set__instrument_set__science_cameras__optical_element_groups__optical_elements',
+        'enclosure_set__telescope_set__instrument_set__instrument_type__mode_types',
+        'enclosure_set__telescope_set__instrument_set__instrument_type__mode_types__modes',
     )
     serializer_class = serializers.SiteSerializer
     filter_fields = ('name', 'code')
@@ -38,6 +44,12 @@ class EnclosureViewSet(FilterableViewSet):
         'telescope_set__instrument_set__autoguider_camera__optical_element_groups',
         'telescope_set__instrument_set__science_camera__optical_element_groups__optical_elements',
         'telescope_set__instrument_set__autoguider_camera__optical_element_groups__optical_elements',
+        'telescope_set__instrument_set__science_cameras__camera_type__mode_types',
+        'telescope_set__instrument_set__science_cameras__camera_type__mode_types__modes',
+        'telescope_set__instrument_set__science_cameras__optical_element_groups',
+        'telescope_set__instrument_set__science_cameras__optical_element_groups__optical_elements',
+        'telescope_set__instrument_set__instrument_type__mode_types',
+        'telescope_set__instrument_set__instrument_type__mode_types__modes',
     )
 
     serializer_class = serializers.EnclosureSerializer
@@ -54,6 +66,12 @@ class TelescopeViewSet(FilterableViewSet):
         'instrument_set__autoguider_camera__optical_element_groups',
         'instrument_set__science_camera__optical_element_groups__optical_elements',
         'instrument_set__autoguider_camera__optical_element_groups__optical_elements',
+        'instrument_set__science_cameras__camera_type__mode_types',
+        'instrument_set__science_cameras__camera_type__mode_types__modes',
+        'instrument_set__science_cameras__optical_element_groups',
+        'instrument_set__science_cameras__optical_element_groups__optical_elements',
+        'instrument_set__instrument_type__mode_types',
+        'instrument_set__instrument_type__mode_types__modes',
     )
     serializer_class = serializers.TelescopeSerializer
     filter_fields = ('name', 'code', 'lat', 'long', 'horizon',
@@ -65,6 +83,7 @@ class InstrumentFilter(django_filters.rest_framework.FilterSet):
         The added attribute to filter on is juse camera_type, which maps to the camera->camera_type->name parameter.
     '''
     camera_type = django_filters.CharFilter(field_name="science_camera__camera_type__code")
+    instrument_type = django_filters.CharFilter(field_name="instrument_type__code")
     telescope = django_filters.CharFilter(field_name="telescope__code")
     enclosure = django_filters.CharFilter(field_name="telescope__enclosure__code")
     site = django_filters.CharFilter(field_name="telescope__enclosure__site__code")
@@ -72,7 +91,7 @@ class InstrumentFilter(django_filters.rest_framework.FilterSet):
 
     class Meta:
         model = Instrument
-        fields = ['telescope', 'science_camera', 'autoguider_camera',
+        fields = ['telescope', 'science_camera', 'science_cameras', 'autoguider_camera', 'instrument_type',
                   'camera_type', 'site', 'telescope', 'enclosure', 'state']
 
     def state_filter(self, queryset, name, value):
@@ -85,7 +104,7 @@ class InstrumentFilter(django_filters.rest_framework.FilterSet):
 
 
 class InstrumentViewSet(FilterableViewSet):
-    queryset = Instrument.objects.all().select_related('telescope__enclosure__site').prefetch_related(
+    queryset = Instrument.objects.all().select_related('telescope__enclosure__site', 'instrument_type').prefetch_related(
         'science_camera__camera_type__mode_types',
         'autoguider_camera__camera_type__mode_types',
         'science_camera__camera_type__mode_types__modes',
@@ -94,6 +113,12 @@ class InstrumentViewSet(FilterableViewSet):
         'autoguider_camera__optical_element_groups',
         'science_camera__optical_element_groups__optical_elements',
         'autoguider_camera__optical_element_groups__optical_elements',
+        'science_cameras__camera_type__mode_types',
+        'science_cameras__camera_type__mode_types__modes',
+        'science_cameras__optical_element_groups',
+        'science_cameras__optical_element_groups__optical_elements',
+        'instrument_type__mode_types',
+        'instrument_type__mode_types__modes'
     ).distinct()
     serializer_class = serializers.InstrumentSerializer
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
@@ -104,6 +129,12 @@ class CameraTypeViewSet(FilterableViewSet):
     queryset = CameraType.objects.all()
     serializer_class = serializers.CameraTypeSerializer
     filter_fields = ('name', 'pscale')
+
+
+class InstrumentTypeViewSet(FilterableViewSet):
+    queryset = InstrumentType.objects.all()
+    serializer_class = serializers.InstrumentTypeSerializer
+    filter_fields = ('name',)
 
 
 class CameraViewSet(FilterableViewSet):

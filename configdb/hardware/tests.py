@@ -5,7 +5,7 @@ from django.test import Client
 from django.contrib.auth.models import User
 from mixer.backend.django import mixer
 
-from .models import Site, Instrument, Enclosure, Telescope, Camera, CameraType
+from .models import Site, Instrument, Enclosure, Telescope, Camera, CameraType, InstrumentType
 from .serializers import GenericModeSerializer
 
 
@@ -19,10 +19,11 @@ class SimpleHardwareTest(TestCase):
         self.telescope = mixer.blend(Telescope, enclosure=self.enclosure)
 
         self.camera_type = mixer.blend(CameraType)
+        self.instrument_type = mixer.blend(InstrumentType)
         self.camera_type.save()
         self.camera = mixer.blend(Camera, camera_type=self.camera_type)
         self.instrument = mixer.blend(Instrument, science_camera=self.camera, autoguider_camera=self.camera,
-                                      telescope=self.telescope)
+                                      telescope=self.telescope, instrument_type=self.instrument_type, science_cameras=[self.camera])
 
     def test_homepage(self):
         response = self.client.get('/')
