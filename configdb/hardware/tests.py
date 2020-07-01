@@ -35,8 +35,23 @@ class SimpleHardwareTest(TestCase):
         self.client.login(username='tst_user', password='tst_pass')
         self.client.post('/sites/', site)
 
-        saved_site = Site.objects.get(code='tst')
+        saved_site = Site.objects.get(code=site['code'])
         self.assertEqual(saved_site.name, site['name'])
+
+    def test_write_instrument(self):
+        instrument = {
+            'code': 'TST-INST-01', 'science_camera_id': self.camera.pk, 'state': 'DISABLED',
+            'science_cameras_ids': [self.camera.pk], 'autoguider_camera_id': self.camera.pk,
+            'telescope_id': self.telescope.pk, 'instrument_type_id': self.instrument_type.pk
+        }
+        self.client.login(username='tst_user', password='tst_pass')
+        self.client.post('/instruments/', instrument)
+
+        saved_instrument = Instrument.objects.get(code=instrument['code'])
+        self.assertEqual(saved_instrument.science_camera.code, self.camera.code)
+        self.assertEqual(saved_instrument.instrument_type.code, self.instrument_type.code)
+        self.assertEqual(saved_instrument.telescope.code, self.telescope.code)
+
 
     def test_patch_instrument(self):
         self.assertEqual(self.instrument.state, Instrument.DISABLED)
@@ -45,7 +60,7 @@ class SimpleHardwareTest(TestCase):
         self.client.patch('/instruments/{}/'.format(self.instrument.pk), json.dumps({'state': 'MANUAL'}),
                           content_type='application/json')
         self.instrument.refresh_from_db()
-        self.assertEqual(self.instrument.state, Instrument.MANUAL)
+        self.assertEqual(self.instrument.state, Instrument.MANUAL)        
 
     def test_reject_invalid_cerberus_schema(self):
         bad_generic_mode_data = {'name': 'Readout Mode', 'overhead': 10.0, 'code': 'readout_mode_1', 'validation_schema': {'test': 'invalid'}}

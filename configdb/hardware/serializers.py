@@ -125,14 +125,16 @@ class InstrumentSerializer(serializers.ModelSerializer):
     telescope = serializers.HyperlinkedRelatedField(view_name='telescope-detail', read_only=True)
     telescope_id = serializers.IntegerField(write_only=True)
     science_cameras = CameraSerializer(read_only=True, many=True)
-    science_cameras_ids = serializers.ListField(write_only=True, child=serializers.IntegerField())
+    science_cameras_ids = serializers.PrimaryKeyRelatedField(write_only=True, many=True, queryset=Camera.objects.all(), source='science_cameras')
     instrument_type = InstrumentTypeSerializer(read_only=True)
+    instrument_type_id = serializers.IntegerField(write_only=True)
 
     state = StateField()
 
     class Meta:
         fields = ('id', 'code', 'state', 'telescope', 'science_camera', 'science_camera_id', 'autoguider_camera_id',
-                  'telescope_id', 'autoguider_camera', 'science_cameras', 'science_cameras_ids', 'instrument_type', '__str__')
+                  'telescope_id', 'autoguider_camera', 'science_cameras', 'science_cameras_ids', 'instrument_type',
+                  'instrument_type_id', '__str__')
         model = Instrument
 
 
