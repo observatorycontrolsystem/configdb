@@ -3,7 +3,6 @@
 from django.db import migrations
 
 def forward(apps, schema_editor):
-    CameraType = apps.get_model('hardware', 'CameraType')
     InstrumentType = apps.get_model('hardware', 'InstrumentType')
     Instrument = apps.get_model('hardware', 'Instrument')
     for instrument in Instrument.objects.all():

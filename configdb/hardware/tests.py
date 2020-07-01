@@ -52,7 +52,6 @@ class SimpleHardwareTest(TestCase):
         self.assertEqual(saved_instrument.instrument_type.code, self.instrument_type.code)
         self.assertEqual(saved_instrument.telescope.code, self.telescope.code)
 
-
     def test_patch_instrument(self):
         self.assertEqual(self.instrument.state, Instrument.DISABLED)
 
@@ -60,7 +59,7 @@ class SimpleHardwareTest(TestCase):
         self.client.patch('/instruments/{}/'.format(self.instrument.pk), json.dumps({'state': 'MANUAL'}),
                           content_type='application/json')
         self.instrument.refresh_from_db()
-        self.assertEqual(self.instrument.state, Instrument.MANUAL)        
+        self.assertEqual(self.instrument.state, Instrument.MANUAL)
 
     def test_reject_invalid_cerberus_schema(self):
         bad_generic_mode_data = {'name': 'Readout Mode', 'overhead': 10.0, 'code': 'readout_mode_1', 'validation_schema': {'test': 'invalid'}}
