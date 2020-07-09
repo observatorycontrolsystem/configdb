@@ -85,13 +85,8 @@ class GenericModeGroupSerializer(serializers.ModelSerializer):
 
 
 class CameraTypeSerializer(serializers.ModelSerializer):
-    mode_types = GenericModeGroupSerializer(many=True)
-
     class Meta:
-        fields = ('id', 'size', 'pscale', 'name', 'code', 'fixed_overhead_per_exposure',
-                  'front_padding', 'config_change_time', 'acquire_exposure_time',
-                  'mode_types', 'default_acceptability_threshold', 'pixels_x', 'pixels_y',
-                  'max_rois', 'allow_self_guiding', 'configuration_types')
+        fields = ('id', 'size', 'pscale', 'name', 'code', 'pixels_x', 'pixels_y', 'max_rois')
         model = CameraType
 
 
@@ -118,8 +113,6 @@ class InstrumentTypeSerializer(serializers.ModelSerializer):
 
 
 class InstrumentSerializer(serializers.ModelSerializer):
-    science_camera = CameraSerializer(read_only=True)
-    science_camera_id = serializers.IntegerField(write_only=True)
     autoguider_camera = CameraSerializer(read_only=True)
     autoguider_camera_id = serializers.IntegerField(write_only=True)
     telescope = serializers.HyperlinkedRelatedField(view_name='telescope-detail', read_only=True)
@@ -132,7 +125,7 @@ class InstrumentSerializer(serializers.ModelSerializer):
     state = StateField()
 
     class Meta:
-        fields = ('id', 'code', 'state', 'telescope', 'science_camera', 'science_camera_id', 'autoguider_camera_id',
+        fields = ('id', 'code', 'state', 'telescope', 'autoguider_camera_id',
                   'telescope_id', 'autoguider_camera', 'science_cameras', 'science_cameras_ids', 'instrument_type',
                   'instrument_type_id', '__str__')
         model = Instrument

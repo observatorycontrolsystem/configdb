@@ -22,8 +22,8 @@ class SimpleHardwareTest(TestCase):
         self.instrument_type = mixer.blend(InstrumentType)
         self.camera_type.save()
         self.camera = mixer.blend(Camera, camera_type=self.camera_type)
-        self.instrument = mixer.blend(Instrument, science_camera=self.camera, autoguider_camera=self.camera,
-                                      telescope=self.telescope, instrument_type=self.instrument_type, science_cameras=[self.camera])
+        self.instrument = mixer.blend(Instrument, autoguider_camera=self.camera, telescope=self.telescope, 
+                                      instrument_type=self.instrument_type, science_cameras=[self.camera])
 
     def test_homepage(self):
         response = self.client.get('/')
@@ -40,7 +40,7 @@ class SimpleHardwareTest(TestCase):
 
     def test_write_instrument(self):
         instrument = {
-            'code': 'TST-INST-01', 'science_camera_id': self.camera.pk, 'state': 'DISABLED',
+            'code': 'TST-INST-01', 'state': 'DISABLED',
             'science_cameras_ids': [self.camera.pk], 'autoguider_camera_id': self.camera.pk,
             'telescope_id': self.telescope.pk, 'instrument_type_id': self.instrument_type.pk
         }
@@ -48,7 +48,7 @@ class SimpleHardwareTest(TestCase):
         self.client.post('/instruments/', instrument)
 
         saved_instrument = Instrument.objects.get(code=instrument['code'])
-        self.assertEqual(saved_instrument.science_camera.code, self.camera.code)
+        self.assertEqual(saved_instrument.science_cameras.all()[0].code, self.camera.code)
         self.assertEqual(saved_instrument.instrument_type.code, self.instrument_type.code)
         self.assertEqual(saved_instrument.telescope.code, self.telescope.code)
 

@@ -101,16 +101,9 @@ class CameraType(BaseModel):
     code = models.CharField(max_length=200)
     size = models.CharField(max_length=200)
     pscale = models.FloatField()
-    fixed_overhead_per_exposure = models.FloatField(default=1)
-    front_padding = models.FloatField(default=90)
-    config_change_time = models.FloatField(default=0)
-    acquire_exposure_time = models.FloatField(default=0)
-    configuration_types = ArrayField(models.CharField(max_length=20), default=list, blank=True)
     pixels_x = models.IntegerField(default=0)
     pixels_y = models.IntegerField(default=0)
     max_rois = models.IntegerField(default=0)
-    default_acceptability_threshold = models.FloatField(default=90.0)
-    allow_self_guiding = models.BooleanField(default=True, blank=True)
 
     def __str__(self):
         return self.code
@@ -151,14 +144,13 @@ class GenericMode(BaseModel):
 
 
 class GenericModeGroup(BaseModel):
-    camera_type = models.ForeignKey(CameraType, related_name='mode_types', on_delete=models.CASCADE)
     instrument_type = models.ForeignKey(InstrumentType, related_name='mode_types', null=True, on_delete=models.CASCADE)
     default = models.ForeignKey(GenericMode, related_name='default', null=True, blank=True, on_delete=models.PROTECT)
     type = models.ForeignKey(ModeType, null=True, on_delete=models.PROTECT)
     modes = models.ManyToManyField(GenericMode)
 
     class Meta:
-        unique_together = ['camera_type', 'type']
+        unique_together = ['instrument_type', 'type']
         # TODO:: the unique_together should change to this in later versions of django
         # constraints = [
         #     models.constraints.UniqueConstraint(fields=['camera_type', 'type'], name='unique_mode_group')
@@ -215,10 +207,9 @@ class Instrument(BaseModel):
     code = models.CharField(max_length=200, default='', blank=True, help_text='Name of the instrument')
     state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED, help_text=state_help_text)
     telescope = models.ForeignKey(Telescope, on_delete=models.CASCADE)
-    science_camera = models.ForeignKey(Camera, on_delete=models.CASCADE, related_name='science_camera_for')
     science_cameras = models.ManyToManyField(Camera)
     autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for', on_delete=models.CASCADE)
     autoguider_type = models.CharField(max_length=200, choices=AUTOGUIDER_TYPES, default="OffAxis")
 
     def __str__(self):
-        return '{0}.{1}-{2}'.format(self.telescope, self.science_camera, self.autoguider_camera)
+        return '{0}.{1}'.format(self.telescope, self.code)
