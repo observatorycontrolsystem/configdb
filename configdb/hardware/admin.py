@@ -12,7 +12,7 @@ from reversion.errors import RegistrationError
 
 from configdb.hardware.models import (
     Site, Enclosure, GenericMode, ModeType, GenericModeGroup, Telescope, Instrument, Camera, CameraType,
-    OpticalElementGroup, OpticalElement
+    OpticalElementGroup, OpticalElement, InstrumentType
 )
 
 
@@ -95,6 +95,12 @@ class CameraAdmin(HardwareAdmin):
     form = CameraAdminForm
     list_display = ('code', 'camera_type')
     search_fields = ('code',)
+
+
+@admin.register(InstrumentType)
+class InstrumentTypeAdmin(HardwareAdmin):
+    list_display = ('name', 'code', 'allow_self_guiding')
+    search_fields = ('name',)
 
 
 @admin.register(CameraType)

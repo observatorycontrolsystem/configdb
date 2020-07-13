@@ -116,6 +116,21 @@ class CameraType(BaseModel):
         return self.code
 
 
+class InstrumentType(BaseModel):
+    name = models.CharField(max_length=200)
+    code = models.CharField(max_length=200, unique=True)
+    fixed_overhead_per_exposure = models.FloatField(default=1)
+    front_padding = models.FloatField(default=90)
+    config_change_time = models.FloatField(default=0)
+    acquire_exposure_time = models.FloatField(default=0)
+    configuration_types = ArrayField(models.CharField(max_length=20), default=list, blank=True)
+    default_acceptability_threshold = models.FloatField(default=90.0)
+    allow_self_guiding = models.BooleanField(default=True, blank=True)
+
+    def __str__(self):
+        return self.code
+
+
 class ModeType(BaseModel):
     id = models.CharField(max_length=200, primary_key=True)
 
@@ -137,6 +152,7 @@ class GenericMode(BaseModel):
 
 class GenericModeGroup(BaseModel):
     camera_type = models.ForeignKey(CameraType, related_name='mode_types', on_delete=models.CASCADE)
+    instrument_type = models.ForeignKey(InstrumentType, related_name='mode_types', null=True, on_delete=models.CASCADE)
     default = models.ForeignKey(GenericMode, related_name='default', null=True, blank=True, on_delete=models.PROTECT)
     type = models.ForeignKey(ModeType, null=True, on_delete=models.PROTECT)
     modes = models.ManyToManyField(GenericMode)
@@ -195,10 +211,12 @@ class Instrument(BaseModel):
     <li>STANDBY - The instrument has been commissioned and is ready to be switched into SCHEDULABLE when needed.</li>
     <li>SCHEDULABLE - The instrument is part of the network and is ready for normal operations</li></ul></div>
     """
+    instrument_type = models.ForeignKey(InstrumentType, null=True, on_delete=models.CASCADE)
     code = models.CharField(max_length=200, default='', blank=True, help_text='Name of the instrument')
     state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED, help_text=state_help_text)
     telescope = models.ForeignKey(Telescope, on_delete=models.CASCADE)
-    science_camera = models.ForeignKey(Camera, on_delete=models.CASCADE)
+    science_camera = models.ForeignKey(Camera, on_delete=models.CASCADE, related_name='science_camera_for')
+    science_cameras = models.ManyToManyField(Camera)
     autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for', on_delete=models.CASCADE)
     autoguider_type = models.CharField(max_length=200, choices=AUTOGUIDER_TYPES, default="OffAxis")
 
