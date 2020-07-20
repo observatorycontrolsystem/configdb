@@ -86,10 +86,10 @@ class TelescopeAdmin(HardwareAdmin):
 
 @admin.register(Instrument)
 class InstrumentAdmin(HardwareAdmin):
-    list_display = ('__str__', 'state', 'telescope', 'code', 'instrument_type', 'get_science_camera_codes', 'autoguider_camera')
+    list_display = ('__str__', 'state', 'telescope', 'code', 'instrument_type', 'science_camera_codes', 'autoguider_camera')
     list_filter = ('telescope__enclosure__site__code', 'state')
 
-    def get_science_camera_codes(self, obj):
+    def science_camera_codes(self, obj):
         return ','.join([science_camera.code for science_camera in obj.science_cameras.all()])
 
 @admin.register(Camera)
