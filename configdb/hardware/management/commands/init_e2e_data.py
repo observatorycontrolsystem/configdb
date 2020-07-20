@@ -75,7 +75,7 @@ class Command(BaseCommand):
         camera.optical_element_groups.add(optical_element_group)
         camera.save()
 
-        instrument, _ = Instrument.objects.get_or_create(code=ins, telescope=telescope, autoguider_camera=camera, 
+        instrument, _ = Instrument.objects.get_or_create(code=ins, telescope=telescope, autoguider_camera=camera,
                                                          instrument_type=instrument_type)
         instrument.science_cameras.add(camera)
         instrument.state = Instrument.MANUAL
