@@ -15,16 +15,8 @@ class FilterableViewSet(viewsets.ModelViewSet):
 
 class SiteViewSet(FilterableViewSet):
     queryset = Site.objects.all().prefetch_related(
-        'enclosure_set__telescope_set__instrument_set__science_camera__camera_type__mode_types',
-        'enclosure_set__telescope_set__instrument_set__autoguider_camera__camera_type__mode_types',
-        'enclosure_set__telescope_set__instrument_set__science_camera__camera_type__mode_types__modes',
-        'enclosure_set__telescope_set__instrument_set__autoguider_camera__camera_type__mode_types__modes',
-        'enclosure_set__telescope_set__instrument_set__science_camera__optical_element_groups',
         'enclosure_set__telescope_set__instrument_set__autoguider_camera__optical_element_groups',
-        'enclosure_set__telescope_set__instrument_set__science_camera__optical_element_groups__optical_elements',
         'enclosure_set__telescope_set__instrument_set__autoguider_camera__optical_element_groups__optical_elements',
-        'enclosure_set__telescope_set__instrument_set__science_cameras__camera_type__mode_types',
-        'enclosure_set__telescope_set__instrument_set__science_cameras__camera_type__mode_types__modes',
         'enclosure_set__telescope_set__instrument_set__science_cameras__optical_element_groups',
         'enclosure_set__telescope_set__instrument_set__science_cameras__optical_element_groups__optical_elements',
         'enclosure_set__telescope_set__instrument_set__instrument_type__mode_types',
@@ -36,16 +28,8 @@ class SiteViewSet(FilterableViewSet):
 
 class EnclosureViewSet(FilterableViewSet):
     queryset = Enclosure.objects.all().select_related('site').prefetch_related(
-        'telescope_set__instrument_set__science_camera__camera_type__mode_types',
-        'telescope_set__instrument_set__autoguider_camera__camera_type__mode_types',
-        'telescope_set__instrument_set__science_camera__camera_type__mode_types__modes',
-        'telescope_set__instrument_set__autoguider_camera__camera_type__mode_types__modes',
-        'telescope_set__instrument_set__science_camera__optical_element_groups',
         'telescope_set__instrument_set__autoguider_camera__optical_element_groups',
-        'telescope_set__instrument_set__science_camera__optical_element_groups__optical_elements',
         'telescope_set__instrument_set__autoguider_camera__optical_element_groups__optical_elements',
-        'telescope_set__instrument_set__science_cameras__camera_type__mode_types',
-        'telescope_set__instrument_set__science_cameras__camera_type__mode_types__modes',
         'telescope_set__instrument_set__science_cameras__optical_element_groups',
         'telescope_set__instrument_set__science_cameras__optical_element_groups__optical_elements',
         'telescope_set__instrument_set__instrument_type__mode_types',
@@ -58,16 +42,8 @@ class EnclosureViewSet(FilterableViewSet):
 
 class TelescopeViewSet(FilterableViewSet):
     queryset = Telescope.objects.all().select_related('enclosure__site').prefetch_related(
-        'instrument_set__science_camera__camera_type__mode_types',
-        'instrument_set__autoguider_camera__camera_type__mode_types',
-        'instrument_set__science_camera__camera_type__mode_types__modes',
-        'instrument_set__autoguider_camera__camera_type__mode_types__modes',
-        'instrument_set__science_camera__optical_element_groups',
         'instrument_set__autoguider_camera__optical_element_groups',
-        'instrument_set__science_camera__optical_element_groups__optical_elements',
         'instrument_set__autoguider_camera__optical_element_groups__optical_elements',
-        'instrument_set__science_cameras__camera_type__mode_types',
-        'instrument_set__science_cameras__camera_type__mode_types__modes',
         'instrument_set__science_cameras__optical_element_groups',
         'instrument_set__science_cameras__optical_element_groups__optical_elements',
         'instrument_set__instrument_type__mode_types',
@@ -82,7 +58,7 @@ class InstrumentFilter(django_filters.rest_framework.FilterSet):
     ''' Filter class used to specify a filterable attribute in the cameratype of science camera in this instrument.
         The added attribute to filter on is juse camera_type, which maps to the camera->camera_type->name parameter.
     '''
-    camera_type = django_filters.CharFilter(field_name="science_camera__camera_type__code")
+    camera_type = django_filters.CharFilter(field_name="science_cameras__camera_type__code")
     instrument_type = django_filters.CharFilter(field_name="instrument_type__code")
     telescope = django_filters.CharFilter(field_name="telescope__code")
     enclosure = django_filters.CharFilter(field_name="telescope__enclosure__code")
@@ -91,7 +67,7 @@ class InstrumentFilter(django_filters.rest_framework.FilterSet):
 
     class Meta:
         model = Instrument
-        fields = ['telescope', 'science_camera', 'science_cameras', 'autoguider_camera', 'instrument_type',
+        fields = ['telescope', 'science_cameras', 'autoguider_camera', 'instrument_type',
                   'camera_type', 'site', 'telescope', 'enclosure', 'state']
 
     def state_filter(self, queryset, name, value):
@@ -105,16 +81,8 @@ class InstrumentFilter(django_filters.rest_framework.FilterSet):
 
 class InstrumentViewSet(FilterableViewSet):
     queryset = Instrument.objects.all().select_related('telescope__enclosure__site', 'instrument_type').prefetch_related(
-        'science_camera__camera_type__mode_types',
-        'autoguider_camera__camera_type__mode_types',
-        'science_camera__camera_type__mode_types__modes',
-        'autoguider_camera__camera_type__mode_types__modes',
-        'science_camera__optical_element_groups',
         'autoguider_camera__optical_element_groups',
-        'science_camera__optical_element_groups__optical_elements',
         'autoguider_camera__optical_element_groups__optical_elements',
-        'science_cameras__camera_type__mode_types',
-        'science_cameras__camera_type__mode_types__modes',
         'science_cameras__optical_element_groups',
         'science_cameras__optical_element_groups__optical_elements',
         'instrument_type__mode_types',
@@ -139,8 +107,6 @@ class InstrumentTypeViewSet(FilterableViewSet):
 
 class CameraViewSet(FilterableViewSet):
     queryset = Camera.objects.all().select_related('camera_type').prefetch_related(
-        'camera_type__mode_types',
-        'camera_type__mode_types__modes',
         'optical_element_groups',
         'optical_element_groups__optical_elements'
     )

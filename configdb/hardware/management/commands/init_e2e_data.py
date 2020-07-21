@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 
 from configdb.hardware.models import (
     Site, Enclosure, Telescope, Instrument, Camera, CameraType, GenericMode, GenericModeGroup,
-    OpticalElement, OpticalElementGroup, ModeType
+    OpticalElement, OpticalElementGroup, ModeType, InstrumentType
 )
 
 logger = logging.getLogger()
@@ -45,16 +45,19 @@ class Command(BaseCommand):
 
         camera_type, _ = CameraType.objects.get_or_create(name='1M0-SCICAM-SINISTRO', code='1M0-SCICAM-SINISTRO',
                                                        defaults={'pscale': 0, 'size': '0x0'})
-        camera_type.configuration_types = ['EXPOSE', 'BIAS', 'DARK', 'AUTO_FOCUS', 'SCRIPT', 'STANDARD']
         camera_type.save()
 
-        # Now set up the modes for the camera_type
+        instrument_type, _ = InstrumentType.objects.get_or_create(name='1M0-SCICAM-SINISTRO', code='1M0-SCICAM-SINISTRO')
+        instrument_type.configuration_types = ['EXPOSE', 'BIAS', 'DARK', 'AUTO_FOCUS', 'SCRIPT', 'STANDARD']
+        instrument_type.save()
+
+        # Now set up the modes for the instrument_type
         readout_mode_type, _ = ModeType.objects.get_or_create(id='readout')
         readout_mode, _ = GenericMode.objects.get_or_create(code='default',
             defaults={'name': 'Sinistro Readout Mode', 'overhead': 0,
                       'validation_schema': {"binning": {"type": "integer", "allowed": [1], "default": 1}}}
         )
-        readout_mode_group, _ = GenericModeGroup.objects.get_or_create(camera_type=camera_type, type=readout_mode_type,
+        readout_mode_group, _ = GenericModeGroup.objects.get_or_create(instrument_type=instrument_type, type=readout_mode_type,
                                                                        default=readout_mode)
         readout_mode_group.modes.add(readout_mode)
         readout_mode_group.save()
@@ -72,8 +75,9 @@ class Command(BaseCommand):
         camera.optical_element_groups.add(optical_element_group)
         camera.save()
 
-        instrument, _ = Instrument.objects.get_or_create(code=ins, telescope=telescope, science_camera=camera,
-                                                         autoguider_camera=camera)
+        instrument, _ = Instrument.objects.get_or_create(code=ins, telescope=telescope, autoguider_camera=camera,
+                                                         instrument_type=instrument_type)
+        instrument.science_cameras.add(camera)
         instrument.state = Instrument.MANUAL
         instrument.save()
 

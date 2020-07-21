@@ -86,9 +86,11 @@ class TelescopeAdmin(HardwareAdmin):
 
 @admin.register(Instrument)
 class InstrumentAdmin(HardwareAdmin):
-    list_display = ('__str__', 'state', 'telescope', 'code', 'science_camera', 'autoguider_camera')
+    list_display = ('__str__', 'state', 'telescope', 'code', 'instrument_type', 'science_camera_codes', 'autoguider_camera')
     list_filter = ('telescope__enclosure__site__code', 'state')
 
+    def science_camera_codes(self, obj):
+        return ','.join([science_camera.code for science_camera in obj.science_cameras.all()])
 
 @admin.register(Camera)
 class CameraAdmin(HardwareAdmin):
@@ -105,16 +107,16 @@ class InstrumentTypeAdmin(HardwareAdmin):
 
 @admin.register(CameraType)
 class CameraTypeAdmin(HardwareAdmin):
-    list_display = ('name', 'size', 'pscale', 'allow_self_guiding')
+    list_display = ('name', 'size', 'pscale')
     search_fields = ('name',)
 
 
 @admin.register(GenericModeGroup)
 class GenericModeGroupAdmin(HardwareAdmin):
     form = GenericModeGroupAdminForm
-    list_display = ('camera_type', 'type', 'default', '__str__')
-    search_fields = ('camera_type', 'type')
-    list_filter = ('type', 'camera_type')
+    list_display = ('instrument_type', 'type', 'default', '__str__')
+    search_fields = ('instrument_type', 'type')
+    list_filter = ('type', 'instrument_type')
 
 
 @admin.register(GenericMode)

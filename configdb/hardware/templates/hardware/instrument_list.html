@@ -19,6 +19,7 @@
   <table class="table table-striped" id="instruments">
     <thead>
       <tr>
+      <th>Instrument Code</th>
       <th>State</th>
       <th>SciCam Codes</th>
       <th>Instrument Type</th>
@@ -31,6 +32,7 @@
     <tbody>
     {% for instrument in object_list %}
       <tr>
+        <td><a href="{% url 'instrument-detail' pk=instrument.pk %}">{{ instrument.code }}</a></td>
         <td>{{ instrument.get_state_display }}</td>
         <td>
           {% for science_camera in instrument.science_cameras.all %}

@@ -5,7 +5,8 @@ from django.test import Client
 from django.contrib.auth.models import User
 from mixer.backend.django import mixer
 
-from .models import Site, Instrument, Enclosure, Telescope, Camera, CameraType, InstrumentType
+from .models import (Site, Instrument, Enclosure, Telescope, Camera, CameraType, InstrumentType,
+                     GenericMode, GenericModeGroup, ModeType, OpticalElement, OpticalElementGroup)
 from .serializers import GenericModeSerializer
 
 
@@ -22,8 +23,8 @@ class SimpleHardwareTest(TestCase):
         self.instrument_type = mixer.blend(InstrumentType)
         self.camera_type.save()
         self.camera = mixer.blend(Camera, camera_type=self.camera_type)
-        self.instrument = mixer.blend(Instrument, science_camera=self.camera, autoguider_camera=self.camera,
-                                      telescope=self.telescope, instrument_type=self.instrument_type, science_cameras=[self.camera])
+        self.instrument = mixer.blend(Instrument, autoguider_camera=self.camera, telescope=self.telescope,
+                                      instrument_type=self.instrument_type, science_cameras=[self.camera])
 
     def test_homepage(self):
         response = self.client.get('/')
@@ -40,7 +41,7 @@ class SimpleHardwareTest(TestCase):
 
     def test_write_instrument(self):
         instrument = {
-            'code': 'TST-INST-01', 'science_camera_id': self.camera.pk, 'state': 'DISABLED',
+            'code': 'TST-INST-01', 'state': 'DISABLED',
             'science_cameras_ids': [self.camera.pk], 'autoguider_camera_id': self.camera.pk,
             'telescope_id': self.telescope.pk, 'instrument_type_id': self.instrument_type.pk
         }
@@ -48,7 +49,7 @@ class SimpleHardwareTest(TestCase):
         self.client.post('/instruments/', instrument)
 
         saved_instrument = Instrument.objects.get(code=instrument['code'])
-        self.assertEqual(saved_instrument.science_camera.code, self.camera.code)
+        self.assertEqual(saved_instrument.science_cameras.all()[0].code, self.camera.code)
         self.assertEqual(saved_instrument.instrument_type.code, self.instrument_type.code)
         self.assertEqual(saved_instrument.telescope.code, self.telescope.code)
 
@@ -66,3 +67,19 @@ class SimpleHardwareTest(TestCase):
         gms = GenericModeSerializer(data=bad_generic_mode_data)
         self.assertFalse(gms.is_valid())
         self.assertIn('SchemaError', gms.errors.get('validation_schema')[0])
+
+    def test_mode_group_str(self):
+        mode_type = mixer.blend(ModeType, id='type1')
+        self.assertEqual(str(mode_type), 'type1')
+        mode1 = mixer.blend(GenericMode, code='mode1', name='MyMode')
+        mode2 = mixer.blend(GenericMode, code='mode2')
+        self.assertEqual(str(mode1), 'mode1: MyMode')
+        mode_group = mixer.blend(GenericModeGroup, type=mode_type, modes=[mode1, mode2])
+        self.assertEqual(str(mode_group), 'mode1,mode2')
+
+    def test_optical_elements_str(self):
+        oe1 = mixer.blend(OpticalElement, code='oe1')
+        oe2 = mixer.blend(OpticalElement, code='oe2')
+        self.assertEqual(str(oe1), 'oe1')
+        oeg = mixer.blend(OpticalElementGroup, type='oeg_type', name='oeg_name', optical_elements=[oe1, oe2])
+        self.assertEqual(str(oeg), 'oeg_name - oeg_type: oe1,oe2')
