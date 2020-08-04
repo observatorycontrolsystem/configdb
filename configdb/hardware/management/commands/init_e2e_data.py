@@ -24,8 +24,10 @@ class Command(BaseCommand):
                             help='Site latitude in degrees')
         parser.add_argument('--longitude', required=True, type=float,
                             help='Site longitude in degrees')
+        parser.add_argument('--instrument-state', dest='instrument_state', type=str, default='MANUAL',
+                            help='Instrument State to use (defaults to MANUAL)')
 
-    def add_telescope(self, site, longitude, latitude, obs, tel, ins):
+    def add_telescope(self, site, longitude, latitude, obs, tel, ins, ins_state):
 
         site, _ = Site.objects.get_or_create(code=site, defaults={'elevation': 0, 'timezone': 0})
         site.lat = latitude
@@ -78,14 +80,23 @@ class Command(BaseCommand):
         instrument, _ = Instrument.objects.get_or_create(code=ins, telescope=telescope, autoguider_camera=camera,
                                                          instrument_type=instrument_type)
         instrument.science_cameras.add(camera)
-        instrument.state = Instrument.MANUAL
+        instrument.state = ins_state
         instrument.save()
 
     def handle(self, *args, **options):
+        if options['instrument_state'] not in dict(Instrument.STATE_CHOICES).values():
+            logger.warning(f"Invalid instrument state {options['instrument_state']}.")
+            sys.exit(1)
+        else:
+            for key, val in dict(Instrument.STATE_CHOICES).items():
+                if options['instrument_state'] == val:
+                    ins_state = key
+                    break
+
         longitude = options['longitude']
         latitude = options['latitude']
         site_str = options['site']
-        self.add_telescope(site=site_str, longitude=longitude, latitude=latitude, obs="doma", tel="1m0a", ins="xx04")
-        self.add_telescope(site=site_str, longitude=longitude, latitude=latitude, obs="clma", tel="2m0a", ins="xx05")
+        self.add_telescope(site=site_str, longitude=longitude, latitude=latitude, obs="doma", tel="1m0a", ins="xx04", ins_state=ins_state)
+        self.add_telescope(site=site_str, longitude=longitude, latitude=latitude, obs="clma", tel="2m0a", ins="xx05", ins_state=ins_state)
         
         sys.exit(0)
