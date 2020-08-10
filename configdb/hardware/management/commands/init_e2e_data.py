@@ -57,12 +57,37 @@ class Command(BaseCommand):
         readout_mode_type, _ = ModeType.objects.get_or_create(id='readout')
         readout_mode, _ = GenericMode.objects.get_or_create(code='default',
             defaults={'name': 'Sinistro Readout Mode', 'overhead': 0,
-                      'validation_schema': {"binning": {"type": "integer", "allowed": [1], "default": 1}}}
+                      'validation_schema': {"bin_x": {"type": "integer", "allowed": [1], "default": 1},
+                                            "bin_y": {"type": "integer", "allowed": [1], "default": 1}}
+                     }
         )
+
         readout_mode_group, _ = GenericModeGroup.objects.get_or_create(instrument_type=instrument_type, type=readout_mode_type,
                                                                        default=readout_mode)
         readout_mode_group.modes.add(readout_mode)
         readout_mode_group.save()
+
+        guide_mode_type, _ = ModeType.objects.get_or_create(id='guiding')
+        guide_mode_off, _ = GenericMode.objects.get_or_create(code='OFF',
+            defaults={'name': 'Guide OFF', 'overhead': 0, 'validation_schema': {}}
+        )
+        guide_mode_on, _ = GenericMode.objects.get_or_create(code='ON',
+            defaults={'name': 'Guide ON', 'overhead': 5, 'validation_schema': {}}
+        )
+        guide_mode_group, _ = GenericModeGroup.objects.get_or_create(instrument_type=instrument_type, type=guide_mode_type,
+                                                                       default=guide_mode_off)
+        guide_mode_group.modes.add(guide_mode_off)
+        guide_mode_group.modes.add(guide_mode_on)
+        guide_mode_group.save()
+
+        acquire_mode_type, _ = ModeType.objects.get_or_create(id='acquisition')
+        acquire_mode_off, _ = GenericMode.objects.get_or_create(code='OFF',
+            defaults={'name': 'Acquire OFF', 'overhead': 0, 'validation_schema': {}}
+        )
+        acquire_mode_group, _ = GenericModeGroup.objects.get_or_create(instrument_type=instrument_type, type=acquire_mode_type,
+                                                                       default=acquire_mode_off)
+        acquire_mode_group.modes.add(acquire_mode_off)
+        acquire_mode_group.save()
 
         # Now set up the camera
         camera, _ = Camera.objects.get_or_create(code='xx04', camera_type=camera_type)
