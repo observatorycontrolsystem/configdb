@@ -123,5 +123,5 @@ class Command(BaseCommand):
         site_str = options['site']
         self.add_telescope(site=site_str, longitude=longitude, latitude=latitude, obs="doma", tel="1m0a", ins="xx04", ins_state=ins_state)
         self.add_telescope(site=site_str, longitude=longitude, latitude=latitude, obs="clma", tel="2m0a", ins="xx05", ins_state=ins_state)
-        
+
         sys.exit(0)
