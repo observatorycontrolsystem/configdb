@@ -18,19 +18,19 @@ The application requires a PostgreSQL database backend because it uses JSONField
 
 This project is configured using environment variables.
 
-| Variable             | Description                                                                        | Default                      |
-| -------------------- | ---------------------------------------------------------------------------------- | ---------------------------- |
-| `SECRET_KEY`      | Django Secret Key                                                                  | `### CHANGE ME ###`          |
-| `DEBUG`         | Enable Django debugging features                                                                   | `False`          |
-| `DB_ENGINE`          | Database Engine, set to `django.db.backends.postgresql` to use PostgreSQL | `django.db.backends.postgresql` |
-| `DB_NAME`            | Database Name                                                                      | `configdb`                 |
-| `DB_HOST`            | Database Hostname, set this when using PostgreSQL                                  | `127.0.0.1`                |
-| `DB_USER`            | Database Username, set this when using PostgreSQL                                  | `postgres`               |
-| `DB_PASS`            | Database Password, set this when using PostgreSQL                                  |  `postgres`               |
-| `DB_PORT`            | Database Port, set this when using PostgreSQL                                      | `5432`                       |
-| `OAUTH_CLIENT_ID`            | Application client_id in the Observation Portal app                                   | `### CHANGE ME ###`                       |
-| `OAUTH_CLIENT_SECRET`            | Application client_secret in the Observation Portal app                                      | `### CHANGE ME ###`                       |
-| `OAUTH_TOKEN_URL`            | Observation Portal app                                      | `https://observation-portal-base-url/o/token/`                       |
+| Variable              | Description                                                                        | Default                         |
+| --------------------- | ---------------------------------------------------------------------------------- | ------------------------------- |
+| `SECRET_KEY`          | Django Secret Key, must be set                                                     | `### CHANGE ME ###`             |
+| `DEBUG`               | Enable Django debugging features, set to `True` for local development              | `False`                         |
+| `DB_ENGINE`           | Database Engine, set to `django.db.backends.postgresql` to use PostgreSQL          | `django.db.backends.postgresql` |
+| `DB_NAME`             | Database Name                                                                      | `configdb`                      |
+| `DB_HOST`             | Database Hostname, set this when using PostgreSQL                                  | `127.0.0.1`                     |
+| `DB_USER`             | Database Username, set this when using PostgreSQL                                  | `postgres`                      |
+| `DB_PASS`             | Database Password, set this when using PostgreSQL                                  | `postgres`                      |
+| `DB_PORT`             | Database Port, set this when using PostgreSQL                                      | `5432`                          |
+| `OAUTH_CLIENT_ID`     | OAuth2 application client_id, set this to use OAuth2 authentication                | `""`                            |
+| `OAUTH_CLIENT_SECRET` | OAuth2 application client_secret, set this to use OAuth2 authentication            | `""`                            |
+| `OAUTH_TOKEN_URL`     | OAuth2 token URL, set this to use OAuth2 authentication                            | `""`                            |
 
 ## Local Development
 
@@ -65,7 +65,12 @@ Run database migrations to set up the tables in the database.
 The application should now be accessible from <http://127.0.0.1:8000>!
 
 ### Authentication
-The application connects to a running Observation Portal for oauth2 authentication to access the admin interface. Staff accounts should have access to the admin interface. If no Observation Portal is connected during development, creating a local superuser account should work to access the admin interface as well:
+The application connects to a running Observation Portal for OAuth2 authentication. Staff accounts should have
+access to the admin interface. Remember to set the appropriate environment variables - the token url
+will be the `/o/token/` endpoint of the Observation Portal you are connecting to.
+
+If no Observation Portal is connected during development, creating a local superuser account should work to
+access the admin interface as well:
 
     (env) python manage.py createsuperuser
 
