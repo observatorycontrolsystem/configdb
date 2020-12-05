@@ -20,7 +20,7 @@ This project is configured using environment variables.
 
 | Variable              | Description                                                                        | Default                         |
 | --------------------- | ---------------------------------------------------------------------------------- | ------------------------------- |
-| `SECRET_KEY`          | Django Secret Key, must be set                                                     | `### CHANGE ME ###`             |
+| `SECRET_KEY`          | Django Secret Key, this value must be set to run the app                           | `None`                          |
 | `DEBUG`               | Enable Django debugging features, set to `True` for local development              | `False`                         |
 | `DB_ENGINE`           | Database Engine, set to `django.db.backends.postgresql` to use PostgreSQL          | `django.db.backends.postgresql` |
 | `DB_NAME`             | Database Name                                                                      | `configdb`                      |
