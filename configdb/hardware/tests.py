@@ -1,4 +1,5 @@
 import json
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.test import Client
@@ -8,6 +9,29 @@ from mixer.backend.django import mixer
 from .models import (Site, Instrument, Enclosure, Telescope, Camera, CameraType, InstrumentType,
                      GenericMode, GenericModeGroup, ModeType, OpticalElement, OpticalElementGroup)
 from .serializers import GenericModeSerializer
+
+
+@patch('configdb.auth_backends.requests.post')
+class TestOauth2Login(TestCase):
+    def test_log_in(self, mock_post):
+        mock_post.return_value.status_code = 200
+        with self.settings(OAUTH_TOKEN_URL='localhost'):
+            logged_in = self.client.login(username='bob', password='bobspass')
+            self.assertTrue(logged_in)
+            self.assertEqual(User.objects.filter(username='bob').count(), 1)
+
+    def test_incorrect_login_credentials_fails(self, mock_post):
+        mock_post.return_value.status_code = 403
+        with self.settings(OAUTH_TOKEN_URL='localhost'):
+            logged_in = self.client.login(username='bob', password='notbobspass')
+            self.assertFalse(logged_in)
+            self.assertEqual(User.objects.filter(username='bob').count(), 0)
+
+    def test_log_in_with_no_oauth_url_set_fails(self, mock_post):
+        with self.settings(OAUTH_TOKEN_URL=''):
+            logged_in = self.client.login(username='bob', password='bobspass')
+            self.assertFalse(logged_in)
+            self.assertEqual(User.objects.filter(username='bob').count(), 0)
 
 
 class SimpleHardwareTest(TestCase):
