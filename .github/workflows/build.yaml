@@ -14,6 +14,20 @@ jobs:
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
     - name: Check out repository
       uses: actions/checkout@v2
@@ -28,6 +42,12 @@ jobs:
         pip install -r requirements.txt
     - name: Run tests
       run: coverage run manage.py test
+      env:
+        SECRET_KEY: test_secret_key
+        DB_USER: postgres
+        DB_PASS: postgres
+        DB_HOST: localhost
+        DB_PORT: 5432
     - name: Coveralls report
       run: coveralls --service=github
       env:
