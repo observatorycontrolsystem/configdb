@@ -1,6 +1,6 @@
 # Observatory Configuration
 
-[![Build Status](https://travis-ci.com/observatorycontrolsystem/configdb.svg?branch=master)](https://travis-ci.com/observatorycontrolsystem/configdb)
+![Build](https://github.com/observatorycontrolsystem/configdb/workflows/Build/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/observatorycontrolsystem/configdb/badge.svg)](https://coveralls.io/github/observatorycontrolsystem/configdb)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/dda63ab6370247a68aa78e0e186f819d)](https://www.codacy.com/gh/observatorycontrolsystem/configdb?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=observatorycontrolsystem/configdb&amp;utm_campaign=Badge_Grade)
 
