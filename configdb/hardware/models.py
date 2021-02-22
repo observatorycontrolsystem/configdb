@@ -119,6 +119,9 @@ class InstrumentType(BaseModel):
     configuration_types = ArrayField(models.CharField(max_length=20), default=list, blank=True)
     default_acceptability_threshold = models.FloatField(default=90.0)
     allow_self_guiding = models.BooleanField(default=True, blank=True)
+    validation_schema = JSONField(default=dict, blank=True,
+                                  help_text='Cerberus styled validation schema used to validate instrument configs using this instrument type'
+                                  )
 
     def __str__(self):
         return self.code

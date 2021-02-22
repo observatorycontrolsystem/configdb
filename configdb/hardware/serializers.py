@@ -108,7 +108,7 @@ class InstrumentTypeSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'code', 'fixed_overhead_per_exposure',
                   'front_padding', 'config_change_time', 'acquire_exposure_time',
                   'mode_types', 'default_acceptability_threshold',
-                  'allow_self_guiding', 'configuration_types')
+                  'allow_self_guiding', 'configuration_types', 'validation_schema')
         model = InstrumentType
 
 
