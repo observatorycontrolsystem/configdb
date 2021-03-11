@@ -8,7 +8,7 @@ from mixer.backend.django import mixer
 
 from .models import (Site, Instrument, Enclosure, Telescope, Camera, CameraType, InstrumentType,
                      GenericMode, GenericModeGroup, ModeType, OpticalElement, OpticalElementGroup)
-from .serializers import GenericModeSerializer
+from .serializers import GenericModeSerializer, InstrumentTypeSerializer
 
 
 @patch('configdb.auth_backends.requests.post')
@@ -68,6 +68,14 @@ class SimpleHardwareTest(TestCase):
         saved_site = Site.objects.get(code=site['code'])
         self.assertEqual(saved_site.name, site['name'])
 
+    def test_write_instrument_type(self):
+        good_instrument_type = {'name': 'Instrument Type', 'code': 'inst1'}
+        self.client.login(username='tst_user', password='tst_pass')
+        result = self.client.post('/instrumenttypes/', good_instrument_type)
+        self.assertEqual(result.status_code, 201)
+        saved_instrument_type = InstrumentType.objects.get(code=good_instrument_type['code'])
+        self.assertEqual(saved_instrument_type.name, good_instrument_type['name'])
+
     def test_write_instrument(self):
         instrument = {
             'code': 'TST-INST-01', 'state': 'DISABLED',
@@ -91,11 +99,17 @@ class SimpleHardwareTest(TestCase):
         self.instrument.refresh_from_db()
         self.assertEqual(self.instrument.state, Instrument.MANUAL)
 
-    def test_reject_invalid_cerberus_schema(self):
+    def test_reject_invalid_cerberus_schema_generic_mode(self):
         bad_generic_mode_data = {'name': 'Readout Mode', 'overhead': 10.0, 'code': 'readout_mode_1', 'validation_schema': {'test': 'invalid'}}
         gms = GenericModeSerializer(data=bad_generic_mode_data)
         self.assertFalse(gms.is_valid())
         self.assertIn('SchemaError', gms.errors.get('validation_schema')[0])
+
+    def test_reject_invalid_cerberus_schema_instrument_type(self):
+        bad_instrument_type = {'name': 'Instrument Type', 'code': 'inst1', 'validation_schema': {'test': 'invalid'}}
+        its = InstrumentTypeSerializer(data=bad_instrument_type)
+        self.assertFalse(its.is_valid())
+        self.assertIn('SchemaError', its.errors.get('validation_schema')[0])
 
     def test_mode_group_str(self):
         mode_type = mixer.blend(ModeType, id='type1')

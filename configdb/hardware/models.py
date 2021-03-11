@@ -72,7 +72,10 @@ class Telescope(BaseModel):
 class OpticalElement(BaseModel):
     name = models.CharField(max_length=200)
     code = models.CharField(max_length=200, unique=True)
-    schedulable = models.BooleanField(default=True)
+    schedulable = models.BooleanField(
+        default=True,
+        help_text='Whether this optical element should be usable by scheduled observations, or only via direct submission.'
+    )
 
     def __str__(self):
         return self.code
@@ -108,16 +111,65 @@ class CameraType(BaseModel):
     def __str__(self):
         return self.code
 
+class ConfigurationType(BaseModel):
+    code = models.CharField(max_length=64, primary_key=True)
+    name = models.CharField(max_length=200)
+    schedulable = models.BooleanField(
+        default=True,
+        help_text='Whether this configuration type should be usable by scheduled observations, or only via direct submission.'
+    )
+    config_change_overhead = models.FloatField(
+        default=0,
+        help_text='Time necessary for switching to this configuration type from a different configuration type during an '
+                  'observation, like going between a Spectrum and a Lamp Flat for example. This could account for starting up '
+                  'a lamp.'
+    )
+
+    def __str__(self):
+        return self.code
+
+class InstrumentCategory(BaseModel):
+    code = models.CharField(max_length=64, primary_key=True)
+
+    def __str__(self):
+        return self.code
 
 class InstrumentType(BaseModel):
     name = models.CharField(max_length=200)
     code = models.CharField(max_length=200, unique=True)
-    fixed_overhead_per_exposure = models.FloatField(default=1)
-    front_padding = models.FloatField(default=90)
-    config_change_time = models.FloatField(default=0)
-    acquire_exposure_time = models.FloatField(default=0)
-    configuration_types = ArrayField(models.CharField(max_length=20), default=list, blank=True)
-    default_acceptability_threshold = models.FloatField(default=90.0)
+    instrument_category = models.ForeignKey(
+        InstrumentCategory, on_delete=models.PROTECT, null=True,
+        help_text='The category of this instrument type, like IMAGE or SPECTRO. '
+    )
+    fixed_overhead_per_exposure = models.FloatField(
+        default=1,
+        help_text='A per exposure overhead to be applied. This accounts for any per exposure '
+                  'setup or delays found in the camera or instrument control software.'
+    )
+    observation_front_padding = models.FloatField(
+        default=90,
+        help_text='Setup time for taking on observation on this instrument, applied '
+                  'once per observation. This is for tasks like slewing and instrument configuration.'
+    )
+    config_front_padding = models.FloatField(
+        default=0,
+        help_text='Setup time for each configuration of an observation on this instrument. '
+                  'This is for things like configuration specific setup time.'
+    )
+    acquire_exposure_time = models.FloatField(
+        default=0,
+        help_text='The default exposure time to use for acquisition exposures with this instrument type.'
+    )
+    configuration_types = models.ManyToManyField(
+        ConfigurationType, related_name='instrument_types',
+        help_text='The set of configuration types available for use with this instrument type.'
+    )
+    default_acceptability_threshold = models.FloatField(
+        default=90.0,
+        help_text='The default acceptability threshold to use for Requests submitted on this instrument type. '
+                  'Acceptability threshold is the minimum percentage of data an Observation must take before '
+                  'causing its Request to be counted as complete.'
+    )
     allow_self_guiding = models.BooleanField(default=True, blank=True)
     validation_schema = JSONField(default=dict, blank=True,
                                   help_text='Cerberus styled validation schema used to validate instrument configs using this instrument type'
@@ -137,7 +189,15 @@ class ModeType(BaseModel):
 class GenericMode(BaseModel):
     name = models.CharField(max_length=200)
     code = models.CharField(max_length=200)
-    overhead = models.FloatField()
+    overhead = models.FloatField(
+        help_text='Overhead associated with the generic mode. Where this overhead is applied depends on what type '
+                  'of generic mode this is for. For example, a readout mode is applied per exposure, while an acquisition '
+                  'overhead is applied for the acquisition step at the beginning of an observation.'
+    )
+    schedulable = models.BooleanField(
+        default=True,
+        help_text='Whether this mode should be usable by scheduled observations, or only via direct submission.'
+    )
     validation_schema = JSONField(default=dict, blank=True,
         help_text='A cerberus styled validation schema that will be used to validate the structure this mode applies to'
     )

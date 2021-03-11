@@ -5,7 +5,7 @@ from cerberus import Validator
 
 from .models import (
     Site, Enclosure, Telescope, OpticalElement, GenericMode, Instrument, Camera, OpticalElementGroup,
-    CameraType, GenericModeGroup, InstrumentType
+    CameraType, GenericModeGroup, InstrumentType, ConfigurationType
 )
 
 
@@ -54,7 +54,7 @@ class GenericModeSerializer(serializers.ModelSerializer):
     validation_schema = serializers.JSONField()
 
     class Meta:
-        fields = ('name', 'overhead', 'code', 'validation_schema')
+        fields = ('name', 'overhead', 'code', 'schedulable', 'validation_schema')
         model = GenericMode
 
     def validate_validation_schema(self, value):
@@ -63,7 +63,7 @@ class GenericModeSerializer(serializers.ModelSerializer):
         except Exception as e:
             raise serializers.ValidationError(f"Invalid cerberus validation_schema: {repr(e)}")
 
-        return json.dumps(value)
+        return value
 
 
 class GenericModeGroupSerializer(serializers.ModelSerializer):
@@ -101,15 +101,30 @@ class CameraSerializer(serializers.ModelSerializer):
         model = Camera
 
 
+class ConfigurationTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('name', 'code', 'config_change_overhead', 'schedulable')
+        model = ConfigurationType
+
+
 class InstrumentTypeSerializer(serializers.ModelSerializer):
-    mode_types = GenericModeGroupSerializer(many=True)
+    mode_types = GenericModeGroupSerializer(many=True, required=False)
+    configuration_types = ConfigurationTypeSerializer(many=True, required=False)
 
     class Meta:
-        fields = ('id', 'name', 'code', 'fixed_overhead_per_exposure',
-                  'front_padding', 'config_change_time', 'acquire_exposure_time',
-                  'mode_types', 'default_acceptability_threshold',
+        fields = ('id', 'name', 'code', 'fixed_overhead_per_exposure', 'instrument_category',
+                  'observation_front_padding', 'acquire_exposure_time',
+                  'mode_types', 'default_acceptability_threshold', 'config_front_padding',
                   'allow_self_guiding', 'configuration_types', 'validation_schema')
         model = InstrumentType
+
+    def validate_validation_schema(self, value):
+        try:
+            Validator(value)
+        except Exception as e:
+            raise serializers.ValidationError(f"Invalid cerberus validation_schema: {repr(e)}")
+
+        return value
 
 
 class InstrumentSerializer(serializers.ModelSerializer):

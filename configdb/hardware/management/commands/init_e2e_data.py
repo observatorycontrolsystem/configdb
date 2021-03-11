@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 
 from configdb.hardware.models import (
     Site, Enclosure, Telescope, Instrument, Camera, CameraType, GenericMode, GenericModeGroup,
-    OpticalElement, OpticalElementGroup, ModeType, InstrumentType
+    OpticalElement, OpticalElementGroup, ModeType, InstrumentType, InstrumentCategory, ConfigurationType
 )
 
 logger = logging.getLogger()
@@ -26,6 +26,21 @@ class Command(BaseCommand):
                             help='Site longitude in degrees')
         parser.add_argument('--instrument-state', dest='instrument_state', type=str, default='MANUAL',
                             help='Instrument State to use (defaults to MANUAL)')
+
+    def add_configuration_types(self, instrument_type):
+        expose_config_type, _ = ConfigurationType.objects.get_or_create(code='EXPOSE', name='Expose', schedulable=True)
+        autofocus_config_type, _ = ConfigurationType.objects.get_or_create(code='AUTO_FOCUS', name='Auto Focus', schedulable=True)
+        standard_config_type, _ = ConfigurationType.objects.get_or_create(code='STANDARD', name='Standard', schedulable=True)
+        script_config_type, _ = ConfigurationType.objects.get_or_create(code='SCRIPT', name='Script', schedulable=True)
+        bias_config_type, _ = ConfigurationType.objects.get_or_create(code='BIAS', name='Bias', schedulable=False)
+        dark_config_type, _ = ConfigurationType.objects.get_or_create(code='DARK', name='Dark', schedulable=False)
+        instrument_type.configuration_types.add(expose_config_type)
+        instrument_type.configuration_types.add(autofocus_config_type)
+        instrument_type.configuration_types.add(standard_config_type)
+        instrument_type.configuration_types.add(script_config_type)
+        instrument_type.configuration_types.add(bias_config_type)
+        instrument_type.configuration_types.add(dark_config_type)
+        instrument_type.save()
 
     def add_telescope(self, site, longitude, latitude, obs, tel, ins, ins_state):
 
@@ -49,9 +64,12 @@ class Command(BaseCommand):
                                                        defaults={'pscale': 0, 'size': '0x0'})
         camera_type.save()
 
-        instrument_type, _ = InstrumentType.objects.get_or_create(name='1M0-SCICAM-SINISTRO', code='1M0-SCICAM-SINISTRO')
-        instrument_type.configuration_types = ['EXPOSE', 'BIAS', 'DARK', 'AUTO_FOCUS', 'SCRIPT', 'STANDARD']
-        instrument_type.save()
+        imager_category, _ = InstrumentCategory.objects.get_or_create(code='IMAGE')
+        InstrumentCategory.objects.get_or_create(code='SPECTRO')
+
+        instrument_type, _ = InstrumentType.objects.get_or_create(name='1M0-SCICAM-SINISTRO', code='1M0-SCICAM-SINISTRO',
+                                                                  instrument_category=imager_category)
+        self.add_configuration_types(instrument_type)
 
         # Now set up the modes for the instrument_type
         readout_mode_type, _ = ModeType.objects.get_or_create(id='readout')
