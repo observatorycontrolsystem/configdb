@@ -1,7 +1,7 @@
 import datetime
 
 from django.db import models
-from django.contrib.postgres.fields import JSONField, ArrayField
+from django.contrib.postgres.fields import JSONField
 
 
 class BaseModel(models.Model):
