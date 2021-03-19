@@ -29,11 +29,12 @@ class Command(BaseCommand):
 
     def add_configuration_types(self, instrument_type):
         expose_config_type, _ = ConfigurationType.objects.get_or_create(code='EXPOSE', name='Expose', schedulable=True)
+        repeat_expose_config_type, _ = ConfigurationType.objects.get_or_create(code='REPEAT_EXPOSE', name='Repeat Expose', schedulable=True)
         autofocus_config_type, _ = ConfigurationType.objects.get_or_create(code='AUTO_FOCUS', name='Auto Focus', schedulable=True)
-        standard_config_type, _ = ConfigurationType.objects.get_or_create(code='STANDARD', name='Standard', schedulable=True)
+        standard_config_type, _ = ConfigurationType.objects.get_or_create(code='STANDARD', name='Standard', requires_optical_elements=False, schedulable=True)
         script_config_type, _ = ConfigurationType.objects.get_or_create(code='SCRIPT', name='Script', schedulable=True)
-        bias_config_type, _ = ConfigurationType.objects.get_or_create(code='BIAS', name='Bias', schedulable=False)
-        dark_config_type, _ = ConfigurationType.objects.get_or_create(code='DARK', name='Dark', schedulable=False)
+        bias_config_type, _ = ConfigurationType.objects.get_or_create(code='BIAS', name='Bias', requires_optical_elements=False, schedulable=False)
+        dark_config_type, _ = ConfigurationType.objects.get_or_create(code='DARK', name='Dark', requires_optical_elements=False, schedulable=False)
         instrument_type.configuration_types.add(expose_config_type)
         instrument_type.configuration_types.add(autofocus_config_type)
         instrument_type.configuration_types.add(standard_config_type)
@@ -42,32 +43,16 @@ class Command(BaseCommand):
         instrument_type.configuration_types.add(dark_config_type)
         instrument_type.save()
 
-    def add_telescope(self, site, longitude, latitude, obs, tel, ins, ins_state):
-
-        site, _ = Site.objects.get_or_create(code=site, defaults={'elevation': 0, 'timezone': 0})
-        site.lat = latitude
-        site.long = longitude
-        site.elevation = 0
-        site.active = True
-        site.timezone = 0
-        site.save()
-
-        enclosure, _ = Enclosure.objects.get_or_create(code=obs, site=site)
-        enclosure.active = True
-        enclosure.save()
-
-        telescope, _ = Telescope.objects.get_or_create(code=tel, enclosure=enclosure,
-                                                       defaults={'lat': latitude, 'long': longitude, 'horizon': 15,
-                                                                 'ha_limit_pos': 4.6, 'ha_limit_neg': -4.6})
-
-        camera_type, _ = CameraType.objects.get_or_create(name='1M0-SCICAM-SINISTRO', code='1M0-SCICAM-SINISTRO',
+    def add_instrument(self, telescope, ins, ins_state):
+        instrument_type_code = f"{telescope.code[:3].upper()}-SCICAM-SINISTRO"
+        camera_type, _ = CameraType.objects.get_or_create(name=instrument_type_code, code=instrument_type_code,
                                                        defaults={'pscale': 0, 'size': '0x0'})
         camera_type.save()
 
         imager_category, _ = InstrumentCategory.objects.get_or_create(code='IMAGE')
         InstrumentCategory.objects.get_or_create(code='SPECTRO')
 
-        instrument_type, _ = InstrumentType.objects.get_or_create(name='1M0-SCICAM-SINISTRO', code='1M0-SCICAM-SINISTRO',
+        instrument_type, _ = InstrumentType.objects.get_or_create(name=instrument_type_code, code=instrument_type_code,
                                                                   instrument_category=imager_category)
         self.add_configuration_types(instrument_type)
 
@@ -125,6 +110,26 @@ class Command(BaseCommand):
         instrument.science_cameras.add(camera)
         instrument.state = ins_state
         instrument.save()
+
+    def add_telescope(self, site, longitude, latitude, obs, tel, ins, ins_state):
+
+        site, _ = Site.objects.get_or_create(code=site, defaults={'elevation': 0, 'timezone': 0})
+        site.lat = latitude
+        site.long = longitude
+        site.elevation = 0
+        site.active = True
+        site.timezone = 0
+        site.save()
+
+        enclosure, _ = Enclosure.objects.get_or_create(code=obs, site=site)
+        enclosure.active = True
+        enclosure.save()
+
+        telescope, _ = Telescope.objects.get_or_create(code=tel, enclosure=enclosure,
+                                                       defaults={'lat': latitude, 'long': longitude, 'horizon': 15,
+                                                                 'ha_limit_pos': 4.6, 'ha_limit_neg': -4.6})
+        self.add_instrument(telescope, ins, ins_state)
+
 
     def handle(self, *args, **options):
         if options['instrument_state'] not in dict(Instrument.STATE_CHOICES).values():

@@ -2,6 +2,8 @@
 
 from django.db import migrations
 
+TYPES_WITH_ACQUISITION_OFF = ['LAMP_FLAT', 'ARC', 'AUTO_FOCUS', 'NRES_BIAS', 'NRES_DARK', 'BIAS', 'DARK', 'SCRIPT']
+TYPES_WITHOUT_OPTICAL_ELEMENTS = ['BIAS', 'DARK', 'SCRIPT']
 
 def forward(apps, schema_editor):
     # Fill in the configuration_type_links from the existing configuration_types in each instrument_type
@@ -14,7 +16,9 @@ def forward(apps, schema_editor):
         for configuration_type in instrument_type.configuration_types:
             config_type_model = ConfigurationType.objects.get_or_create(
                 code=configuration_type,
-                name=configuration_type
+                name=configuration_type,
+                requires_optical_elements=configuration_type not in TYPES_WITHOUT_OPTICAL_ELEMENTS,
+                force_acquisition_off=configuration_type in TYPES_WITH_ACQUISITION_OFF
             )
             instrument_type.configuration_type_links.add(config_type_model)
         instrument_type.save()

@@ -101,7 +101,7 @@ class CameraSerializer(serializers.ModelSerializer):
 
 class ConfigurationTypeSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('name', 'code', 'config_change_overhead', 'schedulable')
+        fields = ('name', 'code', 'config_change_overhead', 'schedulable', 'force_acquisition_off', 'requires_optical_elements')
         model = ConfigurationType
 
 

@@ -17,6 +17,8 @@ class Migration(migrations.Migration):
                 ('modified', models.DateTimeField(auto_now=True)),
                 ('code', models.CharField(max_length=64, primary_key=True, serialize=False)),
                 ('name', models.CharField(max_length=200)),
+                ('force_acquisition_off', models.BooleanField(default=False, help_text='If True, this configuration type will force the acquisition mode to be OFF. Certain configuration types will not need acquisition, such as Biases, Darks, and potentially Lamp Flats and Arcs')),
+                ('requires_optical_elements', models.BooleanField(default=True, help_text='Whether this configuration type requires optical path elements to be set. Some types like Biases and Darks typically do not need these set, so this value should be false for those types.')),
                 ('schedulable', models.BooleanField(default=True, help_text='Whether this configuration type should be usable by scheduled observations, or only via direct submission.')),
                 ('config_change_overhead', models.FloatField(default=0, help_text='Time necessary for switching to this configuration type from a different configuration type during an observation, like going between a Spectrum and a Lamp Flat for example. This could account for starting up a lamp.')),
             ],

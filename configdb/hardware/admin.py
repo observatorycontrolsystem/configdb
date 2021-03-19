@@ -95,7 +95,7 @@ class InstrumentCategoryAdmin(HardwareAdmin):
 
 @admin.register(ConfigurationType)
 class ConfigurationTypeAdmin(HardwareAdmin):
-    list_display = ('code', 'schedulable', 'config_change_overhead')
+    list_display = ('code', 'schedulable', 'config_change_overhead', 'force_acquisition_off', 'requires_optical_elements')
     list_filter = ('schedulable',)
 
 
