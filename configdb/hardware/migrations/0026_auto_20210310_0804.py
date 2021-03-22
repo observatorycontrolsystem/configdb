@@ -15,11 +15,11 @@ def forward(apps, schema_editor):
     for instrument_type in instrument_types:
         # for each configuration_type, create a ConfigurationType and add it to configuration_type_links
         for configuration_type in instrument_type.configuration_types:
-            config_type_model = ConfigurationType.objects.get_or_create(
+            config_type_model, _ = ConfigurationType.objects.get_or_create(
                 code=configuration_type,
                 name=configuration_type
             )
-            config_type_properties = ConfigurationTypeProperties.get_or_create(
+            ConfigurationTypeProperties.get_or_create(
                 configuration_type=config_type_model,
                 instrument_type=instrument_type,
                 requires_optical_elements=configuration_type not in TYPES_WITHOUT_OPTICAL_ELEMENTS,
