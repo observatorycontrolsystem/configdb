@@ -13,7 +13,7 @@ from cerberus import Validator
 
 from configdb.hardware.models import (
     Site, Enclosure, GenericMode, ModeType, GenericModeGroup, Telescope, Instrument, Camera, CameraType,
-    OpticalElementGroup, OpticalElement, InstrumentType, InstrumentCategory, ConfigurationType
+    OpticalElementGroup, OpticalElement, InstrumentType, InstrumentCategory, ConfigurationType, ConfigurationTypeProperties
 )
 
 
@@ -95,8 +95,14 @@ class InstrumentCategoryAdmin(HardwareAdmin):
 
 @admin.register(ConfigurationType)
 class ConfigurationTypeAdmin(HardwareAdmin):
-    list_display = ('code', 'schedulable', 'config_change_overhead', 'force_acquisition_off', 'requires_optical_elements')
-    list_filter = ('schedulable',)
+    list_display = ('code',)
+
+
+@admin.register(ConfigurationTypeProperties)
+class ConfigurationTypePropertiesAdmin(HardwareAdmin):
+    list_display = ('configuration_type', 'instrument_type', 'schedulable', 'config_change_overhead', 'force_acquisition_off', 'requires_optical_elements')
+    list_filter = ('schedulable', 'configuration_type__code', 'instrument_type__code')
+    search_fields = ['configuration_type__code', 'instrument_type__code']
 
 
 @admin.register(Site)

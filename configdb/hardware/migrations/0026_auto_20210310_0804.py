@@ -9,6 +9,7 @@ def forward(apps, schema_editor):
     # Fill in the configuration_type_links from the existing configuration_types in each instrument_type
     InstrumentType = apps.get_model('hardware', 'InstrumentType')
     ConfigurationType = apps.get_model('hardware', 'ConfigurationType')
+    ConfigurationTypeProperties = apps.get_model('hardware', 'ConfigurationTypeProperties')
 
     instrument_types = InstrumentType.objects.all()
     for instrument_type in instrument_types:
@@ -16,12 +17,14 @@ def forward(apps, schema_editor):
         for configuration_type in instrument_type.configuration_types:
             config_type_model = ConfigurationType.objects.get_or_create(
                 code=configuration_type,
-                name=configuration_type,
+                name=configuration_type
+            )
+            config_type_properties = ConfigurationTypeProperties.get_or_create(
+                configuration_type=config_type_model,
+                instrument_type=instrument_type,
                 requires_optical_elements=configuration_type not in TYPES_WITHOUT_OPTICAL_ELEMENTS,
                 force_acquisition_off=configuration_type in TYPES_WITH_ACQUISITION_OFF
             )
-            instrument_type.configuration_type_links.add(config_type_model)
-        instrument_type.save()
 
 
 class Migration(migrations.Migration):

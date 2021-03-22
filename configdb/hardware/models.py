@@ -111,38 +111,21 @@ class CameraType(BaseModel):
     def __str__(self):
         return self.code
 
+
 class ConfigurationType(BaseModel):
     code = models.CharField(max_length=64, primary_key=True)
     name = models.CharField(max_length=200)
-    force_acquisition_off = models.BooleanField(
-        default=False,
-        help_text='If True, this configuration type will force the acquisition mode to be OFF. Certain configuration types '
-                  'will not need acquisition, such as Biases, Darks, and potentially Lamp Flats and Arcs'
-    )
-    requires_optical_elements = models.BooleanField(
-        default=True,
-        help_text='Whether this configuration type requires optical path elements to be set. Some types like Biases and Darks '
-                  'typically do not need these set, so this value should be false for those types.'
-    )
-    schedulable = models.BooleanField(
-        default=True,
-        help_text='Whether this configuration type should be usable by scheduled observations, or only via direct submission.'
-    )
-    config_change_overhead = models.FloatField(
-        default=0,
-        help_text='Time necessary for switching to this configuration type from a different configuration type during an '
-                  'observation, like going between a Spectrum and a Lamp Flat for example. This could account for starting up '
-                  'a lamp.'
-    )
 
     def __str__(self):
         return self.code
+
 
 class InstrumentCategory(BaseModel):
     code = models.CharField(max_length=64, primary_key=True)
 
     def __str__(self):
         return self.code
+
 
 class InstrumentType(BaseModel):
     name = models.CharField(max_length=200)
@@ -171,7 +154,7 @@ class InstrumentType(BaseModel):
         help_text='The default exposure time to use for acquisition exposures with this instrument type.'
     )
     configuration_types = models.ManyToManyField(
-        ConfigurationType, related_name='instrument_types',
+        ConfigurationType, through='ConfigurationTypeProperties',
         help_text='The set of configuration types available for use with this instrument type.'
     )
     default_acceptability_threshold = models.FloatField(
@@ -187,6 +170,37 @@ class InstrumentType(BaseModel):
 
     def __str__(self):
         return self.code
+
+
+class ConfigurationTypeProperties(BaseModel):
+    configuration_type = models.ForeignKey(ConfigurationType, on_delete=models.CASCADE)
+    instrument_type = models.ForeignKey(InstrumentType, on_delete=models.CASCADE)
+    force_acquisition_off = models.BooleanField(
+        default=False,
+        help_text='If True, this configuration type will force the acquisition mode to be OFF. Certain configuration types '
+                  'will not need acquisition, such as Biases, Darks, and potentially Lamp Flats and Arcs'
+    )
+    requires_optical_elements = models.BooleanField(
+        default=True,
+        help_text='Whether this configuration type requires optical path elements to be set. Some types like Biases and Darks '
+                  'typically do not need these set, so this value should be false for those types.'
+    )
+    schedulable = models.BooleanField(
+        default=True,
+        help_text='Whether this configuration type should be usable by scheduled observations, or only via direct submission.'
+    )
+    config_change_overhead = models.FloatField(
+        default=0,
+        help_text='Time necessary for switching to this configuration type from a different configuration type during an '
+                  'observation, like going between a Spectrum and a Lamp Flat for example. This could account for starting up '
+                  'a lamp.'
+    )
+
+    class Meta:
+        unique_together = ('instrument_type', 'configuration_type')
+
+    def __str__(self):
+        return f"{self.instrument_type.code}-{self.configuration_type.code}"
 
 
 class ModeType(BaseModel):

@@ -5,7 +5,8 @@ from django.core.management.base import BaseCommand
 
 from configdb.hardware.models import (
     Site, Enclosure, Telescope, Instrument, Camera, CameraType, GenericMode, GenericModeGroup,
-    OpticalElement, OpticalElementGroup, ModeType, InstrumentType, InstrumentCategory, ConfigurationType
+    OpticalElement, OpticalElementGroup, ModeType, InstrumentType, InstrumentCategory,
+    ConfigurationType, ConfigurationTypeProperties
 )
 
 logger = logging.getLogger()
@@ -28,20 +29,21 @@ class Command(BaseCommand):
                             help='Instrument State to use (defaults to MANUAL)')
 
     def add_configuration_types(self, instrument_type):
-        expose_config_type, _ = ConfigurationType.objects.get_or_create(code='EXPOSE', name='Expose', schedulable=True)
-        repeat_expose_config_type, _ = ConfigurationType.objects.get_or_create(code='REPEAT_EXPOSE', name='Repeat Expose', schedulable=True)
-        autofocus_config_type, _ = ConfigurationType.objects.get_or_create(code='AUTO_FOCUS', name='Auto Focus', schedulable=True)
-        standard_config_type, _ = ConfigurationType.objects.get_or_create(code='STANDARD', name='Standard', requires_optical_elements=False, schedulable=True)
-        script_config_type, _ = ConfigurationType.objects.get_or_create(code='SCRIPT', name='Script', schedulable=True)
-        bias_config_type, _ = ConfigurationType.objects.get_or_create(code='BIAS', name='Bias', requires_optical_elements=False, schedulable=False)
-        dark_config_type, _ = ConfigurationType.objects.get_or_create(code='DARK', name='Dark', requires_optical_elements=False, schedulable=False)
-        instrument_type.configuration_types.add(expose_config_type)
-        instrument_type.configuration_types.add(autofocus_config_type)
-        instrument_type.configuration_types.add(standard_config_type)
-        instrument_type.configuration_types.add(script_config_type)
-        instrument_type.configuration_types.add(bias_config_type)
-        instrument_type.configuration_types.add(dark_config_type)
-        instrument_type.save()
+        expose_config_type, _ = ConfigurationType.objects.get_or_create(code='EXPOSE', name='Expose')
+        repeat_expose_config_type, _ = ConfigurationType.objects.get_or_create(code='REPEAT_EXPOSE', name='Repeat Expose')
+        autofocus_config_type, _ = ConfigurationType.objects.get_or_create(code='AUTO_FOCUS', name='Auto Focus')
+        standard_config_type, _ = ConfigurationType.objects.get_or_create(code='STANDARD', name='Standard')
+        script_config_type, _ = ConfigurationType.objects.get_or_create(code='SCRIPT', name='Script')
+        bias_config_type, _ = ConfigurationType.objects.get_or_create(code='BIAS', name='Bias')
+        dark_config_type, _ = ConfigurationType.objects.get_or_create(code='DARK', name='Dark')
+
+        ConfigurationTypeProperties.objects.get_or_create(configuration_type=expose_config_type, instrument_type=instrument_type, schedulable=True)
+        ConfigurationTypeProperties.objects.get_or_create(configuration_type=repeat_expose_config_type, instrument_type=instrument_type, schedulable=True)
+        ConfigurationTypeProperties.objects.get_or_create(configuration_type=autofocus_config_type, instrument_type=instrument_type, schedulable=True)
+        ConfigurationTypeProperties.objects.get_or_create(configuration_type=script_config_type, instrument_type=instrument_type, schedulable=True)
+        ConfigurationTypeProperties.objects.get_or_create(configuration_type=standard_config_type, instrument_type=instrument_type, requires_optical_elements=False, schedulable=True)
+        ConfigurationTypeProperties.objects.get_or_create(configuration_type=bias_config_type, instrument_type=instrument_type, requires_optical_elements=False, schedulable=False)
+        ConfigurationTypeProperties.objects.get_or_create(configuration_type=dark_config_type, instrument_type=instrument_type, requires_optical_elements=False, schedulable=False)
 
     def add_instrument(self, telescope, ins, ins_state):
         instrument_type_code = f"{telescope.code[:3].upper()}-SCICAM-SINISTRO"

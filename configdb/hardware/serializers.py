@@ -3,7 +3,7 @@ from cerberus import Validator
 
 from .models import (
     Site, Enclosure, Telescope, OpticalElement, GenericMode, Instrument, Camera, OpticalElementGroup,
-    CameraType, GenericModeGroup, InstrumentType, ConfigurationType
+    CameraType, GenericModeGroup, InstrumentType, ConfigurationTypeProperties
 )
 
 
@@ -99,15 +99,18 @@ class CameraSerializer(serializers.ModelSerializer):
         model = Camera
 
 
-class ConfigurationTypeSerializer(serializers.ModelSerializer):
+class ConfigurationTypePropertiesSerializer(serializers.ModelSerializer):
+    name = serializers.ReadOnlyField(source='configuration_type.name')
+    code = serializers.ReadOnlyField(source='configuration_type.code')
+
     class Meta:
         fields = ('name', 'code', 'config_change_overhead', 'schedulable', 'force_acquisition_off', 'requires_optical_elements')
-        model = ConfigurationType
+        model = ConfigurationTypeProperties
 
 
 class InstrumentTypeSerializer(serializers.ModelSerializer):
     mode_types = GenericModeGroupSerializer(many=True, required=False)
-    configuration_types = ConfigurationTypeSerializer(many=True, required=False)
+    configuration_types = ConfigurationTypePropertiesSerializer(source='configurationtypeproperties_set', many=True, required=False, read_only=True)
 
     class Meta:
         fields = ('id', 'name', 'code', 'fixed_overhead_per_exposure', 'instrument_category',
