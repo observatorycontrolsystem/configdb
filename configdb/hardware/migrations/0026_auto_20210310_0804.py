@@ -19,7 +19,7 @@ def forward(apps, schema_editor):
                 code=configuration_type,
                 name=configuration_type
             )
-            ConfigurationTypeProperties.get_or_create(
+            ConfigurationTypeProperties.objects.get_or_create(
                 configuration_type=config_type_model,
                 instrument_type=instrument_type,
                 requires_optical_elements=configuration_type not in TYPES_WITHOUT_OPTICAL_ELEMENTS,
