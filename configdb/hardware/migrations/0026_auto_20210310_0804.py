@@ -16,7 +16,7 @@ def forward(apps, schema_editor):
     if InstrumentType.objects.count() > 0:
         InstrumentCategory = apps.get_model('hardware', 'InstrumentCategory')
         image_category, _ = InstrumentCategory.objects.get_or_create(code='IMAGE')
-        spectra_category, _ = InstrumentCategory.objects.get_or_create(code='IMAGE')
+        spectra_category, _ = InstrumentCategory.objects.get_or_create(code='SPECTRA')
 
     instrument_types = InstrumentType.objects.all()
     for instrument_type in instrument_types:
