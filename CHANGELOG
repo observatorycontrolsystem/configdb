@@ -1,3 +1,8 @@
+2.1.0
+2021-03-25
+Create ConfigurationType and InstrumentCategory models and move some properties around
+Add schedulable bool to GenericModes and ConfigurationTypes
+
 2.0.6
 2021-02-22
 Add validation_schema field to InstrumentType to be used when validating requests
