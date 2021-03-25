@@ -9,10 +9,11 @@ from django.core.exceptions import ValidationError
 from reversion.models import Version
 from reversion.admin import VersionAdmin
 from reversion.errors import RegistrationError
+from cerberus import Validator
 
 from configdb.hardware.models import (
     Site, Enclosure, GenericMode, ModeType, GenericModeGroup, Telescope, Instrument, Camera, CameraType,
-    OpticalElementGroup, OpticalElement, InstrumentType
+    OpticalElementGroup, OpticalElement, InstrumentType, InstrumentCategory, ConfigurationType, ConfigurationTypeProperties
 )
 
 
@@ -27,6 +28,15 @@ class GenericModeGroupAdminForm(forms.ModelForm):
         if existing:
             self.fields['default'].queryset = self.instance.modes.all()
 
+    def clean(self):
+        if 'validation_schema' in self.cleaned_data:
+            try:
+                Validator(self.cleaned_data['validation_schema'])
+            except Exception as e:
+                raise ValidationError(f"Invalid cerberus validation_schema: {repr(e)}")
+
+        return self.cleaned_data
+
 
 class OpticalElementGroupAdminForm(forms.ModelForm):
     class Meta:
@@ -38,6 +48,21 @@ class OpticalElementGroupAdminForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if existing:
             self.fields['default'].queryset = self.instance.optical_elements.all()
+
+
+class InstrumentTypeAdminForm(forms.ModelForm):
+    class Meta:
+        model = InstrumentType
+        fields = '__all__'
+
+    def clean(self):
+        if 'validation_schema' in self.cleaned_data:
+            try:
+                Validator(self.cleaned_data['validation_schema'])
+            except Exception as e:
+                raise ValidationError(f"Invalid cerberus validation_schema: {repr(e)}")
+
+        return self.cleaned_data
 
 
 class CameraAdminForm(forms.ModelForm):
@@ -61,6 +86,23 @@ class HardwareAdmin(VersionAdmin):
 @admin.register(ModeType)
 class ModeTypeAdmin(HardwareAdmin):
     list_display = ('id',)
+
+
+@admin.register(InstrumentCategory)
+class InstrumentCategoryAdmin(HardwareAdmin):
+    list_display = ('code',)
+
+
+@admin.register(ConfigurationType)
+class ConfigurationTypeAdmin(HardwareAdmin):
+    list_display = ('code',)
+
+
+@admin.register(ConfigurationTypeProperties)
+class ConfigurationTypePropertiesAdmin(HardwareAdmin):
+    list_display = ('configuration_type', 'instrument_type', 'schedulable', 'config_change_overhead', 'force_acquisition_off', 'requires_optical_elements')
+    list_filter = ('schedulable', 'configuration_type__code', 'instrument_type__code')
+    search_fields = ['configuration_type__code', 'instrument_type__code']
 
 
 @admin.register(Site)
@@ -101,8 +143,10 @@ class CameraAdmin(HardwareAdmin):
 
 @admin.register(InstrumentType)
 class InstrumentTypeAdmin(HardwareAdmin):
-    list_display = ('name', 'code', 'allow_self_guiding')
+    form = InstrumentTypeAdminForm
+    list_display = ('name', 'code', 'instrument_category', 'allow_self_guiding')
     search_fields = ('name',)
+    list_filter = ('instrument_category', 'allow_self_guiding')
 
 
 @admin.register(CameraType)
@@ -121,7 +165,7 @@ class GenericModeGroupAdmin(HardwareAdmin):
 
 @admin.register(GenericMode)
 class GenericModeAdmin(HardwareAdmin):
-    list_display = ('name', 'code', 'overhead')
+    list_display = ('name', 'code', 'overhead', 'schedulable')
     search_fields = ('name', 'code')
 
 
