@@ -102,7 +102,7 @@ class CameraTypeViewSet(FilterableViewSet):
 class InstrumentTypeViewSet(FilterableViewSet):
     queryset = InstrumentType.objects.all()
     serializer_class = serializers.InstrumentTypeSerializer
-    filter_fields = ('name',)
+    filter_fields = ('name', 'code', 'instrument_category')
 
 
 class CameraViewSet(FilterableViewSet):
@@ -134,3 +134,4 @@ class GenericModeGroupViewSet(FilterableViewSet):
 class GenericModeViewSet(FilterableViewSet):
     queryset = GenericMode.objects.all()
     serializer_class = serializers.GenericModeSerializer
+    filter_fields = ('name', 'code', 'schedulable')
