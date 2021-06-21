@@ -20,7 +20,7 @@ jobs:
       run: |
         python manage.py generateschema --file configdb.yaml --generator_class=configdb.hardware.urls.ConfigDBSchemaGenerator
         npx redoc-cli bundle configdb.yaml
-        mkdir docs; mv redoc-static.html docs/downtime.html
+        mkdir docs; mv redoc-static.html docs/configdb.html
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3 # https://github.com/peaceiris/actions-gh-pages
       with:
