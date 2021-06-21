@@ -1,0 +1,33 @@
+
+name: Build docs
+# TODO: Change this to only push on tag on the main branch
+on:
+  push:
+    branches:
+      - feature/openapi-doc
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Build docs
+      run: |
+        python manage.py generateschema --file configdb.yaml --generator_class=configdb.hardware.urls.ConfigDBSchemaGenerator
+        npx redoc-cli bundle configdb.yaml
+        mkdir docs; mv redoc-static.html docs/downtime.html
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3 # https://github.com/peaceiris/actions-gh-pages
+      with:
+        personal_token: ${{ secrets.PERSONAL_TOKEN }}
+        # TODO: point this to  observatorycontrolsystem/observatorycontrolsystem.github.io (main branch)
+        external_repository: mgdaily/ocs-gh-pages
+        publish_dir: docs
+        destination_dir: docs
+        enable_jekyll: true
+        publish_branch: main
+        keep_files: true
+        exclude_assets: '.github,openapi,.redocly.yaml,LICENSE,README.md,make.sh'
