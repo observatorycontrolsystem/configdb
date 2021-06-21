@@ -12,6 +12,7 @@ RESTful API as well as HTML views of the data. This is used by other application
 -   Python>=3.6
 -   PostgreSQL
 
+
 The application requires a PostgreSQL database backend because it uses JSONFields in the model.
 
 ## Configuration
