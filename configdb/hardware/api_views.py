@@ -1,6 +1,7 @@
 from rest_framework import viewsets, filters
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.schemas.openapi import AutoSchema
 
 from configdb.hardware import serializers
 from .models import (
@@ -14,6 +15,7 @@ class FilterableViewSet(viewsets.ModelViewSet):
 
 
 class SiteViewSet(FilterableViewSet):
+    schema = AutoSchema(tags=['Sites'])
     queryset = Site.objects.all().prefetch_related(
         'enclosure_set__telescope_set__instrument_set__autoguider_camera__optical_element_groups',
         'enclosure_set__telescope_set__instrument_set__autoguider_camera__optical_element_groups__optical_elements',
@@ -27,6 +29,7 @@ class SiteViewSet(FilterableViewSet):
 
 
 class EnclosureViewSet(FilterableViewSet):
+    schema = AutoSchema(tags=['Enclosures'])
     queryset = Enclosure.objects.all().select_related('site').prefetch_related(
         'telescope_set__instrument_set__autoguider_camera__optical_element_groups',
         'telescope_set__instrument_set__autoguider_camera__optical_element_groups__optical_elements',
@@ -41,6 +44,7 @@ class EnclosureViewSet(FilterableViewSet):
 
 
 class TelescopeViewSet(FilterableViewSet):
+    schema = AutoSchema(tags=['Telescopes'])
     queryset = Telescope.objects.all().select_related('enclosure__site').prefetch_related(
         'instrument_set__autoguider_camera__optical_element_groups',
         'instrument_set__autoguider_camera__optical_element_groups__optical_elements',
@@ -80,6 +84,7 @@ class InstrumentFilter(django_filters.rest_framework.FilterSet):
 
 
 class InstrumentViewSet(FilterableViewSet):
+    schema = AutoSchema(tags=['Instruments'])
     queryset = Instrument.objects.all().select_related('telescope__enclosure__site', 'instrument_type').prefetch_related(
         'autoguider_camera__optical_element_groups',
         'autoguider_camera__optical_element_groups__optical_elements',
@@ -94,18 +99,21 @@ class InstrumentViewSet(FilterableViewSet):
 
 
 class CameraTypeViewSet(FilterableViewSet):
+    schema = AutoSchema(tags=['Camera Types'])
     queryset = CameraType.objects.all()
     serializer_class = serializers.CameraTypeSerializer
     filter_fields = ('name', 'pscale')
 
 
 class InstrumentTypeViewSet(FilterableViewSet):
+    schema = AutoSchema(tags=['Instrument Types'])
     queryset = InstrumentType.objects.all()
     serializer_class = serializers.InstrumentTypeSerializer
     filter_fields = ('name', 'code', 'instrument_category')
 
 
 class CameraViewSet(FilterableViewSet):
+    schema = AutoSchema(tags=['Cameras'])
     queryset = Camera.objects.all().select_related('camera_type').prefetch_related(
         'optical_element_groups',
         'optical_element_groups__optical_elements'
@@ -115,23 +123,27 @@ class CameraViewSet(FilterableViewSet):
 
 
 class OpticalElementGroupViewSet(FilterableViewSet):
+    schema = AutoSchema(tags=['Optical Element Groups'])
     queryset = OpticalElementGroup.objects.all().prefetch_related('optical_elements').distinct()
     serializer_class = serializers.OpticalElementGroupSerializer
     filter_fields = ('name', 'type', 'optical_elements')
 
 
 class OpticalElementViewSet(FilterableViewSet):
+    schema = AutoSchema(tags=['Optical Elements'])
     queryset = OpticalElement.objects.all()
     serializer_class = serializers.OpticalElementSerializer
     filter_fields = ('id', 'name', 'code', 'schedulable')
 
 
 class GenericModeGroupViewSet(FilterableViewSet):
+    schema = AutoSchema(tags=['Generic Mode Groups'])
     queryset = GenericModeGroup.objects.all()
     serializer_class = serializers.GenericModeGroupSerializer
 
 
 class GenericModeViewSet(FilterableViewSet):
+    schema = AutoSchema(tags=['Generic Modes'])
     queryset = GenericMode.objects.all()
     serializer_class = serializers.GenericModeSerializer
     filter_fields = ('name', 'code', 'schedulable')
