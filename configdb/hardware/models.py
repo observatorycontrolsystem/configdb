@@ -2,7 +2,7 @@ import datetime
 
 from django.db import models
 from django.contrib.postgres.fields import JSONField
-
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class BaseModel(models.Model):
     modified = models.DateTimeField(auto_now=True)
@@ -12,21 +12,27 @@ class BaseModel(models.Model):
 
 
 class Site(BaseModel):
-    active = models.BooleanField(default=True)
-    code = models.CharField(max_length=3)
-    name = models.CharField(default='', blank=True, max_length=200)
-    lat = models.FloatField(default=0.0)
-    long = models.FloatField(default=0.0)
-    elevation = models.IntegerField(help_text='meters')
+    active = models.BooleanField(default=True, help_text='Whether the site is active and able to accept observations')
+    code = models.CharField(max_length=3, help_text='3-letter site code')
+    name = models.CharField(default='', blank=True, max_length=200, help_text='Site name')
+    lat = models.FloatField(default=0.0, help_text='Site latitude in decimal degrees')
+    long = models.FloatField(default=0.0, help_text='Site longitude in decimal degrees')
+    elevation = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100000)], 
+        help_text='Site elevation in meters'
+    )
     # TODO FIXME:
     # The timezone field does not accurately represent the world. It is supposed
     # to represent the offset from UTC in hours. In many timezones, this changes
     # several times per year (US/Pacific varies between -7 and -8, depending on
     # daylight savings time). It is also incapable of representing many time zones
     # around the world that have non-Integer offsets (example: Australia/Adelaide).
-    timezone = models.IntegerField()
+    timezone = models.IntegerField(
+        help_text='Offset from UTC in hours',
+        validators=[MinValueValidator(-12), MaxValueValidator(12)]
+    )
     tz = models.CharField(default='Etc/UTC', max_length=64, help_text='Timezone Name')
-    restart = models.TimeField(default=datetime.time(hour=0, minute=0, second=0))
+    restart = models.TimeField(default=datetime.time(hour=0, minute=0, second=0), help_text='Daily restart time in UTC')
 
     class Meta:
         ordering = ['code']
@@ -36,19 +42,19 @@ class Site(BaseModel):
 
 
 class Enclosure(BaseModel):
-    active = models.BooleanField(default=True)
-    code = models.CharField(max_length=200)
-    name = models.CharField(default='', blank=True, max_length=200)
-    site = models.ForeignKey(Site, on_delete=models.CASCADE)
+    active = models.BooleanField(default=True, help_text='Whether the enclosure is active and able to accept observations')
+    code = models.CharField(max_length=200, help_text='Enclosure code')
+    name = models.CharField(default='', blank=True, max_length=200, help_text='Enclosure name')
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, help_text='Site where this enclosure is located')
 
     def __str__(self):
         return '{0}.{1}'.format(self.site, self.code)
 
 
 class Telescope(BaseModel):
-    active = models.BooleanField(default=True)
-    code = models.CharField(max_length=200)
-    name = models.CharField(default='', blank=True, max_length=200)
+    active = models.BooleanField(default=True, help_text='Whether the telescope is active and able to accept observations')
+    code = models.CharField(max_length=200, help_text='Telescope code')
+    name = models.CharField(default='', blank=True, max_length=200, help_text='Telescome name')
     serial_number = models.CharField(max_length=50, default='', help_text='Unique telescope serial number')
     slew_rate = models.FloatField(default=0,
                                   help_text='The rate in sec/arcsec at which the telescope slews between positions')
@@ -56,22 +62,23 @@ class Telescope(BaseModel):
                                               help_text='The minimum amount of time a slew can take in seconds')
     instrument_change_overhead = models.FloatField(
         default=0, help_text='The maximum amount of time it takes to switch instruments')
-    lat = models.FloatField()
-    long = models.FloatField()
-    horizon = models.FloatField()
-    ha_limit_neg = models.FloatField()
-    ha_limit_pos = models.FloatField()
+    lat = models.FloatField(help_text='Telescope latitude in decimal degrees')
+    long = models.FloatField(help_text='Telescope longitude in decimal degrees')
+    # TODO: Get these correct
+    horizon = models.FloatField(help_text='')
+    ha_limit_neg = models.FloatField(help_text='Positive hour-angle limit in decimal degrees')
+    ha_limit_pos = models.FloatField(help_text='Negative hour-angle limit in decimal degrees')
     zenith_blind_spot = models.FloatField(
         default=0.0, help_text='For AltAz telescopes, radius of zenith blind spot in degrees')
-    enclosure = models.ForeignKey(Enclosure, on_delete=models.CASCADE)
+    enclosure = models.ForeignKey(Enclosure, on_delete=models.CASCADE, help_text='Enclosure which contains this telescope')
 
     def __str__(self):
         return '{0}.{1}'.format(self.enclosure, self.code)
 
 
 class OpticalElement(BaseModel):
-    name = models.CharField(max_length=200)
-    code = models.CharField(max_length=200, unique=True)
+    name = models.CharField(max_length=200, help_text='Optical element name')
+    code = models.CharField(max_length=200, unique=True, help_text='Optical element code')
     schedulable = models.BooleanField(
         default=True,
         help_text='Whether this optical element should be usable by scheduled observations, or only via direct submission.'
@@ -82,11 +89,15 @@ class OpticalElement(BaseModel):
 
 
 class OpticalElementGroup(BaseModel):
-    name = models.CharField(max_length=200)
-    type = models.CharField(max_length=200)
-    default = models.ForeignKey(OpticalElement, related_name='default', null=True, blank=True, on_delete=models.PROTECT)
-    optical_elements = models.ManyToManyField(OpticalElement)
-    element_change_overhead = models.FloatField(default=0)
+    name = models.CharField(max_length=200, help_text='Optical element group name')
+    type = models.CharField(max_length=200, help_text = 'Optical element group type')
+    default = models.ForeignKey(OpticalElement, related_name='default', null=True, 
+                                blank=True, on_delete=models.PROTECT, help_text='Default optical element within this optical element group')
+    optical_elements = models.ManyToManyField(OpticalElement, help_text="Optical elements belonging to this optical element group")
+    element_change_overhead = models.FloatField(
+        default=0, 
+        help_text='Overhead in seconds when changing between optical elements within this optical element group'
+    )
 
     class Meta:
         ordering = ['id']
@@ -100,36 +111,38 @@ class OpticalElementGroup(BaseModel):
 
 
 class CameraType(BaseModel):
-    name = models.CharField(max_length=200, unique=True)
-    code = models.CharField(max_length=200)
-    size = models.CharField(max_length=200)
-    pscale = models.FloatField()
-    pixels_x = models.IntegerField(default=0)
-    pixels_y = models.IntegerField(default=0)
-    max_rois = models.IntegerField(default=0)
+    name = models.CharField(max_length=200, unique=True, help_text='Camera name')
+    code = models.CharField(max_length=200, help_text='Camera code')
+    # TODO: What units is size in?
+    size = models.CharField(max_length=200, help_text='')
+    pscale = models.FloatField(help_text='Pixel scale in arcseconds/pixel')
+    pixels_x = models.IntegerField(default=0, help_text='Number of pixels on x-axis')
+    pixels_y = models.IntegerField(default=0, help_text='Number of pixels on y-axis')
+    # TODO: What does this field mean?
+    max_rois = models.IntegerField(default=0, help_text='')
 
     def __str__(self):
         return self.code
 
 
 class ConfigurationType(BaseModel):
-    code = models.CharField(max_length=64, primary_key=True)
-    name = models.CharField(max_length=200)
+    code = models.CharField(max_length=64, primary_key=True, help_text='Configuration type code')
+    name = models.CharField(max_length=200, help_text='Configuration type name')
 
     def __str__(self):
         return self.code
 
 
 class InstrumentCategory(BaseModel):
-    code = models.CharField(max_length=64, primary_key=True)
+    code = models.CharField(max_length=64, primary_key=True, help_text='Instrument category code')
 
     def __str__(self):
         return self.code
 
 
 class InstrumentType(BaseModel):
-    name = models.CharField(max_length=200)
-    code = models.CharField(max_length=200, unique=True)
+    name = models.CharField(max_length=200, help_text='Instrument name')
+    code = models.CharField(max_length=200, unique=True, help_text='Instrument code')
     instrument_category = models.ForeignKey(
         InstrumentCategory, on_delete=models.PROTECT, null=True,
         help_text='The category of this instrument type, like IMAGE or SPECTRO. '
@@ -163,7 +176,9 @@ class InstrumentType(BaseModel):
                   'Acceptability threshold is the minimum percentage of data an Observation must take before '
                   'causing its Request to be counted as complete.'
     )
-    allow_self_guiding = models.BooleanField(default=True, blank=True)
+    allow_self_guiding = models.BooleanField(default=True, blank=True, 
+                                             help_text='Whether to allow this instrument to be used for self-guiding'
+                                             )
     validation_schema = JSONField(default=dict, blank=True,
                                   help_text='Cerberus styled validation schema used to validate instrument configs using this instrument type'
                                   )
@@ -173,8 +188,10 @@ class InstrumentType(BaseModel):
 
 
 class ConfigurationTypeProperties(BaseModel):
-    configuration_type = models.ForeignKey(ConfigurationType, on_delete=models.CASCADE)
-    instrument_type = models.ForeignKey(InstrumentType, on_delete=models.CASCADE)
+    configuration_type = models.ForeignKey(ConfigurationType, on_delete=models.CASCADE,
+                                           help_text='Configuration type')
+    instrument_type = models.ForeignKey(InstrumentType, on_delete=models.CASCADE,
+                                        help_text='Instrument type')
     force_acquisition_off = models.BooleanField(
         default=False,
         help_text='If True, this configuration type will force the acquisition mode to be OFF. Certain configuration types '
@@ -204,15 +221,15 @@ class ConfigurationTypeProperties(BaseModel):
 
 
 class ModeType(BaseModel):
-    id = models.CharField(max_length=200, primary_key=True)
+    id = models.CharField(max_length=200, primary_key=True, help_text='Mode type ID')
 
     def __str__(self):
         return self.id
 
 
 class GenericMode(BaseModel):
-    name = models.CharField(max_length=200)
-    code = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, help_text='Generic mode name')
+    code = models.CharField(max_length=200, help_text='Generic mode code')
     overhead = models.FloatField(
         help_text='Overhead associated with the generic mode. Where this overhead is applied depends on what type '
                   'of generic mode this is for. For example, a readout mode is applied per exposure, while an acquisition '
@@ -231,10 +248,14 @@ class GenericMode(BaseModel):
 
 
 class GenericModeGroup(BaseModel):
-    instrument_type = models.ForeignKey(InstrumentType, related_name='mode_types', null=True, on_delete=models.CASCADE)
-    default = models.ForeignKey(GenericMode, related_name='default', null=True, blank=True, on_delete=models.PROTECT)
-    type = models.ForeignKey(ModeType, null=True, on_delete=models.PROTECT)
-    modes = models.ManyToManyField(GenericMode)
+    instrument_type = models.ForeignKey(InstrumentType, related_name='mode_types', 
+                                        null=True, on_delete=models.CASCADE,
+                                        help_text='Instrument type')
+    default = models.ForeignKey(GenericMode, related_name='default', 
+                                null=True, blank=True, on_delete=models.PROTECT,
+                                help_text='Default mode within this generic mode group')
+    type = models.ForeignKey(ModeType, null=True, on_delete=models.PROTECT, help_text='Generic mode group type')
+    modes = models.ManyToManyField(GenericMode, help_text='Modes within this generic mode group')
 
     class Meta:
         unique_together = ['instrument_type', 'type']
@@ -248,9 +269,10 @@ class GenericModeGroup(BaseModel):
 
 
 class Camera(BaseModel):
-    camera_type = models.ForeignKey(CameraType, on_delete=models.CASCADE)
-    code = models.CharField(max_length=200)
-    optical_element_groups = models.ManyToManyField(OpticalElementGroup, blank=True)
+    camera_type = models.ForeignKey(CameraType, on_delete=models.CASCADE, help_text='Camera type')
+    code = models.CharField(max_length=200, help_text='Camera code')
+    optical_element_groups = models.ManyToManyField(OpticalElementGroup, blank=True, 
+                                                    help_text='Optical element groups that this camera belongs to')
     host = models.CharField(max_length=200, default='', blank=True,
                             help_text='The physical machine hostname that this camera is connected to')
 
@@ -290,13 +312,13 @@ class Instrument(BaseModel):
     <li>STANDBY - The instrument has been commissioned and is ready to be switched into SCHEDULABLE when needed.</li>
     <li>SCHEDULABLE - The instrument is part of the network and is ready for normal operations</li></ul></div>
     """
-    instrument_type = models.ForeignKey(InstrumentType, null=True, on_delete=models.CASCADE)
-    code = models.CharField(max_length=200, default='', blank=True, help_text='Name of the instrument')
+    instrument_type = models.ForeignKey(InstrumentType, null=True, on_delete=models.CASCADE, help_text='Instrument type')
+    code = models.CharField(max_length=200, default='', blank=True, help_text='Instrument code')
     state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED, help_text=state_help_text)
-    telescope = models.ForeignKey(Telescope, on_delete=models.CASCADE)
-    science_cameras = models.ManyToManyField(Camera)
-    autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for', on_delete=models.CASCADE)
-    autoguider_type = models.CharField(max_length=200, choices=AUTOGUIDER_TYPES, default="OffAxis")
+    telescope = models.ForeignKey(Telescope, on_delete=models.CASCADE, help_text='Telescope this instrument belongs to')
+    science_cameras = models.ManyToManyField(Camera, help_text='Science cameras that this instrument contains')
+    autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for', on_delete=models.CASCADE, help_text='Autoguider camera for this instrument')
+    autoguider_type = models.CharField(max_length=200, choices=AUTOGUIDER_TYPES, default="OffAxis", help_text='Type of autoguider used on this instrument')
 
     def __str__(self):
         return '{0}.{1}'.format(self.telescope, self.code)
