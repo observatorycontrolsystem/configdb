@@ -23,7 +23,7 @@ class StateField(serializers.IntegerField):
 
 
 class OpticalElementSerializer(serializers.ModelSerializer):
-    
+
     class Meta:
         model = OpticalElement
         fields = ('name', 'code', 'schedulable')
