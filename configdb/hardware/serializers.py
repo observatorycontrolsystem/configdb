@@ -23,15 +23,15 @@ class StateField(serializers.IntegerField):
 
 
 class OpticalElementSerializer(serializers.ModelSerializer):
-
+    
     class Meta:
         model = OpticalElement
         fields = ('name', 'code', 'schedulable')
 
 
 class OpticalElementGroupSerializer(serializers.ModelSerializer):
-    optical_elements = OpticalElementSerializer(many=True)
-    default = serializers.SerializerMethodField('get_default_code')
+    optical_elements = OpticalElementSerializer(many=True, help_text='Optical elements belonging to this optical element group')
+    default = serializers.SerializerMethodField('get_default_code', help_text='Default optical element code')
 
     class Meta:
         model = OpticalElementGroup
@@ -49,7 +49,8 @@ class OpticalElementGroupSerializer(serializers.ModelSerializer):
 
 
 class GenericModeSerializer(serializers.ModelSerializer):
-    validation_schema = serializers.JSONField()
+    validation_schema = serializers.JSONField(help_text='Cerberus styled validation schema used to validate '
+                                                        'instrument configs using this generic mode')
 
     class Meta:
         fields = ('name', 'overhead', 'code', 'schedulable', 'validation_schema')
@@ -65,8 +66,8 @@ class GenericModeSerializer(serializers.ModelSerializer):
 
 
 class GenericModeGroupSerializer(serializers.ModelSerializer):
-    modes = GenericModeSerializer(many=True)
-    default = serializers.SerializerMethodField('get_default_code')
+    modes = GenericModeSerializer(many=True, help_text='Set of modes belonging to this generic mode group')
+    default = serializers.SerializerMethodField('get_default_code', help_text='Default mode within this generic mode group')
 
     class Meta:
         fields = ('type', 'modes', 'default')
@@ -89,9 +90,10 @@ class CameraTypeSerializer(serializers.ModelSerializer):
 
 
 class CameraSerializer(serializers.ModelSerializer):
-    camera_type = CameraTypeSerializer(read_only=True)
-    camera_type_id = serializers.IntegerField(write_only=True)
-    optical_element_groups = OpticalElementGroupSerializer(many=True, read_only=True)
+    camera_type = CameraTypeSerializer(read_only=True, help_text='Camera type')
+    camera_type_id = serializers.IntegerField(write_only=True, help_text='Unique ID that corresponds to this camera\'s type')
+    optical_element_groups = OpticalElementGroupSerializer(many=True, read_only=True, 
+                                                           help_text='Optical element groups that this camera belongs to')
 
     class Meta:
         fields = ('id', 'code', 'camera_type', 'camera_type_id',
@@ -100,8 +102,8 @@ class CameraSerializer(serializers.ModelSerializer):
 
 
 class ConfigurationTypePropertiesSerializer(serializers.ModelSerializer):
-    name = serializers.ReadOnlyField(source='configuration_type.name')
-    code = serializers.ReadOnlyField(source='configuration_type.code')
+    name = serializers.ReadOnlyField(source='configuration_type.name', help_text='Configuration type name')
+    code = serializers.ReadOnlyField(source='configuration_type.code', help_text='Configuration type code')
 
     class Meta:
         fields = ('name', 'code', 'config_change_overhead', 'schedulable', 'force_acquisition_off', 'requires_optical_elements')
@@ -109,8 +111,9 @@ class ConfigurationTypePropertiesSerializer(serializers.ModelSerializer):
 
 
 class InstrumentTypeSerializer(serializers.ModelSerializer):
-    mode_types = GenericModeGroupSerializer(many=True, required=False)
-    configuration_types = ConfigurationTypePropertiesSerializer(source='configurationtypeproperties_set', many=True, required=False, read_only=True)
+    mode_types = GenericModeGroupSerializer(many=True, required=False, help_text='Set of generic modes that this instrument type supports')
+    configuration_types = ConfigurationTypePropertiesSerializer(source='configurationtypeproperties_set', many=True, required=False, read_only=True,
+                                                                help_text='Set of configuration types that this instrument type supports')
 
     class Meta:
         fields = ('id', 'name', 'code', 'fixed_overhead_per_exposure', 'instrument_category',
@@ -129,16 +132,21 @@ class InstrumentTypeSerializer(serializers.ModelSerializer):
 
 
 class InstrumentSerializer(serializers.ModelSerializer):
-    autoguider_camera = CameraSerializer(read_only=True)
-    autoguider_camera_id = serializers.IntegerField(write_only=True)
-    telescope = serializers.HyperlinkedRelatedField(view_name='telescope-detail', read_only=True)
-    telescope_id = serializers.IntegerField(write_only=True)
-    science_cameras = CameraSerializer(read_only=True, many=True)
-    science_cameras_ids = serializers.PrimaryKeyRelatedField(write_only=True, many=True, queryset=Camera.objects.all(), source='science_cameras')
-    instrument_type = InstrumentTypeSerializer(read_only=True)
-    instrument_type_id = serializers.IntegerField(write_only=True)
-
-    state = StateField()
+    autoguider_camera = CameraSerializer(read_only=True, help_text='Autoguider camera for this instrument')
+    autoguider_camera_id = serializers.IntegerField(write_only=True, 
+                                                    help_text='Unique ID for the autoguider camera belonging to this instrument')
+    telescope = serializers.HyperlinkedRelatedField(view_name='telescope-detail', read_only=True,
+                                                    help_text='Telescope this instrument belongs to')
+    telescope_id = serializers.IntegerField(write_only=True,
+                                            help_text='Unique ID for the telescope that this instrument belongs to')
+    science_cameras = CameraSerializer(read_only=True, many=True,
+                                       help_text='Science cameras that belong to this instrument')
+    science_cameras_ids = serializers.PrimaryKeyRelatedField(write_only=True, many=True, 
+                                                             queryset=Camera.objects.all(), source='science_cameras',
+                                                             help_text='Unique IDs for the science cameras belonging to this instrument')
+    instrument_type = InstrumentTypeSerializer(read_only=True, help_text='Instrument type')
+    instrument_type_id = serializers.IntegerField(write_only=True, help_text='Unique ID for the instrument type of this instrument')
+    state = StateField(help_text='Instrument state')
 
     class Meta:
         fields = ('id', 'code', 'state', 'telescope', 'autoguider_camera_id',
@@ -148,9 +156,10 @@ class InstrumentSerializer(serializers.ModelSerializer):
 
 
 class TelescopeSerializer(serializers.ModelSerializer):
-    instrument_set = InstrumentSerializer(many=True, read_only=True)
-    enclosure = serializers.HyperlinkedRelatedField(view_name='enclosure-detail', read_only=True)
-    enclosure_id = serializers.IntegerField(write_only=True)
+    instrument_set = InstrumentSerializer(many=True, read_only=True, help_text='Set of instruments belonging to this telescope')
+    enclosure = serializers.HyperlinkedRelatedField(view_name='enclosure-detail', read_only=True,
+                                                    help_text='Enclosure that this telescope belongs to')
+    enclosure_id = serializers.IntegerField(write_only=True, help_text='Unique IDs for the enclosure that this telescope belongs to')
 
     class Meta:
         fields = ('id', 'serial_number', 'name', 'code', 'active', 'lat', 'enclosure_id', 'slew_rate',
@@ -160,9 +169,10 @@ class TelescopeSerializer(serializers.ModelSerializer):
 
 
 class EnclosureSerializer(serializers.ModelSerializer):
-    telescope_set = TelescopeSerializer(many=True, read_only=True)
-    site = serializers.HyperlinkedRelatedField(view_name='site-detail', read_only=True)
-    site_id = serializers.IntegerField(write_only=True)
+    telescope_set = TelescopeSerializer(many=True, read_only=True, help_text='Set of telescopes within this enclosure')
+    site = serializers.HyperlinkedRelatedField(view_name='site-detail', read_only=True,
+                                               help_text='Site where this enclosure is located')
+    site_id = serializers.IntegerField(write_only=True, help_text='Unique ID for the site this enclosure belongs to')
 
     class Meta:
         fields = ('id', 'name', 'code', 'active', 'site', 'site_id',
@@ -171,7 +181,7 @@ class EnclosureSerializer(serializers.ModelSerializer):
 
 
 class SiteSerializer(serializers.ModelSerializer):
-    enclosure_set = EnclosureSerializer(many=True, read_only=True)
+    enclosure_set = EnclosureSerializer(many=True, read_only=True, help_text='Set of enclosures belonging to this site')
 
     class Meta:
         fields = (

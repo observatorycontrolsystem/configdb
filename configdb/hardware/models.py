@@ -64,10 +64,9 @@ class Telescope(BaseModel):
         default=0, help_text='The maximum amount of time it takes to switch instruments')
     lat = models.FloatField(help_text='Telescope latitude in decimal degrees')
     long = models.FloatField(help_text='Telescope longitude in decimal degrees')
-    # TODO: Get these correct
-    horizon = models.FloatField(help_text='')
-    ha_limit_neg = models.FloatField(help_text='Positive hour-angle limit in decimal degrees')
-    ha_limit_pos = models.FloatField(help_text='Negative hour-angle limit in decimal degrees')
+    horizon = models.FloatField(help_text='Minimum distance to horizon for pointing in degrees')
+    ha_limit_neg = models.FloatField(help_text='Negative hour-angle limit in hours')
+    ha_limit_pos = models.FloatField(help_text='Positive hour-angle limit in hours')
     zenith_blind_spot = models.FloatField(
         default=0.0, help_text='For AltAz telescopes, radius of zenith blind spot in degrees')
     enclosure = models.ForeignKey(Enclosure, on_delete=models.CASCADE, help_text='Enclosure which contains this telescope')
@@ -113,13 +112,11 @@ class OpticalElementGroup(BaseModel):
 class CameraType(BaseModel):
     name = models.CharField(max_length=200, unique=True, help_text='Camera name')
     code = models.CharField(max_length=200, help_text='Camera code')
-    # TODO: What units is size in?
-    size = models.CharField(max_length=200, help_text='')
+    size = models.CharField(max_length=200, help_text='Field of view in arcminutes')
     pscale = models.FloatField(help_text='Pixel scale in arcseconds/pixel')
     pixels_x = models.IntegerField(default=0, help_text='Number of pixels on x-axis')
     pixels_y = models.IntegerField(default=0, help_text='Number of pixels on y-axis')
-    # TODO: What does this field mean?
-    max_rois = models.IntegerField(default=0, help_text='')
+    max_rois = models.IntegerField(default=0, help_text='Maximum number of regions of interest that this camera type supports')
 
     def __str__(self):
         return self.code
@@ -136,6 +133,9 @@ class ConfigurationType(BaseModel):
 class InstrumentCategory(BaseModel):
     code = models.CharField(max_length=64, primary_key=True, help_text='Instrument category code')
 
+    class Meta:
+        verbose_name_plural = "Instrument categories"
+    
     def __str__(self):
         return self.code
 
@@ -316,7 +316,7 @@ class Instrument(BaseModel):
     code = models.CharField(max_length=200, default='', blank=True, help_text='Instrument code')
     state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED, help_text=state_help_text)
     telescope = models.ForeignKey(Telescope, on_delete=models.CASCADE, help_text='Telescope this instrument belongs to')
-    science_cameras = models.ManyToManyField(Camera, help_text='Science cameras that this instrument contains')
+    science_cameras = models.ManyToManyField(Camera, help_text='Science cameras that belong to this instrument')
     autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for', on_delete=models.CASCADE, help_text='Autoguider camera for this instrument')
     autoguider_type = models.CharField(max_length=200, choices=AUTOGUIDER_TYPES, default="OffAxis", help_text='Type of autoguider used on this instrument')
 
