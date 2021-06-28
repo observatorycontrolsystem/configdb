@@ -18,7 +18,7 @@ jobs:
         pip install -r requirements.txt
     - name: Build docs
       run: |
-        python manage.py generateschema --file configdb.yaml --generator_class=configdb.hardware.urls.ConfigDBSchemaGenerator
+        python manage.py generateschema --file configdb.yaml --generator_class=configdb.schema.ConfigDBSchemaGenerator
         npx redoc-cli bundle configdb.yaml
         mkdir docs; mv redoc-static.html docs/configdb.html
     - name: Deploy to GitHub Pages
