@@ -42,7 +42,7 @@ class FilterableViewSet(viewsets.ModelViewSet):
 class SiteViewSet(FilterableViewSet):
     custom_filter_annotations = [{'name': 'name', 'description': 'Site name'},
                                  {'name': 'code', 'description': 'Site code'}]
-    schema = CustomViewSchema(tags=['Sites'], 
+    schema = CustomViewSchema(tags=['Sites'],
                               custom_filter_annotations=custom_filter_annotations)
     queryset = Site.objects.all().prefetch_related(
         'enclosure_set__telescope_set__instrument_set__autoguider_camera__optical_element_groups',
@@ -60,7 +60,7 @@ class EnclosureViewSet(FilterableViewSet):
     custom_filter_annotations = [{'name': 'name', 'description': 'Enclosure name'},
                                  {'name': 'code', 'description': 'Enclosure code'},
                                  {'name': 'site', 'description': 'Unique site ID', 'type': 'integer'}]
-    schema = CustomViewSchema(tags=['Enclosures'], 
+    schema = CustomViewSchema(tags=['Enclosures'],
                               custom_filter_annotations=custom_filter_annotations)
     queryset = Enclosure.objects.all().select_related('site').prefetch_related(
         'telescope_set__instrument_set__autoguider_camera__optical_element_groups',
@@ -82,7 +82,7 @@ class TelescopeViewSet(FilterableViewSet):
                                  {'name': 'long', 'description': 'Telescope longitude in decimal degrees', 'type': 'number'},
                                  {'name': 'horizon', 'description': 'Minimum distance from horizion telescope can point without field of view being obscured, in degrees', 'type': 'number'},
                                  {'name': 'enclosure', 'description': 'Unique enclosure ID', 'type': 'integer'}]
-    schema = CustomViewSchema(tags=['Telescopes'], 
+    schema = CustomViewSchema(tags=['Telescopes'],
                               custom_filter_annotations=custom_filter_annotations)
     queryset = Telescope.objects.all().select_related('enclosure__site').prefetch_related(
         'instrument_set__autoguider_camera__optical_element_groups',
@@ -101,7 +101,7 @@ class InstrumentFilter(django_filters.rest_framework.FilterSet):
     ''' Filter class used to specify a filterable attribute in the cameratype of science camera in this instrument.
         The added attribute to filter on is juse camera_type, which maps to the camera->camera_type->name parameter.
     '''
-    camera_type = django_filters.CharFilter(field_name="science_cameras__camera_type__code", 
+    camera_type = django_filters.CharFilter(field_name="science_cameras__camera_type__code",
                                             label='Camera type code')
     instrument_type = django_filters.CharFilter(field_name="instrument_type__code",
                                                 label='Instrument type code')
@@ -131,7 +131,7 @@ class InstrumentViewSet(FilterableViewSet):
     custom_filter_annotations=[{'name': 'science_cameras', 'description': 'Set of science camera codes on the instrument',
                                 'type': 'Array of strings'},
                                {'name': 'autoguider_camera', 'description': 'Autoguider code for the autoguider camera on the instrument'}]
-    schema = CustomViewSchema(tags=['Instruments'], 
+    schema = CustomViewSchema(tags=['Instruments'],
                               custom_filter_annotations=custom_filter_annotations)
     queryset = Instrument.objects.all().select_related('telescope__enclosure__site', 'instrument_type').prefetch_related(
         'autoguider_camera__optical_element_groups',
@@ -149,7 +149,7 @@ class InstrumentViewSet(FilterableViewSet):
 class CameraTypeViewSet(FilterableViewSet):
     custom_filter_annotations=[{'name': 'name', 'description': 'Camera type name'},
                                {'name': 'pscale', 'description': 'Pixel scale in arcseconds/pixel', 'type': 'number'}]
-    schema = CustomViewSchema(tags=['Camera Types'], 
+    schema = CustomViewSchema(tags=['Camera Types'],
                               custom_filter_annotations=custom_filter_annotations)
     queryset = CameraType.objects.all()
     serializer_class = serializers.CameraTypeSerializer
@@ -160,7 +160,7 @@ class InstrumentTypeViewSet(FilterableViewSet):
     custom_filter_annotations=[{'name': 'name', 'description': 'Camera type name'},
                                {'name': 'code', 'description': 'Instrument type code'},
                                {'name': 'instrument_category', 'description': 'Instrument category name'}]
-    schema = CustomViewSchema(tags=['Instrument Types'], 
+    schema = CustomViewSchema(tags=['Instrument Types'],
                               custom_filter_annotations=custom_filter_annotations)
     queryset = InstrumentType.objects.all()
     serializer_class = serializers.InstrumentTypeSerializer
@@ -170,7 +170,7 @@ class InstrumentTypeViewSet(FilterableViewSet):
 class CameraViewSet(FilterableViewSet):
     custom_filter_annotations=[{'name': 'code', 'description': 'Camera code'},
                                {'name': 'camera_type', 'description': 'Camera type unique ID', 'type': 'integer'}]
-    schema = CustomViewSchema(tags=['Cameras'], 
+    schema = CustomViewSchema(tags=['Cameras'],
                               custom_filter_annotations=custom_filter_annotations)
     queryset = Camera.objects.all().select_related('camera_type').prefetch_related(
         'optical_element_groups',
@@ -183,9 +183,9 @@ class CameraViewSet(FilterableViewSet):
 class OpticalElementGroupViewSet(FilterableViewSet):
     custom_filter_annotations=[{'name': 'name', 'description': 'Optical element group name'},
                                {'name': 'type', 'description': 'Optical element group type'},
-                               {'name': 'optical_elements', 'description': 'List of optical elements in optical element group', 
+                               {'name': 'optical_elements', 'description': 'List of optical elements in optical element group',
                                 'type': 'Array of objects'}]
-    schema = CustomViewSchema(tags=['Optical Element Groups'], 
+    schema = CustomViewSchema(tags=['Optical Element Groups'],
                               custom_filter_annotations=custom_filter_annotations)
     queryset = OpticalElementGroup.objects.all().prefetch_related('optical_elements').distinct()
     serializer_class = serializers.OpticalElementGroupSerializer
@@ -197,7 +197,7 @@ class OpticalElementViewSet(FilterableViewSet):
                                {'name': 'name', 'description': 'Optical element name'},
                                {'name': 'code', 'description': 'Optical element code'},
                                {'name': 'schedulable', 'description': 'Whether optical element is schedulable', 'type': 'boolean'}]
-    schema = CustomViewSchema(tags=['Optical Elements'], 
+    schema = CustomViewSchema(tags=['Optical Elements'],
                               custom_filter_annotations=custom_filter_annotations)
     queryset = OpticalElement.objects.all()
     serializer_class = serializers.OpticalElementSerializer
@@ -214,7 +214,7 @@ class GenericModeViewSet(FilterableViewSet):
     custom_filter_annotations= [{'name': 'name', 'description': 'Optical element name'},
                                 {'name': 'code', 'description': 'Optical element code'},
                                 {'name': 'schedulable', 'description': 'Whether generic mode is schedulable', 'type': 'boolean'}]
-    schema = CustomViewSchema(tags=['Generic Modes'], 
+    schema = CustomViewSchema(tags=['Generic Modes'],
                               custom_filter_annotations=custom_filter_annotations)
     queryset = GenericMode.objects.all()
     serializer_class = serializers.GenericModeSerializer

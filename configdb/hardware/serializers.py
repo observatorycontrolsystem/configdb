@@ -92,7 +92,7 @@ class CameraTypeSerializer(serializers.ModelSerializer):
 class CameraSerializer(serializers.ModelSerializer):
     camera_type = CameraTypeSerializer(read_only=True, help_text='Camera type')
     camera_type_id = serializers.IntegerField(write_only=True, help_text='Unique ID that corresponds to this camera\'s type')
-    optical_element_groups = OpticalElementGroupSerializer(many=True, read_only=True, 
+    optical_element_groups = OpticalElementGroupSerializer(many=True, read_only=True,
                                                            help_text='Optical element groups that this camera contains')
 
     class Meta:
@@ -133,7 +133,7 @@ class InstrumentTypeSerializer(serializers.ModelSerializer):
 
 class InstrumentSerializer(serializers.ModelSerializer):
     autoguider_camera = CameraSerializer(read_only=True, help_text='Autoguider camera for this instrument')
-    autoguider_camera_id = serializers.IntegerField(write_only=True, 
+    autoguider_camera_id = serializers.IntegerField(write_only=True,
                                                     help_text='Unique ID for the autoguider camera belonging to this instrument')
     telescope = serializers.HyperlinkedRelatedField(view_name='telescope-detail', read_only=True,
                                                     help_text='Telescope this instrument belongs to')
@@ -141,7 +141,7 @@ class InstrumentSerializer(serializers.ModelSerializer):
                                             help_text='Unique ID for the telescope that this instrument belongs to')
     science_cameras = CameraSerializer(read_only=True, many=True,
                                        help_text='Science cameras that belong to this instrument')
-    science_cameras_ids = serializers.PrimaryKeyRelatedField(write_only=True, many=True, 
+    science_cameras_ids = serializers.PrimaryKeyRelatedField(write_only=True, many=True,
                                                              queryset=Camera.objects.all(), source='science_cameras',
                                                              help_text='Unique IDs for the science cameras belonging to this instrument')
     instrument_type = InstrumentTypeSerializer(read_only=True, help_text='Instrument type')

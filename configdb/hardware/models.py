@@ -18,7 +18,7 @@ class Site(BaseModel):
     lat = models.FloatField(default=0.0, help_text='Site latitude in decimal degrees')
     long = models.FloatField(default=0.0, help_text='Site longitude in decimal degrees')
     elevation = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(100000)], 
+        validators=[MinValueValidator(0), MaxValueValidator(100000)],
         help_text='Site elevation in meters'
     )
     # TODO FIXME:
@@ -90,11 +90,11 @@ class OpticalElement(BaseModel):
 class OpticalElementGroup(BaseModel):
     name = models.CharField(max_length=200, help_text='Optical element group name')
     type = models.CharField(max_length=200, help_text = 'Optical element group type')
-    default = models.ForeignKey(OpticalElement, related_name='default', null=True, 
+    default = models.ForeignKey(OpticalElement, related_name='default', null=True,
                                 blank=True, on_delete=models.PROTECT, help_text='Default optical element within this optical element group')
     optical_elements = models.ManyToManyField(OpticalElement, help_text="Optical elements belonging to this optical element group")
     element_change_overhead = models.FloatField(
-        default=0, 
+        default=0,
         help_text='Overhead in seconds when changing between optical elements within this optical element group'
     )
 
@@ -135,7 +135,7 @@ class InstrumentCategory(BaseModel):
 
     class Meta:
         verbose_name_plural = "Instrument categories"
-    
+
     def __str__(self):
         return self.code
 
@@ -176,7 +176,7 @@ class InstrumentType(BaseModel):
                   'Acceptability threshold is the minimum percentage of data an Observation must take before '
                   'causing its Request to be counted as complete.'
     )
-    allow_self_guiding = models.BooleanField(default=True, blank=True, 
+    allow_self_guiding = models.BooleanField(default=True, blank=True,
                                              help_text='Whether to allow instruments of this type to be used for self-guiding'
                                              )
     validation_schema = JSONField(default=dict, blank=True,
@@ -248,10 +248,10 @@ class GenericMode(BaseModel):
 
 
 class GenericModeGroup(BaseModel):
-    instrument_type = models.ForeignKey(InstrumentType, related_name='mode_types', 
+    instrument_type = models.ForeignKey(InstrumentType, related_name='mode_types',
                                         null=True, on_delete=models.CASCADE,
                                         help_text='Instrument type')
-    default = models.ForeignKey(GenericMode, related_name='default', 
+    default = models.ForeignKey(GenericMode, related_name='default',
                                 null=True, blank=True, on_delete=models.PROTECT,
                                 help_text='Default mode within this generic mode group')
     type = models.ForeignKey(ModeType, null=True, on_delete=models.PROTECT, help_text='Generic mode group type')
@@ -271,7 +271,7 @@ class GenericModeGroup(BaseModel):
 class Camera(BaseModel):
     camera_type = models.ForeignKey(CameraType, on_delete=models.CASCADE, help_text='Camera type')
     code = models.CharField(max_length=200, help_text='Camera code')
-    optical_element_groups = models.ManyToManyField(OpticalElementGroup, blank=True, 
+    optical_element_groups = models.ManyToManyField(OpticalElementGroup, blank=True,
                                                     help_text='Optical element groups that this camera contains')
     host = models.CharField(max_length=200, default='', blank=True,
                             help_text='The physical machine hostname that this camera is connected to')
