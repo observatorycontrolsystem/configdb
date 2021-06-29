@@ -64,7 +64,7 @@ class Telescope(BaseModel):
         default=0, help_text='The maximum amount of time it takes to switch instruments')
     lat = models.FloatField(help_text='Telescope latitude in decimal degrees')
     long = models.FloatField(help_text='Telescope longitude in decimal degrees')
-    horizon = models.FloatField(help_text='Minimum distance to horizon for pointing in degrees')
+    horizon = models.FloatField(help_text='Minimum distance from horizion telescope can point without field of view being obscured, in degrees')
     ha_limit_neg = models.FloatField(help_text='Negative hour-angle limit in hours')
     ha_limit_pos = models.FloatField(help_text='Positive hour-angle limit in hours')
     zenith_blind_spot = models.FloatField(

@@ -59,7 +59,7 @@ class SiteViewSet(FilterableViewSet):
 class EnclosureViewSet(FilterableViewSet):
     custom_filter_annotations = [{'name': 'name', 'description': 'Enclosure name'},
                                  {'name': 'code', 'description': 'Enclosure code'},
-                                 {'name': 'site', 'description': 'Unique integer site ID', 'type': 'integer'}]
+                                 {'name': 'site', 'description': 'Unique site ID', 'type': 'integer'}]
     schema = CustomViewSchema(tags=['Enclosures'], 
                               custom_filter_annotations=custom_filter_annotations)
     queryset = Enclosure.objects.all().select_related('site').prefetch_related(
@@ -80,8 +80,8 @@ class TelescopeViewSet(FilterableViewSet):
                                  {'name': 'code', 'description': 'Telescope code'},
                                  {'name': 'lat', 'description': 'Telescope latitude in decimal degrees', 'type': 'number'},
                                  {'name': 'long', 'description': 'Telescope longitude in decimal degrees', 'type': 'number'},
-                                 {'name': 'horizon', 'description': 'Minimum distance to horizon for pointing in degrees', 'type': 'number'},
-                                 {'name': 'enclosure', 'description': 'Unique integer enclosure ID', 'type': 'integer'}]
+                                 {'name': 'horizon', 'description': 'Minimum distance from horizion telescope can point without field of view being obscured, in degrees', 'type': 'number'},
+                                 {'name': 'enclosure', 'description': 'Unique enclosure ID', 'type': 'integer'}]
     schema = CustomViewSchema(tags=['Telescopes'], 
                               custom_filter_annotations=custom_filter_annotations)
     queryset = Telescope.objects.all().select_related('enclosure__site').prefetch_related(
@@ -205,7 +205,7 @@ class OpticalElementViewSet(FilterableViewSet):
 
 
 class GenericModeGroupViewSet(FilterableViewSet):
-    schema = AutoSchema(tags=['Generic Mode Groups'])
+    schema = CustomViewSchema(tags=['Generic Mode Groups'])
     queryset = GenericModeGroup.objects.all()
     serializer_class = serializers.GenericModeGroupSerializer
 
