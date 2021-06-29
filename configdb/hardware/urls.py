@@ -27,5 +27,5 @@ urlpatterns = [
     url(r'^html/instruments/$', ListView.as_view(model=Instrument), name='html-instrument-list'),
     url(r'^html/opticalelementgroups/$', ListView.as_view(model=OpticalElementGroup), name='html-opticalelementgroup-list'),
     url(r'^html/genericmodegroups/$', ListView.as_view(model=GenericModeGroup), name='html-genericmodegroup-list'),
-    url(r'^', include(router.urls)),
+    url(r'^', include(router.urls))
 ]

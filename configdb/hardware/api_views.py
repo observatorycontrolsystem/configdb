@@ -42,7 +42,8 @@ class FilterableViewSet(viewsets.ModelViewSet):
 class SiteViewSet(FilterableViewSet):
     custom_filter_annotations = [{'name': 'name', 'description': 'Site name'},
                                  {'name': 'code', 'description': 'Site code'}]
-    schema = CustomViewSchema(tags=['Sites'], custom_filter_annotations=custom_filter_annotations)
+    schema = CustomViewSchema(tags=['Sites'], 
+                              custom_filter_annotations=custom_filter_annotations)
     queryset = Site.objects.all().prefetch_related(
         'enclosure_set__telescope_set__instrument_set__autoguider_camera__optical_element_groups',
         'enclosure_set__telescope_set__instrument_set__autoguider_camera__optical_element_groups__optical_elements',
@@ -59,7 +60,8 @@ class EnclosureViewSet(FilterableViewSet):
     custom_filter_annotations = [{'name': 'name', 'description': 'Enclosure name'},
                                  {'name': 'code', 'description': 'Enclosure code'},
                                  {'name': 'site', 'description': 'Unique integer site ID', 'type': 'integer'}]
-    schema = CustomViewSchema(tags=['Enclosures'], custom_filter_annotations=custom_filter_annotations)
+    schema = CustomViewSchema(tags=['Enclosures'], 
+                              custom_filter_annotations=custom_filter_annotations)
     queryset = Enclosure.objects.all().select_related('site').prefetch_related(
         'telescope_set__instrument_set__autoguider_camera__optical_element_groups',
         'telescope_set__instrument_set__autoguider_camera__optical_element_groups__optical_elements',
@@ -76,12 +78,12 @@ class EnclosureViewSet(FilterableViewSet):
 class TelescopeViewSet(FilterableViewSet):
     custom_filter_annotations = [{'name': 'name', 'description': 'Telescope name'},
                                  {'name': 'code', 'description': 'Telescope code'},
-                                 {'name': 'lat', 'description': 'Telescope latitude in decimal degrees', 'type': 'float'},
-                                 {'name': 'long', 'description': 'Telescope longitude in decimal degrees', 'type': 'float'},
-                                 {'name': 'horizon', 'description': 'Minimum distance to horizon for pointing in degrees', 'type': 'float'},
+                                 {'name': 'lat', 'description': 'Telescope latitude in decimal degrees', 'type': 'number'},
+                                 {'name': 'long', 'description': 'Telescope longitude in decimal degrees', 'type': 'number'},
+                                 {'name': 'horizon', 'description': 'Minimum distance to horizon for pointing in degrees', 'type': 'number'},
                                  {'name': 'enclosure', 'description': 'Unique integer enclosure ID', 'type': 'integer'}]
-    schema = CustomViewSchema(tags=['Enclosures'], custom_filter_annotations=custom_filter_annotations)
-    schema = AutoSchema(tags=['Telescopes'])
+    schema = CustomViewSchema(tags=['Telescopes'], 
+                              custom_filter_annotations=custom_filter_annotations)
     queryset = Telescope.objects.all().select_related('enclosure__site').prefetch_related(
         'instrument_set__autoguider_camera__optical_element_groups',
         'instrument_set__autoguider_camera__optical_element_groups__optical_elements',
@@ -116,7 +118,7 @@ class InstrumentFilter(django_filters.rest_framework.FilterSet):
         model = Instrument
         fields = ['telescope', 'science_cameras', 'autoguider_camera', 'instrument_type',
                   'camera_type', 'site', 'telescope', 'enclosure', 'state']
-                  
+
     def state_filter(self, queryset, name, value):
         ''' Allows us to do queries like ?state=MANUAL instead of ?state=10 '''
         for state in Instrument.STATE_CHOICES:

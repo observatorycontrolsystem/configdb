@@ -93,7 +93,7 @@ class CameraSerializer(serializers.ModelSerializer):
     camera_type = CameraTypeSerializer(read_only=True, help_text='Camera type')
     camera_type_id = serializers.IntegerField(write_only=True, help_text='Unique ID that corresponds to this camera\'s type')
     optical_element_groups = OpticalElementGroupSerializer(many=True, read_only=True, 
-                                                           help_text='Optical element groups that this camera belongs to')
+                                                           help_text='Optical element groups that this camera contains')
 
     class Meta:
         fields = ('id', 'code', 'camera_type', 'camera_type_id',
@@ -159,7 +159,7 @@ class TelescopeSerializer(serializers.ModelSerializer):
     instrument_set = InstrumentSerializer(many=True, read_only=True, help_text='Set of instruments belonging to this telescope')
     enclosure = serializers.HyperlinkedRelatedField(view_name='enclosure-detail', read_only=True,
                                                     help_text='Enclosure that this telescope belongs to')
-    enclosure_id = serializers.IntegerField(write_only=True, help_text='Unique IDs for the enclosure that this telescope belongs to')
+    enclosure_id = serializers.IntegerField(write_only=True, help_text='Unique ID for the enclosure that this telescope belongs to')
 
     class Meta:
         fields = ('id', 'serial_number', 'name', 'code', 'active', 'lat', 'enclosure_id', 'slew_rate',

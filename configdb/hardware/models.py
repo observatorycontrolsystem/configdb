@@ -110,13 +110,13 @@ class OpticalElementGroup(BaseModel):
 
 
 class CameraType(BaseModel):
-    name = models.CharField(max_length=200, unique=True, help_text='Camera name')
-    code = models.CharField(max_length=200, help_text='Camera code')
+    name = models.CharField(max_length=200, unique=True, help_text='Camera type name')
+    code = models.CharField(max_length=200, help_text='Camera type code')
     size = models.CharField(max_length=200, help_text='Field of view in arcminutes')
     pscale = models.FloatField(help_text='Pixel scale in arcseconds/pixel')
     pixels_x = models.IntegerField(default=0, help_text='Number of pixels on x-axis')
     pixels_y = models.IntegerField(default=0, help_text='Number of pixels on y-axis')
-    max_rois = models.IntegerField(default=0, help_text='Maximum number of regions of interest that this camera type supports')
+    max_rois = models.IntegerField(default=0, help_text='Maximum regions of interest that this camera type supports')
 
     def __str__(self):
         return self.code
@@ -141,8 +141,8 @@ class InstrumentCategory(BaseModel):
 
 
 class InstrumentType(BaseModel):
-    name = models.CharField(max_length=200, help_text='Instrument name')
-    code = models.CharField(max_length=200, unique=True, help_text='Instrument code')
+    name = models.CharField(max_length=200, help_text='Instrument type name')
+    code = models.CharField(max_length=200, unique=True, help_text='Instrument type code')
     instrument_category = models.ForeignKey(
         InstrumentCategory, on_delete=models.PROTECT, null=True,
         help_text='The category of this instrument type, like IMAGE or SPECTRO. '
@@ -177,7 +177,7 @@ class InstrumentType(BaseModel):
                   'causing its Request to be counted as complete.'
     )
     allow_self_guiding = models.BooleanField(default=True, blank=True, 
-                                             help_text='Whether to allow this instrument to be used for self-guiding'
+                                             help_text='Whether to allow instruments of this type to be used for self-guiding'
                                              )
     validation_schema = JSONField(default=dict, blank=True,
                                   help_text='Cerberus styled validation schema used to validate instrument configs using this instrument type'
@@ -272,7 +272,7 @@ class Camera(BaseModel):
     camera_type = models.ForeignKey(CameraType, on_delete=models.CASCADE, help_text='Camera type')
     code = models.CharField(max_length=200, help_text='Camera code')
     optical_element_groups = models.ManyToManyField(OpticalElementGroup, blank=True, 
-                                                    help_text='Optical element groups that this camera belongs to')
+                                                    help_text='Optical element groups that this camera contains')
     host = models.CharField(max_length=200, default='', blank=True,
                             help_text='The physical machine hostname that this camera is connected to')
 
