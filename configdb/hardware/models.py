@@ -18,7 +18,8 @@ class Site(BaseModel):
     lat = models.FloatField(default=0.0, help_text='Site latitude in decimal degrees')
     long = models.FloatField(default=0.0, help_text='Site longitude in decimal degrees')
     elevation = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(100000)],
+        # validator covers the extents of the terrestrial Earth
+        validators=[MinValueValidator(-500), MaxValueValidator(100000)],
         help_text='Site elevation in meters'
     )
     # TODO FIXME:
@@ -29,7 +30,7 @@ class Site(BaseModel):
     # around the world that have non-Integer offsets (example: Australia/Adelaide).
     timezone = models.IntegerField(
         help_text='Offset from UTC in hours',
-        validators=[MinValueValidator(-12), MaxValueValidator(12)]
+        validators=[MinValueValidator(-12), MaxValueValidator(14)]
     )
     tz = models.CharField(default='Etc/UTC', max_length=64, help_text='Timezone Name')
     restart = models.TimeField(default=datetime.time(hour=0, minute=0, second=0), help_text='Daily restart time in UTC')
@@ -222,7 +223,7 @@ class ConfigurationTypeProperties(BaseModel):
 
 
 class ModeType(BaseModel):
-    id = models.CharField(max_length=200, primary_key=True, help_text='Mode type ID')
+    id = models.CharField(max_length=200, primary_key=True, help_text='Mode type')
 
     def __str__(self):
         return self.id
