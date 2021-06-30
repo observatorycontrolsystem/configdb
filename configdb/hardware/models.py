@@ -134,7 +134,7 @@ class InstrumentCategory(BaseModel):
     code = models.CharField(max_length=64, primary_key=True, help_text='Instrument category code')
 
     class Meta:
-        verbose_name_plural = "Instrument categories"
+        verbose_name_plural = 'Instrument categories'
 
     def __str__(self):
         return self.code
@@ -215,6 +215,7 @@ class ConfigurationTypeProperties(BaseModel):
 
     class Meta:
         unique_together = ('instrument_type', 'configuration_type')
+        verbose_name_plural = 'Configuration type properties'
 
     def __str__(self):
         return f"{self.instrument_type.code}-{self.configuration_type.code}"
