@@ -1,7 +1,7 @@
 django>=3.0,<3.1
 psycopg2-binary>=2.8,<2.9
 requests>=2,<3
-djangorestframework>=3.11,<3.12
+djangorestframework>=3.12.2,<3.13
 django-filter>=2.2,<2.5
 django-reversion>=3.0,<3.1
 django-cors-headers>=3.3,<3.4
@@ -12,3 +12,6 @@ django-extensions
 ipython
 gunicorn[gevent]==20.0.4
 mixer==6.1.3
+pyyaml==5.4.1
+uritemplate==3.0.1
+setuptools-scm==6.0.1
