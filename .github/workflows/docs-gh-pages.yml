@@ -31,7 +31,7 @@ jobs:
         personal_token: ${{ secrets.PERSONAL_TOKEN }}
         external_repository: observatorycontrolsystem/observatorycontrolsystem.github.io
         publish_dir: docs
-        destination_dir: docs
+        destination_dir: assets/html
         enable_jekyll: true
         publish_branch: main
         keep_files: true
