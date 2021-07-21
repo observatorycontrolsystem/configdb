@@ -96,7 +96,7 @@ class CameraSerializer(serializers.ModelSerializer):
                                                            help_text='Optical element groups that this camera contains')
 
     class Meta:
-        fields = ('id', 'code', 'camera_type', 'camera_type_id',
+        fields = ('id', 'code', 'camera_type', 'camera_type_id', 'orientation',
                   'optical_elements', 'optical_element_groups', 'host')
         model = Camera
 
