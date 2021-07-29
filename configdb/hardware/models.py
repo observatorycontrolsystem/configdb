@@ -273,6 +273,10 @@ class GenericModeGroup(BaseModel):
 class Camera(BaseModel):
     camera_type = models.ForeignKey(CameraType, on_delete=models.CASCADE, help_text='Camera type')
     code = models.CharField(max_length=200, help_text='Camera code')
+    orientation = models.FloatField(
+        default=0.0,
+        help_text='The orientation of the Cameras ccd in degrees measured counterclockwise from North (y-axis)'
+    )
     optical_element_groups = models.ManyToManyField(OpticalElementGroup, blank=True,
                                                     help_text='Optical element groups that this camera contains')
     host = models.CharField(max_length=200, default='', blank=True,
