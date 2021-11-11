@@ -45,6 +45,9 @@ class Command(BaseCommand):
         ConfigurationTypeProperties.objects.get_or_create(configuration_type=bias_config_type, instrument_type=instrument_type, requires_optical_elements=False, schedulable=False)
         ConfigurationTypeProperties.objects.get_or_create(configuration_type=dark_config_type, instrument_type=instrument_type, requires_optical_elements=False, schedulable=False)
 
+        instrument_type.default_configuration_type = expose_config_type
+        instrument_type.save()
+
     def add_instrument(self, telescope, ins, ins_state):
         instrument_type_code = f"{telescope.code[:3].upper()}-SCICAM-SINISTRO"
         camera_type, _ = CameraType.objects.get_or_create(name=instrument_type_code, code=instrument_type_code,

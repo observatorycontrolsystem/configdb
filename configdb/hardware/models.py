@@ -171,6 +171,10 @@ class InstrumentType(BaseModel):
         ConfigurationType, through='ConfigurationTypeProperties',
         help_text='The set of configuration types available for use with this instrument type.'
     )
+    default_configuration_type = models.ForeignKey(ConfigurationType, related_name='default_for',
+        null=True, blank=True, on_delete=models.CASCADE,
+        help_text='The default configuration type shown on the frontend or used if none is specified for this instrument type.'
+    )
     default_acceptability_threshold = models.FloatField(
         default=90.0,
         help_text='The default acceptability threshold to use for Requests submitted on this instrument type. '
