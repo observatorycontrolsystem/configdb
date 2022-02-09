@@ -1,6 +1,4 @@
 import json
-from unittest.mock import patch
-
 from django.test import TestCase
 from django.test import Client
 from django.contrib.auth.models import User
@@ -9,34 +7,6 @@ from mixer.backend.django import mixer
 from .models import (Site, Instrument, Enclosure, Telescope, Camera, CameraType, InstrumentType,
                      GenericMode, GenericModeGroup, ModeType, OpticalElement, OpticalElementGroup)
 from .serializers import GenericModeSerializer, InstrumentTypeSerializer
-
-
-@patch('configdb.auth_backends.requests.post')
-class TestOauth2Login(TestCase):
-    def setUp(self) -> None:
-        self.credentials = {'username': 'bob', 'password': 'pass'}
-        self.oauth_token_url = 'localhost'
-        self.empty_oauth_token_url = ''
-
-    def test_log_in(self, mock_post):
-        mock_post.return_value.status_code = 200
-        with self.settings(OAUTH_TOKEN_URL=self.oauth_token_url):
-            logged_in = self.client.login(**self.credentials)
-            self.assertTrue(logged_in)
-            self.assertEqual(User.objects.filter(username=self.credentials['username']).count(), 1)
-
-    def test_incorrect_login_credentials_fails(self, mock_post):
-        mock_post.return_value.status_code = 403
-        with self.settings(OAUTH_TOKEN_URL=self.oauth_token_url):
-            logged_in = self.client.login(**self.credentials)
-            self.assertFalse(logged_in)
-            self.assertEqual(User.objects.filter(username=self.credentials['username']).count(), 0)
-
-    def test_log_in_with_no_oauth_url_set_fails(self, mock_post):
-        with self.settings(OAUTH_TOKEN_URL=self.empty_oauth_token_url):
-            logged_in = self.client.login(**self.credentials)
-            self.assertFalse(logged_in)
-            self.assertEqual(User.objects.filter(username=self.credentials['username']).count(), 0)
 
 
 class SimpleHardwareTest(TestCase):

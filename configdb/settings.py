@@ -50,6 +50,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_filters',
+    'ocs_authentication.auth_profile',
     'reversion',
     'rest_framework',
     'django_nose',
@@ -73,7 +74,7 @@ MIDDLEWARE = (
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    'configdb.auth_backends.OAuth2Backend',  # Allows Oauth login with username/pass
+    'ocs_authentication.backends.OAuthUsernamePasswordBackend',
 ]
 
 ROOT_URLCONF = 'configdb.urls'
@@ -138,13 +139,25 @@ REST_FRAMEWORK = {
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 1000,
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        # Allows authentication against DRF authtoken and then Oauth Server's api_token
+        'ocs_authentication.backends.OCSTokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
 
-OAUTH_CLIENT_ID = os.getenv('OAUTH_CLIENT_ID', '')
-OAUTH_CLIENT_SECRET = os.getenv('OAUTH_CLIENT_SECRET', '')
-OAUTH_TOKEN_URL = os.getenv('OAUTH_TOKEN_URL', '')
+# This project now requires connection to an OAuth server for authenticating users to make changes
+# In the OCS, this would be the Observation Portal backend
+OCS_AUTHENTICATION = {
+    'OAUTH_TOKEN_URL': os.getenv('OAUTH_TOKEN_URL', 'http://127.0.0.1:8000/o/token/'),
+    'OAUTH_PROFILE_URL': os.getenv('OAUTH_PROFILE_URL', 'http://127.0.0.1:8000/api/profile/'),
+    'OAUTH_CLIENT_ID': os.getenv('OAUTH_CLIENT_ID', ''),
+    'OAUTH_CLIENT_SECRET': os.getenv('OAUTH_CLIENT_SECRET', ''),
+    'OAUTH_SERVER_KEY': os.getenv('OAUTH_SERVER_KEY', ''),
+    'REQUESTS_TIMEOUT_SECONDS': 60
+}
 
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
