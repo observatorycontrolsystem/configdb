@@ -6,6 +6,9 @@ from configdb.hardware import api_views
 from .views import IndexView
 from .models import Site, Telescope, Camera, Instrument, OpticalElementGroup, GenericModeGroup
 
+import ocs_authentication.auth_profile.urls as authprofile_urls
+
+
 router = routers.SimpleRouter()
 router.register(r'sites', api_views.SiteViewSet)
 router.register(r'enclosures', api_views.EnclosureViewSet)
@@ -21,6 +24,7 @@ router.register(r'genericmodes', api_views.GenericModeViewSet)
 
 urlpatterns = [
     url(r'^$', IndexView.as_view(), name='index'),
+    url(r'^authprofile/', include(authprofile_urls)),
     url(r'^html/sites/$', ListView.as_view(model=Site), name='html-site-list'),
     url(r'^html/telescopes/$', ListView.as_view(model=Telescope), name='html-telescope-list'),
     url(r'^html/cameras/$', ListView.as_view(model=Camera), name='html-camera-list'),
