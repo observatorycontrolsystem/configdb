@@ -1,3 +1,7 @@
+2.2.0
+2022-02-24
+Switch to use ocs-authentication library for backend authentication
+
 2.1.1
 2021-04-09
 Update some dependencies

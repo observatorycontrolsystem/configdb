@@ -9,7 +9,7 @@ represent the physical state of a Telescope Network. It provides a
 RESTful API as well as HTML views of the data. This is used by other applications in the observatory control system to understand what components make up the observatory, and to allow for automated validation of component properties.
 
 ## Prerequisites
--   Python>=3.6
+-   Python>=3.7
 -   PostgreSQL
 
 The application requires a PostgreSQL database backend because it uses JSONFields in the model.
