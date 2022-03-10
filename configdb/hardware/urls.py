@@ -1,4 +1,4 @@
-from django.conf.urls import url, include
+from django.urls import re_path, include
 from django.views.generic.list import ListView
 from rest_framework import routers
 
@@ -23,13 +23,13 @@ router.register(r'genericmodegroups', api_views.GenericModeGroupViewSet)
 router.register(r'genericmodes', api_views.GenericModeViewSet)
 
 urlpatterns = [
-    url(r'^$', IndexView.as_view(), name='index'),
-    url(r'^authprofile/', include(authprofile_urls)),
-    url(r'^html/sites/$', ListView.as_view(model=Site), name='html-site-list'),
-    url(r'^html/telescopes/$', ListView.as_view(model=Telescope), name='html-telescope-list'),
-    url(r'^html/cameras/$', ListView.as_view(model=Camera), name='html-camera-list'),
-    url(r'^html/instruments/$', ListView.as_view(model=Instrument), name='html-instrument-list'),
-    url(r'^html/opticalelementgroups/$', ListView.as_view(model=OpticalElementGroup), name='html-opticalelementgroup-list'),
-    url(r'^html/genericmodegroups/$', ListView.as_view(model=GenericModeGroup), name='html-genericmodegroup-list'),
-    url(r'^', include(router.urls))
+    re_path(r'^$', IndexView.as_view(), name='index'),
+    re_path(r'^authprofile/', include(authprofile_urls)),
+    re_path(r'^html/sites/$', ListView.as_view(model=Site), name='html-site-list'),
+    re_path(r'^html/telescopes/$', ListView.as_view(model=Telescope), name='html-telescope-list'),
+    re_path(r'^html/cameras/$', ListView.as_view(model=Camera), name='html-camera-list'),
+    re_path(r'^html/instruments/$', ListView.as_view(model=Instrument), name='html-instrument-list'),
+    re_path(r'^html/opticalelementgroups/$', ListView.as_view(model=OpticalElementGroup), name='html-opticalelementgroup-list'),
+    re_path(r'^html/genericmodegroups/$', ListView.as_view(model=GenericModeGroup), name='html-genericmodegroup-list'),
+    re_path(r'^', include(router.urls))
 ]
