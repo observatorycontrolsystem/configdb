@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "configdb"
+version = "3.0.0-alpha.0"
+description = "Configuration Database"
+authors = ["Observatory Control System Project <ocs@lco.global>"]
+license = "GPL-3.0-only"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+Django = ">=3.0,<4"
+psycopg2-binary = ">=2.8,<2.9"
+requests = ">=2,<3"
+djangorestframework = ">=3.12.2,<3.13"
+django-filter = ">=2.2,<2.5"
+django-reversion = ">=3.0,<3.1"
+django-cors-headers = ">=3.3,<3.4"
+ocs-authentication = "0.1.0"
+Cerberus = ">=1.3,<1.4"
+django-extensions = "^3.1.5"
+ipython = "^8.1.1"
+gunicorn = {version = "20.0.4", extras = ["gevent"]}
+mixer = "6.1.3"
+PyYAML = "5.4.1"
+uritemplate = "3.0.1"
+setuptools-scm = "6.0.1"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
