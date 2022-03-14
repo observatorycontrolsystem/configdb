@@ -1,7 +1,6 @@
 import datetime
 
 from django.db import models
-from django.contrib.postgres.fields import JSONField
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 class BaseModel(models.Model):
@@ -184,7 +183,7 @@ class InstrumentType(BaseModel):
     allow_self_guiding = models.BooleanField(default=True, blank=True,
                                              help_text='Whether to allow instruments of this type to be used for self-guiding'
                                              )
-    validation_schema = JSONField(default=dict, blank=True,
+    validation_schema = models.JSONField(default=dict, blank=True,
                                   help_text='Cerberus styled validation schema used to validate instrument configs using this instrument type'
                                   )
 
@@ -245,7 +244,7 @@ class GenericMode(BaseModel):
         default=True,
         help_text='Whether this mode should be usable by scheduled observations, or only via direct submission.'
     )
-    validation_schema = JSONField(default=dict, blank=True,
+    validation_schema = models.JSONField(default=dict, blank=True,
         help_text='A cerberus styled validation schema that will be used to validate the structure this mode applies to'
     )
 
