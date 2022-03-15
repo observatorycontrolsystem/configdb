@@ -41,6 +41,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install --upgrade poetry
+        git clone 'git@github.com:observatorycontrolsystem/ocs-authentication.git'
         poetry install
     - name: Run tests
       run: poetry run coverage run manage.py test
