@@ -356,7 +356,7 @@ requests = ">=2.22,<2.27"
 
 [package.source]
 type = "git"
-url = "git@github.com:observatorycontrolsystem/ocs-authentication.git"
+url = "https://github.com/observatorycontrolsystem/ocs-authentication.git"
 reference = "chore/django4"
 resolved_reference = "a5df2d53395c76ec0c91cc4b75d53da4b4239dd6"
 
@@ -598,7 +598,7 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "d104b0f1a36452cc582c739d4090f7002592bede8d22677572a1c1a004a0d972"
+content-hash = "ad6206e2c8769380737297aba5f759e61664c4c46d1ca6120d484524ec90484d"
 
 [metadata.files]
 appnope = [
