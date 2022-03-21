@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9"]
+        python-version: ["3.8", "3.9", "3.10"]
     services:
       postgres:
         image: postgres
@@ -40,10 +40,10 @@ jobs:
     - name: Install dependencies and setup
       run: |
         python -m pip install --upgrade pip
-        pip install -U coverage coveralls
-        pip install -r requirements.txt
+        pip install --upgrade poetry
+        poetry install
     - name: Run tests
-      run: coverage run manage.py test
+      run: poetry run coverage run manage.py test
       env:
         SECRET_KEY: test_secret_key
         DB_USER: postgres
@@ -51,7 +51,9 @@ jobs:
         DB_HOST: localhost
         DB_PORT: 5432
     - name: Coveralls report
-      run: coveralls --service=github
+      run: |
+        pip install --upgrade coveralls
+        coveralls --service=github
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -115,7 +115,7 @@ class InstrumentViewSet(FilterableViewSet):
     ).distinct()
     serializer_class = serializers.InstrumentSerializer
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
-    filter_class = InstrumentFilter
+    filterset_class = InstrumentFilter
 
 
 class CameraTypeViewSet(FilterableViewSet):

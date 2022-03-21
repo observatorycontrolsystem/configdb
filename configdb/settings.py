@@ -53,7 +53,6 @@ INSTALLED_APPS = (
     'ocs_authentication.auth_profile',
     'reversion',
     'rest_framework',
-    'django_nose',
     'configdb.hardware',
     'corsheaders',
     'django_extensions',
@@ -159,7 +158,6 @@ OCS_AUTHENTICATION = {
     'REQUESTS_TIMEOUT_SECONDS': 60
 }
 
-TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
 try:
     from local_settings import *  # noqa

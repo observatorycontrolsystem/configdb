@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.conf.urls import include, url
+from django.urls import include, re_path
 from django.contrib import admin
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.urls import path
@@ -18,8 +18,8 @@ schema_view = get_schema_view(
     )
 
 urlpatterns = [
-    url(r'^admin/', admin.site.urls),
-    url(r'^', include(hardware_urls)),
+    re_path(r'^admin/', admin.site.urls),
+    re_path(r'^', include(hardware_urls)),
     path('openapi/', schema_view, name='openapi-schema'),
     path('redoc/', TemplateView.as_view(
         template_name='redoc.html',
