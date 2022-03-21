@@ -16,7 +16,7 @@ WORKDIR /app
 COPY ./README.md ./pyproject.toml ./poetry.lock ./
 
 # install locked python dependecies using poetry to generate a requirements.txt
-RUN pip install -r <(poetry export --without-hashes) # TODO: remove --without-hashes once not using git
+RUN pip install -r <(poetry export)
 
 # copy everything else
 COPY ./ ./
