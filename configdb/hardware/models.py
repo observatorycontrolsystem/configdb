@@ -14,8 +14,16 @@ class Site(BaseModel):
     active = models.BooleanField(default=True, help_text='Whether the site is active and able to accept observations')
     code = models.CharField(max_length=3, help_text='3-letter site code')
     name = models.CharField(default='', blank=True, max_length=200, help_text='Site name')
-    lat = models.FloatField(default=0.0, help_text='Site latitude in decimal degrees')
-    long = models.FloatField(default=0.0, help_text='Site longitude in decimal degrees')
+    lat = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(-90.0), MaxValueValidator(90.0)],
+        help_text='Site latitude in decimal degrees'
+    )
+    long = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(-180.0), MaxValueValidator(180.0)],
+        help_text='Site longitude in decimal degrees'
+    )
     elevation = models.IntegerField(
         # validator covers the extents of the terrestrial Earth
         validators=[MinValueValidator(-500), MaxValueValidator(100000)],
@@ -56,19 +64,50 @@ class Telescope(BaseModel):
     code = models.CharField(max_length=200, help_text='Telescope code')
     name = models.CharField(default='', blank=True, max_length=200, help_text='Telescome name')
     serial_number = models.CharField(max_length=50, default='', help_text='Unique telescope serial number')
-    slew_rate = models.FloatField(default=0,
-                                  help_text='The rate in sec/arcsec at which the telescope slews between positions')
-    minimum_slew_overhead = models.FloatField(default=0,
-                                              help_text='The minimum amount of time a slew can take in seconds')
+    telescope_front_padding = models.FloatField(
+        default=90,
+        validators=[MinValueValidator(0)],
+        help_text='Setup time for taking on observation on this telescope, applied once per '
+        'observation. This is for an average of tasks like initial slewing and opening the enclosure.'
+    )
+    slew_rate = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text='The rate in sec/arcsec at which the telescope slews between targets within a single observation'
+    )
+    minimum_slew_overhead = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text='The minimum amount of time a slew can take in seconds for targets within a single observation'
+    )
     instrument_change_overhead = models.FloatField(
-        default=0, help_text='The maximum amount of time it takes to switch instruments')
-    lat = models.FloatField(help_text='Telescope latitude in decimal degrees')
-    long = models.FloatField(help_text='Telescope longitude in decimal degrees')
-    horizon = models.FloatField(help_text='Minimum distance from horizion telescope can point without field of view being obscured, in degrees')
-    ha_limit_neg = models.FloatField(help_text='Negative hour-angle limit in hours')
-    ha_limit_pos = models.FloatField(help_text='Positive hour-angle limit in hours')
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text='The maximum amount of time it takes to switch instruments on this telescope'
+    )
+    lat = models.FloatField(
+        validators=[MinValueValidator(-90.0), MaxValueValidator(90.0)],
+        help_text='Telescope latitude in decimal degrees'
+    )
+    long = models.FloatField(
+        validators=[MinValueValidator(-180.0), MaxValueValidator(180.0)],
+        help_text='Telescope longitude in decimal degrees'
+    )
+    horizon = models.FloatField(
+        validators=[MinValueValidator(0), MaxValueValidator(90)],
+        help_text='Minimum distance from horizion telescope can point without field of view being obscured, in degrees'
+    )
+    aperture = models.FloatField(validators=[MinValueValidator(0)], default=0.0,
+                                 help_text='The aperture of this telescope in meters. This is used to group telescopes by aperture class')
+    ha_limit_neg = models.FloatField(validators=[MinValueValidator(-12), MaxValueValidator(0)],
+                                     help_text='Negative hour-angle limit in hours')
+    ha_limit_pos = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(12)],
+                                     help_text='Positive hour-angle limit in hours')
     zenith_blind_spot = models.FloatField(
-        default=0.0, help_text='For AltAz telescopes, radius of zenith blind spot in degrees')
+        default=0.0,
+        validators=[MinValueValidator(0), MaxValueValidator(180)],
+        help_text='For AltAz telescopes, radius of zenith blind spot in degrees'
+    )
     enclosure = models.ForeignKey(Enclosure, on_delete=models.CASCADE, help_text='Enclosure which contains this telescope')
 
     def __str__(self):
@@ -89,12 +128,13 @@ class OpticalElement(BaseModel):
 
 class OpticalElementGroup(BaseModel):
     name = models.CharField(max_length=200, help_text='Optical element group name')
-    type = models.CharField(max_length=200, help_text = 'Optical element group type')
+    type = models.CharField(max_length=200, help_text='Optical element group type')
     default = models.ForeignKey(OpticalElement, related_name='default', null=True,
                                 blank=True, on_delete=models.PROTECT, help_text='Default optical element within this optical element group')
     optical_elements = models.ManyToManyField(OpticalElement, help_text="Optical elements belonging to this optical element group")
     element_change_overhead = models.FloatField(
         default=0,
+        validators=[MinValueValidator(0)],
         help_text='Overhead in seconds when changing between optical elements within this optical element group'
     )
 
@@ -113,10 +153,22 @@ class CameraType(BaseModel):
     name = models.CharField(max_length=200, unique=True, help_text='Camera type name')
     code = models.CharField(max_length=200, help_text='Camera type code')
     size = models.CharField(max_length=200, help_text='Field of view in arcminutes')
-    pscale = models.FloatField(help_text='Pixel scale in arcseconds/pixel')
-    pixels_x = models.IntegerField(default=0, help_text='Number of pixels on x-axis')
-    pixels_y = models.IntegerField(default=0, help_text='Number of pixels on y-axis')
-    max_rois = models.IntegerField(default=0, help_text='Maximum regions of interest that this camera type supports')
+    pscale = models.FloatField(help_text='Pixel scale in arcseconds/pixel', validators=[MinValueValidator(0.0)])
+    pixels_x = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text='Number of pixels on x-axis'
+    )
+    pixels_y = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text='Number of pixels on y-axis'
+    )
+    max_rois = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text='Maximum regions of interest that this camera type supports'
+    )
 
     def __str__(self):
         return self.code
@@ -149,21 +201,25 @@ class InstrumentType(BaseModel):
     )
     fixed_overhead_per_exposure = models.FloatField(
         default=1,
+        validators=[MinValueValidator(0)],
         help_text='A per exposure overhead to be applied. This accounts for any per exposure '
                   'setup or delays found in the camera or instrument control software.'
     )
     observation_front_padding = models.FloatField(
         default=90,
+        validators=[MinValueValidator(0)],
         help_text='Setup time for taking on observation on this instrument, applied '
-                  'once per observation. This is for tasks like slewing and instrument configuration.'
+                  'once per observation. This is for tasks like initial slewing and instrument configuration.'
     )
     config_front_padding = models.FloatField(
         default=0,
+        validators=[MinValueValidator(0)],
         help_text='Setup time for each configuration of an observation on this instrument. '
                   'This is for things like configuration specific setup time.'
     )
     acquire_exposure_time = models.FloatField(
         default=0,
+        validators=[MinValueValidator(0)],
         help_text='The default exposure time to use for acquisition exposures with this instrument type.'
     )
     configuration_types = models.ManyToManyField(
@@ -176,6 +232,7 @@ class InstrumentType(BaseModel):
     )
     default_acceptability_threshold = models.FloatField(
         default=90.0,
+        validators=[MinValueValidator(0), MaxValueValidator(100.0)],
         help_text='The default acceptability threshold to use for Requests submitted on this instrument type. '
                   'Acceptability threshold is the minimum percentage of data an Observation must take before '
                   'causing its Request to be counted as complete.'
@@ -183,9 +240,11 @@ class InstrumentType(BaseModel):
     allow_self_guiding = models.BooleanField(default=True, blank=True,
                                              help_text='Whether to allow instruments of this type to be used for self-guiding'
                                              )
-    validation_schema = models.JSONField(default=dict, blank=True,
-                                  help_text='Cerberus styled validation schema used to validate instrument configs using this instrument type'
-                                  )
+    validation_schema = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Cerberus styled validation schema used to validate instrument configs using this instrument type'
+    )
 
     def __str__(self):
         return self.code
@@ -212,6 +271,7 @@ class ConfigurationTypeProperties(BaseModel):
     )
     config_change_overhead = models.FloatField(
         default=0,
+        validators=[MinValueValidator(0)],
         help_text='Time necessary for switching to this configuration type from a different configuration type during an '
                   'observation, like going between a Spectrum and a Lamp Flat for example. This could account for starting up '
                   'a lamp.'
@@ -236,6 +296,7 @@ class GenericMode(BaseModel):
     name = models.CharField(max_length=200, help_text='Generic mode name')
     code = models.CharField(max_length=200, help_text='Generic mode code')
     overhead = models.FloatField(
+        validators=[MinValueValidator(0)],
         help_text='Overhead associated with the generic mode. Where this overhead is applied depends on what type '
                   'of generic mode this is for. For example, a readout mode is applied per exposure, while an acquisition '
                   'overhead is applied for the acquisition step at the beginning of an observation.'
@@ -244,7 +305,9 @@ class GenericMode(BaseModel):
         default=True,
         help_text='Whether this mode should be usable by scheduled observations, or only via direct submission.'
     )
-    validation_schema = models.JSONField(default=dict, blank=True,
+    validation_schema = models.JSONField(
+        default=dict,
+        blank=True,
         help_text='A cerberus styled validation schema that will be used to validate the structure this mode applies to'
     )
 
@@ -278,6 +341,7 @@ class Camera(BaseModel):
     code = models.CharField(max_length=200, help_text='Camera code')
     orientation = models.FloatField(
         default=0.0,
+        validators=[MinValueValidator(0), MaxValueValidator(360.0)],
         help_text='The orientation of the Cameras ccd in degrees measured counterclockwise from North (y-axis)'
     )
     optical_element_groups = models.ManyToManyField(OpticalElementGroup, blank=True,

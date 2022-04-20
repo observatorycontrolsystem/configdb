@@ -121,9 +121,9 @@ class EnclosureAdmin(HardwareAdmin):
 
 @admin.register(Telescope)
 class TelescopeAdmin(HardwareAdmin):
-    list_display = ('__str__', 'active', 'name', 'lat', 'long')
+    list_display = ('__str__', 'active', 'name', 'lat', 'long', 'aperture')
     list_filter = ('enclosure__site__code',)
-    search_fields = ('code', 'name', 'active', 'enclosure__site__code')
+    search_fields = ('code', 'name', 'active', 'enclosure__site__code', 'aperture')
 
 
 @admin.register(Instrument)

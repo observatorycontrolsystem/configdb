@@ -10,7 +10,7 @@ RESTful API as well as HTML views of the data. This is used by other application
 
 ## Prerequisites
 -   Python>=3.7
--   PostgreSQL
+-   PostgreSQL >= 10
 
 The application requires a PostgreSQL database backend because it uses JSONFields in the model.
 
@@ -34,14 +34,28 @@ This project is configured using environment variables.
 
 ## Local Development
 
-### **Set up a virtual environment**
+### **Poetry**
 
-Using a virtual environment is highly recommended. Run the following commands from the base of this project. `(env)`
-is used to denote commands that should be run using your virtual environment.
+We use Poetry for package management. If you already have Poetry installed, you
+can skip this section.
 
-    python3 -m venv env
-    source env/bin/activate
-    (env) pip install -r requirements.txt
+You can install Poetry using one of the many options listed at https://python-poetry.org/docs/#installation.
+One simple option is using Pipx:
+
+    python3 -m pip install --user pipx
+    python3 -m pipx ensurepath
+    pipx install poetry
+
+### **Install**
+
+Install the project and its Python dependencies:
+
+    poetry install
+
+This will install the project in a Poetry managed virtual environment. To run
+commands in that environment either use `poetry run ...` or start a shell in
+that environment with `poetry shell`
+
 
 ### **Set up the database**
 
@@ -50,19 +64,19 @@ create a test PostgreSQL database. Make sure that the options that you use to se
 
     docker run --name configdb-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=configdb -v/var/lib/postgresql/data -p5432:5432 -d postgres:11.1
 
-Run database migrations to set up the tables in the database.
+After creating the database, migrations must be applied to set up the tables in the database.
 
-    (env) python manage.py migrate
+    poetry run python manage.py migrate
 
-### Run the tests
+### **Run the tests**
 
-    (env) python manage.py test
+    poetry run python manage.py test
 
-### Run the application
+### **Run the configdb**
 
-    (env) python manage.py runserver
+    poetry run python manage.py runserver
 
-The application should now be accessible from <http://127.0.0.1:8000>!
+The configdb should now be accessible from <http://127.0.0.1:8000>!
 
 ### Authentication
 The application connects to a running Observation Portal for OAuth2 authentication. Staff accounts should have
@@ -72,7 +86,7 @@ will be the `/o/token/` endpoint of the Observation Portal you are connecting to
 If no Observation Portal is connected during development, creating a local superuser account should work to
 access the admin interface as well:
 
-    (env) python manage.py createsuperuser
+    poetry run python manage.py createsuperuser
 
 ### Filling in Observatory Data
 The admin interface is used to define the components of the Observatory. It is accessible by going to <http://127.0.0.1:8000/admin/>. The different components of the Observatory should be defined one-by-one, and will often reference each other when creating them. A sensible order to initially create the components of an Observatory is:
@@ -87,6 +101,9 @@ The admin interface is used to define the components of the Observatory. It is a
 8. Generic modes - A generic definition for a single mode, including an associated overhead and validation schema
 9. Generic mode group - A grouping of one or more generic modes of a single type associated with a camera type. The type is user definable, but some examples used in the Observation Portal include `readout`, `acquisition`, `guiding`, `exposure`, and `rotator`
 10. Instrument - A combination of one or more science cameras and a guide camera on a specific Telescope
+
+- Check out the updated step-by-step setup guide [here](https://observatorycontrolsystem.github.io/deployment/configdb_setup/)
+- It is recommended that all codes use lowercase characters by convention, except for type codes such as instrument type, camera type, and mode type which should use all upper case. While this convention isn't strictly required, it is useful to choose a convention and apply it consistently when defining your codes.
 
 #### Generic Mode Validation Schema
 GenericMode structures have a field called `validation_schema` which accepts a dictionary [Cerberus Validation Schema](https://docs.python-cerberus.org/en/stable/schemas.html). This validation schema will be used to provide automatic validation and setting of defaults within the [Observation Portal](https://github.com/observatorycontrolsystem/observation-portal). The validation schema will act on the structure in which the GenericMode is a part of. For example:

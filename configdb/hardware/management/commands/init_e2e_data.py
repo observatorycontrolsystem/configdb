@@ -51,7 +51,7 @@ class Command(BaseCommand):
     def add_instrument(self, telescope, ins, ins_state):
         instrument_type_code = f"{telescope.code[:3].upper()}-SCICAM-SINISTRO"
         camera_type, _ = CameraType.objects.get_or_create(name=instrument_type_code, code=instrument_type_code,
-                                                       defaults={'pscale': 0, 'size': '0x0'})
+                                                          defaults={'pscale': 0, 'size': '0x0'})
         camera_type.save()
 
         imager_category, _ = InstrumentCategory.objects.get_or_create(code='IMAGE')
@@ -63,7 +63,8 @@ class Command(BaseCommand):
 
         # Now set up the modes for the instrument_type
         readout_mode_type, _ = ModeType.objects.get_or_create(id='readout')
-        readout_mode, _ = GenericMode.objects.get_or_create(code='default',
+        readout_mode, _ = GenericMode.objects.get_or_create(
+            code='default',
             defaults={'name': 'Sinistro Readout Mode', 'overhead': 0,
                       'validation_schema': {"bin_x": {"type": "integer", "allowed": [1], "default": 1},
                                             "bin_y": {"type": "integer", "allowed": [1], "default": 1}}
@@ -76,20 +77,23 @@ class Command(BaseCommand):
         readout_mode_group.save()
 
         guide_mode_type, _ = ModeType.objects.get_or_create(id='guiding')
-        guide_mode_off, _ = GenericMode.objects.get_or_create(code='OFF',
+        guide_mode_off, _ = GenericMode.objects.get_or_create(
+            code='OFF',
             defaults={'name': 'Guide OFF', 'overhead': 0, 'validation_schema': {}}
         )
-        guide_mode_on, _ = GenericMode.objects.get_or_create(code='ON',
+        guide_mode_on, _ = GenericMode.objects.get_or_create(
+            code='ON',
             defaults={'name': 'Guide ON', 'overhead': 5, 'validation_schema': {}}
         )
         guide_mode_group, _ = GenericModeGroup.objects.get_or_create(instrument_type=instrument_type, type=guide_mode_type,
-                                                                       default=guide_mode_off)
+                                                                     default=guide_mode_off)
         guide_mode_group.modes.add(guide_mode_off)
         guide_mode_group.modes.add(guide_mode_on)
         guide_mode_group.save()
 
         acquire_mode_type, _ = ModeType.objects.get_or_create(id='acquisition')
-        acquire_mode_off, _ = GenericMode.objects.get_or_create(code='OFF',
+        acquire_mode_off, _ = GenericMode.objects.get_or_create(
+            code='OFF',
             defaults={'name': 'Acquire OFF', 'overhead': 0, 'validation_schema': {}}
         )
         acquire_mode_group, _ = GenericModeGroup.objects.get_or_create(instrument_type=instrument_type, type=acquire_mode_type,
@@ -116,7 +120,7 @@ class Command(BaseCommand):
         instrument.state = ins_state
         instrument.save()
 
-    def add_telescope(self, site, longitude, latitude, obs, tel, ins, ins_state):
+    def add_telescope(self, site, longitude, latitude, obs, tel, aperture, ins, ins_state):
 
         site, _ = Site.objects.get_or_create(code=site, defaults={'elevation': 0, 'timezone': 0})
         site.lat = latitude
@@ -132,9 +136,9 @@ class Command(BaseCommand):
 
         telescope, _ = Telescope.objects.get_or_create(code=tel, enclosure=enclosure,
                                                        defaults={'lat': latitude, 'long': longitude, 'horizon': 15,
-                                                                 'ha_limit_pos': 4.6, 'ha_limit_neg': -4.6})
+                                                                 'ha_limit_pos': 4.6, 'ha_limit_neg': -4.6,
+                                                                 'aperture': aperture})
         self.add_instrument(telescope, ins, ins_state)
-
 
     def handle(self, *args, **options):
         if options['instrument_state'] not in dict(Instrument.STATE_CHOICES).values():
@@ -149,7 +153,9 @@ class Command(BaseCommand):
         longitude = options['longitude']
         latitude = options['latitude']
         site_str = options['site']
-        self.add_telescope(site=site_str, longitude=longitude, latitude=latitude, obs="doma", tel="1m0a", ins="xx04", ins_state=ins_state)
-        self.add_telescope(site=site_str, longitude=longitude, latitude=latitude, obs="clma", tel="2m0a", ins="xx05", ins_state=ins_state)
+        self.add_telescope(site=site_str, longitude=longitude, latitude=latitude, obs="doma", tel="1m0a",
+                           aperture=1.0, ins="xx04", ins_state=ins_state)
+        self.add_telescope(site=site_str, longitude=longitude, latitude=latitude, obs="clma", tel="2m0a",
+                           aperture=2.0, ins="xx05", ins_state=ins_state)
 
         sys.exit(0)
