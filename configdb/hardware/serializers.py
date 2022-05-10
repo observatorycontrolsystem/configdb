@@ -162,9 +162,9 @@ class TelescopeSerializer(serializers.ModelSerializer):
     enclosure_id = serializers.IntegerField(write_only=True, help_text='Model ID number for the enclosure that this telescope belongs to')
 
     class Meta:
-        fields = ('id', 'serial_number', 'name', 'code', 'active', 'lat', 'enclosure_id', 'slew_rate',
+        fields = ('id', 'serial_number', 'name', 'code', 'active', 'aperture', 'lat', 'enclosure_id', 'slew_rate',
                   'minimum_slew_overhead', 'instrument_change_overhead', 'long', 'enclosure', 'horizon',
-                  'ha_limit_pos', 'ha_limit_neg', 'zenith_blind_spot', 'instrument_set', '__str__')
+                  'ha_limit_pos', 'ha_limit_neg', 'telescope_front_padding', 'zenith_blind_spot', 'instrument_set', '__str__')
         model = Telescope
 
 
