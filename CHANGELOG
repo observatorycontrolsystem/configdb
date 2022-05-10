@@ -1,3 +1,11 @@
+3.0.1
+2022-05-10
+Add aperture and telescope_front_padding to telescope level and tighten field validators
+
+3.0.0
+2022-03-21
+Update all dependencies to django 4, python 3.7+ and switch to poetry for build
+
 2.2.1
 2022-02-24
 Switch to use ocs-authentication library for backend authentication
