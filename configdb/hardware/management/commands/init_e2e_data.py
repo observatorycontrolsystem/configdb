@@ -66,8 +66,10 @@ class Command(BaseCommand):
         readout_mode, _ = GenericMode.objects.get_or_create(
             code='default',
             defaults={'name': 'Sinistro Readout Mode', 'overhead': 0,
-                      'validation_schema': {"bin_x": {"type": "integer", "allowed": [1], "default": 1},
-                                            "bin_y": {"type": "integer", "allowed": [1], "default": 1}}
+                      'validation_schema': {"extra_params": {"type": "dict", "schema": {"bin_x":
+                                           {"type": "integer", "allowed": [1], "default": 1, "required": False},
+                                           "bin_y": {"type": "integer", "allowed": [1], "default": 1,
+                                           "required": False}}, "default": {}, "required": True}}
                      }
         )
 
