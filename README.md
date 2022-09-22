@@ -31,6 +31,8 @@ This project is configured using environment variables.
 | `OAUTH_CLIENT_ID`     | OAuth2 application client_id, set this to use OAuth2 authentication                | `""`                            |
 | `OAUTH_CLIENT_SECRET` | OAuth2 application client_secret, set this to use OAuth2 authentication            | `""`                            |
 | `OAUTH_TOKEN_URL`     | OAuth2 token URL, set this to use OAuth2 authentication                            | `""`                            |
+| `OAUTH_PROFILE_URL`   | Observation portal profile endpoint, used to retrieve details on user accounts     | `""`                            |
+| `OAUTH_SERVER_KEY`    | Observation portal server secret key to authenticate calls from the server         | `""`                            |
 
 ## Local Development
 
