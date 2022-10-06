@@ -24,6 +24,13 @@ def str2bool(value):
 
     raise RuntimeError('Unable to parse {} as a boolean value'.format(value))
 
+def get_list_from_env(variable, default=None):
+    value_as_list = []
+    value = os.getenv(variable, default)
+    if value:
+        value_as_list = value.strip(', ').replace(' ', '').split(',')
+    return value_as_list
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -125,6 +132,8 @@ USE_L10N = True
 
 USE_TZ = True
 
+# CSRF Overrides
+CSRF_TRUSTED_ORIGINS = get_list_from_env('CSRF_TRUSTED_ORIGINS', 'http://localhost:7000,http://127.0.0.1:7000,http://*')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
