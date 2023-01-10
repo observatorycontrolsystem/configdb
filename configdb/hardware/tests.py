@@ -85,7 +85,7 @@ class SimpleHardwareTest(TestCase):
                                      instrument_type=self.instrument_type, science_cameras=[self.camera],
                                      state=Instrument.SCHEDULABLE)
 
-        
+
         response = self.client.get('/instruments/', data={'state': ['DISABLED', 'SCHEDULABLE']}, content_type='application/x-www-form-urlencoded')
         self.assertEqual(len(response.json()['results']), 2)
 

@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 ins.save()
             except:
                 print(f"Reverse migration for instrument {ins.code} failed.")
-    
+
     operations = [
         migrations.RunPython(translate_state_int_to_char, reverse_code=translate_state_char_to_int),
         migrations.RemoveField(

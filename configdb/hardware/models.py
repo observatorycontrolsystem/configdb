@@ -366,7 +366,7 @@ class Instrument(BaseModel):
     COMMISSIONING = 'COMMISSIONING'
     STANDBY = 'STANDBY'
     SCHEDULABLE = 'SCHEDULABLE'
-    
+
     STATE_CHOICES = (
         (DISABLED, 'DISABLED'),
         (MANUAL, 'MANUAL'),
