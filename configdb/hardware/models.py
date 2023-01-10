@@ -361,11 +361,12 @@ class Camera(BaseModel):
 
 
 class Instrument(BaseModel):
-    DISABLED = 0
-    MANUAL = 10
-    COMMISSIONING = 20
-    STANDBY = 25
-    SCHEDULABLE = 30
+    DISABLED = 'DISABLED'
+    MANUAL = 'MANUAL'
+    COMMISSIONING = 'COMMISSIONING'
+    STANDBY = 'STANDBY'
+    SCHEDULABLE = 'SCHEDULABLE'
+
     STATE_CHOICES = (
         (DISABLED, 'DISABLED'),
         (MANUAL, 'MANUAL'),
@@ -387,7 +388,7 @@ class Instrument(BaseModel):
     """
     instrument_type = models.ForeignKey(InstrumentType, null=True, on_delete=models.CASCADE, help_text='Instrument type')
     code = models.CharField(max_length=200, default='', blank=True, help_text='Instrument code')
-    state = models.IntegerField(choices=STATE_CHOICES, default=DISABLED, help_text=state_help_text)
+    state = models.CharField(max_length=50, choices=STATE_CHOICES, default='DISABLED', help_text=state_help_text)
     telescope = models.ForeignKey(Telescope, on_delete=models.CASCADE, help_text='Telescope this instrument belongs to')
     science_cameras = models.ManyToManyField(Camera, help_text='Science cameras that belong to this instrument')
     autoguider_camera = models.ForeignKey(Camera, related_name='autoguides_for', on_delete=models.CASCADE, help_text='Autoguider camera for this instrument')

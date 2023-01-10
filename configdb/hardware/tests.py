@@ -1,4 +1,5 @@
 import json
+from http import HTTPStatus
 from django.test import TestCase
 from django.test import Client
 from django.contrib.auth.models import User
@@ -68,6 +69,35 @@ class SimpleHardwareTest(TestCase):
                           content_type='application/json')
         self.instrument.refresh_from_db()
         self.assertEqual(self.instrument.state, Instrument.MANUAL)
+
+    def test_patch_instrument_invalid_state_fails(self):
+        self.assertEqual(self.instrument.state, Instrument.DISABLED)
+
+        self.client.login(username='tst_user', password='tst_pass')
+        response = self.client.patch('/instruments/{}/'.format(self.instrument.pk), json.dumps({'state': 'UNWELL'}),
+                                     content_type='application/json')
+        self.instrument.refresh_from_db()
+        self.assertEqual(self.instrument.state, Instrument.DISABLED)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+
+    def test_or_instrument_states(self):
+        new_instrument = mixer.blend(Instrument, autoguider_camera=self.camera, telescope=self.telescope,
+                                     instrument_type=self.instrument_type, science_cameras=[self.camera],
+                                     state=Instrument.SCHEDULABLE)
+
+
+        response = self.client.get('/instruments/', data={'state': ['DISABLED', 'SCHEDULABLE']}, content_type='application/x-www-form-urlencoded')
+        self.assertEqual(len(response.json()['results']), 2)
+
+        response = self.client.get('/instruments/', data={'state': 'DISABLED'}, content_type='application/x-www-form-urlencoded')
+        self.assertEqual(len(response.json()['results']), 1)
+        self.assertEqual(str(new_instrument), response.json()['results'][0]['__str__'])
+
+        response = self.client.get('/instruments/', data={'state': 'SCHEDULABLE'}, content_type='application/x-www-form-urlencoded')
+        self.assertEqual(len(response.json()['results']), 1)
+
+        response = self.client.get('/instruments/', data={'state': 'MANUAL'}, content_type='application/x-www-form-urlencoded')
+        self.assertEqual(len(response.json()['results']), 0)
 
     def test_reject_invalid_cerberus_schema_generic_mode(self):
         bad_generic_mode_data = {'name': 'Readout Mode', 'overhead': 10.0, 'code': 'readout_mode_1', 'validation_schema': {'test': 'invalid'}}

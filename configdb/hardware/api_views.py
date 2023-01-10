@@ -87,20 +87,13 @@ class InstrumentFilter(django_filters.rest_framework.FilterSet):
                                           label='Enclosure code')
     site = django_filters.CharFilter(field_name="telescope__enclosure__site__code",
                                      label='Site code')
-    state = django_filters.CharFilter(method='state_filter', label='Instrument state')
-
+    state = django_filters.MultipleChoiceFilter(choices=Instrument.STATE_CHOICES,
+                                                label='Instrument state')
 
     class Meta:
         model = Instrument
         fields = ['telescope', 'science_cameras', 'autoguider_camera', 'instrument_type',
                   'camera_type', 'site', 'telescope', 'enclosure', 'state']
-
-    def state_filter(self, queryset, name, value):
-        ''' Allows us to do queries like ?state=MANUAL instead of ?state=10 '''
-        for state in Instrument.STATE_CHOICES:
-            if value.upper() == state[1]:
-                return queryset.filter(state=state[0])
-        return queryset
 
 
 class InstrumentViewSet(FilterableViewSet):
