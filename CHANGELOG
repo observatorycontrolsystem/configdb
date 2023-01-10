@@ -1,3 +1,8 @@
+3.0.2
+2023-01-10
+Make instrument state a multi-select to allow for OR queries
+Migrate instrument state from an integer model field to a character model field
+
 3.0.1
 2022-05-10
 Add aperture and telescope_front_padding to telescope level and tighten field validators
