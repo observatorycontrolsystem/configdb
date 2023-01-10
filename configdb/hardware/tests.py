@@ -1,4 +1,5 @@
 import json
+from http import HTTPStatus
 from django.test import TestCase
 from django.test import Client
 from django.contrib.auth.models import User
@@ -68,6 +69,16 @@ class SimpleHardwareTest(TestCase):
                           content_type='application/json')
         self.instrument.refresh_from_db()
         self.assertEqual(self.instrument.state, 'MANUAL')
+
+    def test_patch_instrument_invalid_state_fails(self):
+        self.assertEqual(self.instrument.state, 'DISABLED')
+
+        self.client.login(username='tst_user', password='tst_pass')
+        response = self.client.patch('/instruments/{}/'.format(self.instrument.pk), json.dumps({'state': 'UNWELL'}),
+                                     content_type='application/json')
+        self.instrument.refresh_from_db()
+        self.assertEqual(self.instrument.state, 'DISABLED')
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
 
     def test_reject_invalid_cerberus_schema_generic_mode(self):
         bad_generic_mode_data = {'name': 'Readout Mode', 'overhead': 10.0, 'code': 'readout_mode_1', 'validation_schema': {'test': 'invalid'}}

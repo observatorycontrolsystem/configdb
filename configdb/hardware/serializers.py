@@ -6,22 +6,6 @@ from .models import (
     CameraType, GenericModeGroup, InstrumentType, ConfigurationTypeProperties
 )
 
-
-class StateField(serializers.IntegerField):
-    def to_internal_value(self, data):
-        state_to_number = {choice[1]: choice[0] for choice in Instrument.STATE_CHOICES}
-        if data.upper() in state_to_number.keys():
-            return state_to_number[data.upper()]
-        raise serializers.ValidationError('State {} is not valid. Valid states include [{}]'
-                                          .format(data.upper(), ', '.join(state_to_number.keys())))
-
-    def to_representation(self, value):
-        number_to_state = {choice[0]: choice[1] for choice in Instrument.STATE_CHOICES}
-        if value in number_to_state:
-            return number_to_state[value]
-        return None
-
-
 class OpticalElementSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -146,7 +130,7 @@ class InstrumentSerializer(serializers.ModelSerializer):
                                                              help_text='Model ID numbers for the science cameras belonging to this instrument')
     instrument_type = InstrumentTypeSerializer(read_only=True, help_text='Instrument type')
     instrument_type_id = serializers.IntegerField(write_only=True, help_text='Model ID number for the instrument type of this instrument')
-    state = StateField(help_text='Instrument state')
+    state = serializers.ChoiceField(choices=Instrument.STATE_CHOICES, help_text='Instrument state')
 
     class Meta:
         fields = ('id', 'code', 'state', 'telescope', 'autoguider_camera_id',
