@@ -361,12 +361,18 @@ class Camera(BaseModel):
 
 
 class Instrument(BaseModel):
+    DISABLED = 'DISABLED'
+    MANUAL = 'MANUAL'
+    COMMISSIONING = 'COMMISSIONING'
+    STANDBY = 'STANDBY'
+    SCHEDULABLE = 'SCHEDULABLE'
+    
     STATE_CHOICES = (
-        ('DISABLED', 'DISABLED'),
-        ('MANUAL', 'MANUAL'),
-        ('COMMISSIONING', 'COMMISSIONING'),
-        ('STANDBY', 'STANDBY'),
-        ('SCHEDULABLE', 'SCHEDULABLE'),
+        (DISABLED, 'DISABLED'),
+        (MANUAL, 'MANUAL'),
+        (COMMISSIONING, 'COMMISSIONING'),
+        (STANDBY, 'STANDBY'),
+        (SCHEDULABLE, 'SCHEDULABLE'),
     )
     AUTOGUIDER_TYPES = (
         ("InCamera", "InCamera"),
