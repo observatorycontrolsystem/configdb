@@ -1,5 +1,5 @@
 from django.db import migrations
-    
+
 CODE_STATE_MAPPING = {0: 'DISABLED',
                       10: 'MANUAL',
                       20: 'COMMISSIONING',
