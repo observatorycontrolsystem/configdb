@@ -60,6 +60,7 @@ INSTALLED_APPS = (
     'ocs_authentication.auth_profile',
     'reversion',
     'rest_framework',
+    'rest_framework.authtoken',
     'configdb.hardware',
     'corsheaders',
     'django_extensions',
@@ -150,6 +151,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         # Allows authentication against DRF authtoken and then Oauth Server's api_token
         'ocs_authentication.backends.OCSTokenAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
 }
