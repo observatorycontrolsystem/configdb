@@ -1,3 +1,7 @@
+3.0.3
+2023-01-18
+Add back BasicAuth to rest framework and fix token auth for direct api queries
+
 3.0.2
 2023-01-10
 Make instrument state a multi-select to allow for OR queries
