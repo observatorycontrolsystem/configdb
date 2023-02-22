@@ -222,6 +222,11 @@ class InstrumentType(BaseModel):
         validators=[MinValueValidator(0)],
         help_text='The default exposure time to use for acquisition exposures with this instrument type.'
     )
+    minimum_flat_exposure_time = models.FloatField(
+        default=2,
+        validators=[MinValueValidator(2)],
+        help_text='The minimum exposure time to use for for flat exposures with this instrument type.'
+    )
     configuration_types = models.ManyToManyField(
         ConfigurationType, through='ConfigurationTypeProperties',
         help_text='The set of configuration types available for use with this instrument type.'
