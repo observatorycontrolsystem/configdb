@@ -222,11 +222,6 @@ class InstrumentType(BaseModel):
         validators=[MinValueValidator(0)],
         help_text='The default exposure time to use for acquisition exposures with this instrument type.'
     )
-    minimum_flat_exposure_time = models.FloatField(
-        default=2,
-        validators=[MinValueValidator(2)],
-        help_text='The minimum exposure time to use for for flat exposures with this instrument type.'
-    )
     configuration_types = models.ManyToManyField(
         ConfigurationType, through='ConfigurationTypeProperties',
         help_text='The set of configuration types available for use with this instrument type.'
@@ -280,6 +275,11 @@ class ConfigurationTypeProperties(BaseModel):
         help_text='Time necessary for switching to this configuration type from a different configuration type during an '
                   'observation, like going between a Spectrum and a Lamp Flat for example. This could account for starting up '
                   'a lamp.'
+    )
+    default_exposure_time = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text='Default exposure time for this configuration type'
     )
 
     class Meta:

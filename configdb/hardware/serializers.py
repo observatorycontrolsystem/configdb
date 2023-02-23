@@ -90,7 +90,7 @@ class ConfigurationTypePropertiesSerializer(serializers.ModelSerializer):
     code = serializers.ReadOnlyField(source='configuration_type.code', help_text='Configuration type code')
 
     class Meta:
-        fields = ('name', 'code', 'config_change_overhead', 'schedulable', 'force_acquisition_off', 'requires_optical_elements')
+        fields = ('name', 'code', 'config_change_overhead', 'schedulable', 'force_acquisition_off', 'requires_optical_elements', 'default_exposure_time')
         model = ConfigurationTypeProperties
 
 
@@ -101,8 +101,8 @@ class InstrumentTypeSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('id', 'name', 'code', 'fixed_overhead_per_exposure', 'instrument_category',
-                  'observation_front_padding', 'acquire_exposure_time', 'minimum_flat_exposure_time',
-                  'default_configuration_type', 'mode_types', 'default_acceptability_threshold', 'config_front_padding',
+                  'observation_front_padding', 'acquire_exposure_time', 'default_configuration_type',
+                  'mode_types', 'default_acceptability_threshold', 'config_front_padding',
                   'allow_self_guiding', 'configuration_types', 'validation_schema')
         model = InstrumentType
 
