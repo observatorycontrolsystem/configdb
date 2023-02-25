@@ -276,10 +276,10 @@ class ConfigurationTypeProperties(BaseModel):
                   'observation, like going between a Spectrum and a Lamp Flat for example. This could account for starting up '
                   'a lamp.'
     )
-    default_exposure_time = models.FloatField(
-        default=0,
-        validators=[MinValueValidator(0)],
-        help_text='Default exposure time for this configuration type'
+    validation_schema = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Cerberus styled validation schema used to validate instrument configs using this configuration type and instrument type'
     )
 
     class Meta:
