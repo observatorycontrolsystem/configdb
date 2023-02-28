@@ -90,7 +90,7 @@ class ConfigurationTypePropertiesSerializer(serializers.ModelSerializer):
     code = serializers.ReadOnlyField(source='configuration_type.code', help_text='Configuration type code')
 
     class Meta:
-        fields = ('name', 'code', 'config_change_overhead', 'schedulable', 'force_acquisition_off', 'requires_optical_elements')
+        fields = ('name', 'code', 'config_change_overhead', 'schedulable', 'force_acquisition_off', 'requires_optical_elements', 'validation_schema')
         model = ConfigurationTypeProperties
 
 

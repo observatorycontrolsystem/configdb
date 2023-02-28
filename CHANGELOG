@@ -1,3 +1,7 @@
+3.0.4
+2023-02-28
+Add validation_schema to ConfigurationTypeProperties model to allow for more flexible validation of instrument configs per instrument type/configuration type
+
 3.0.3
 2023-01-18
 Add back BasicAuth to rest framework and fix token auth for direct api queries
