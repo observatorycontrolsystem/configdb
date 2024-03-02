@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "configdb"
-version = "3.0.4"
+version = "3.0.5"
 description = "Configuration Database"
 authors = ["Observatory Control System Project <ocs@lco.global>"]
 license = "GPL-3.0-only"
@@ -22,6 +22,7 @@ ipython = "^8.1.1"
 gunicorn = {version = "^20.1.0", extras = ["gevent"]}
 mixer = "^7.2.1"
 PyYAML = "^6.0"
+time_intervals = ">=1.0,<2.0"
 uritemplate = "^4.1.1"
 
 [tool.poetry.dev-dependencies]
