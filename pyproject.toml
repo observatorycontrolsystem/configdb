@@ -24,6 +24,8 @@ mixer = "^7.2.1"
 PyYAML = "^6.0"
 time_intervals = ">=1.0,<2.0"
 uritemplate = "^4.1.1"
+time-machine = "^2.14.0"
+python-dateutil = "^2.9.0.post0"
 
 [tool.poetry.dev-dependencies]
 coverage = "^6.3.2"

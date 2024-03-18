@@ -77,10 +77,11 @@ def build_telescope_availability_history(telescope):
     for instrument in telescope.instrument_set.all():
         instrument_intervals.append(Intervals(build_instrument_availability_history(instrument)))
     combined_instrument_availability = Intervals().union(instrument_intervals)
-    
+
     # We can also check the telescope active state history and enforce that as well
     telescope_availability = build_availability_history(
         telescope, telescope.active, lambda version: version.field_dict['active'], True
     )
     telescope_intervals = Intervals(telescope_availability)
-    return combined_instrument_availability.intersect([telescope_intervals]).toTupleList()
+    # Reverse the intervals so the latest is first
+    return reversed(combined_instrument_availability.intersect([telescope_intervals]).toTupleList())
