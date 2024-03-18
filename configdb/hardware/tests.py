@@ -32,12 +32,18 @@ class BaseHardwareTest(TestCase):
 
 
 class SimpleHardwareTest(BaseHardwareTest):
+    def setUp(self):
+        super().setUp()
+        # Set instrument to initially be disabled
+        self.instrument.state = Instrument.DISABLED
+        self.instrument.save()
+
     def test_homepage(self):
         response = self.client.get('/')
         self.assertContains(response, 'ConfigDB3', status_code=200)
 
     def test_write_site(self):
-        site = {'name': 'Test Site', 'code': 'tst', 'active': True, 'timezone': -7, 'lat': 33.33, 'long': 22.22,
+        site = {'name': 'Test Site', 'code': 'tss', 'active': True, 'timezone': -7, 'lat': 33.33, 'long': 22.22,
                 'elevation': 1236, 'tz': 'US/Mountain', 'restart': '19:00:00'}
         self.client.login(username='tst_user', password='tst_pass')
         self.client.post('/sites/', site)
@@ -97,7 +103,7 @@ class SimpleHardwareTest(BaseHardwareTest):
 
         response = self.client.get('/instruments/', data={'state': 'DISABLED'}, content_type='application/x-www-form-urlencoded')
         self.assertEqual(len(response.json()['results']), 1)
-        self.assertEqual(str(new_instrument), response.json()['results'][0]['__str__'])
+        self.assertEqual(str(self.instrument), response.json()['results'][0]['__str__'])
 
         response = self.client.get('/instruments/', data={'state': 'SCHEDULABLE'}, content_type='application/x-www-form-urlencoded')
         self.assertEqual(len(response.json()['results']), 1)
