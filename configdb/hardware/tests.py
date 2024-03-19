@@ -93,7 +93,7 @@ class SimpleHardwareTest(BaseHardwareTest):
         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
 
     def test_or_instrument_states(self):
-        new_instrument = mixer.blend(Instrument, autoguider_camera=self.camera, telescope=self.telescope,
+        mixer.blend(Instrument, autoguider_camera=self.camera, telescope=self.telescope,
                                      instrument_type=self.instrument_type, science_cameras=[self.camera],
                                      state=Instrument.SCHEDULABLE)
 
@@ -169,7 +169,7 @@ class TestAvailabilityHistory(BaseHardwareTest):
 
     def test_requires_instrument_to_exist(self):
         with time_machine.travel("2024-01-01 00:00:00"):
-            response = self.client.get(reverse('availability') + f'?instrument_id=FakeInst')
+            response = self.client.get(reverse('availability') + '?instrument_id=FakeInst')
         self.assertContains(response, 'No instrument found with code FakeInst', status_code=404)
 
     def test_requires_telescope_to_exist(self):
@@ -180,7 +180,7 @@ class TestAvailabilityHistory(BaseHardwareTest):
     def test_requires_date_params_be_parseable(self):
         with time_machine.travel("2024-01-01 00:00:00"):
             response = self.client.get(reverse('availability') + f'?instrument_id={self.instrument.code}&start=notadate')
-        self.assertContains(response, f'The format used for the start/end parameters is not parseable', status_code=400)
+        self.assertContains(response, 'The format used for the start/end parameters is not parseable', status_code=400)
 
     def test_instrument_availability_history(self):
         self._update_instrument_revision(self.instrument, Instrument.MANUAL, "2023-02-01 00:00:00")
