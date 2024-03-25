@@ -50,12 +50,10 @@ jobs:
         DB_PASS: postgres
         DB_HOST: localhost
         DB_PORT: 5432
-    - name: Coveralls report
-      run: |
-        pip install --upgrade coveralls
-        coveralls --service=github
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Generate and send coveralls report
+      uses: coverallsapp/github-action@v2
+      with:
+        parallel: true
 
   build_and_publish_image:
     # Only run this job if the run_tests job has succeeded, and if

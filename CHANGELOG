@@ -1,3 +1,9 @@
+3.0.5
+2024-03-01
+Add /api/availability_history endpoint that leverages the django-reversion-redux version
+data to return time intervals that instruments were SCHEDULABLE, or time intervals that 
+telescopes had at least one SCHEDULABLE instrument.
+
 3.0.4
 2023-02-28
 Add validation_schema to ConfigurationTypeProperties model to allow for more flexible validation of instrument configs per instrument type/configuration type
