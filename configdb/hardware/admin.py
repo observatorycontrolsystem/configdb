@@ -1,4 +1,5 @@
 from datetime import timedelta
+import json
 
 from django.contrib import admin
 from django.contrib.admin.models import LogEntry, DELETION, ADDITION, CHANGE
@@ -9,12 +10,39 @@ from django.core.exceptions import ValidationError
 from reversion.models import Version
 from reversion.admin import VersionAdmin
 from reversion.errors import RegistrationError
-from cerberus import Validator
 
 from configdb.hardware.models import (
     Site, Enclosure, GenericMode, ModeType, GenericModeGroup, Telescope, Instrument, Camera, CameraType,
     OpticalElementGroup, OpticalElement, InstrumentType, InstrumentCategory, ConfigurationType, ConfigurationTypeProperties
 )
+from configdb.hardware.validator import OCSValidator
+
+
+class ProperJSONField(forms.JSONField):
+    """ To allow validation_schema JSONFields in the admin interface to accept empty dict {}"""
+    empty_values= [None, "", [], ()]
+
+
+class PrettyJSONEncoder(json.JSONEncoder):
+    """ To pretty print the json validation_schema in the admin interface forms """
+    def __init__(self, *args, indent, sort_keys, **kwargs):
+        super().__init__(*args, indent=2, sort_keys=True, **kwargs)
+
+
+class ConfigurationTypePropertiesAdminForm(forms.ModelForm):
+    validation_schema = ProperJSONField(encoder=PrettyJSONEncoder)
+
+    class Meta:
+        model = ConfigurationTypeProperties
+        fields = '__all__'
+
+
+class GenericModeAdminForm(forms.ModelForm):
+    validation_schema = ProperJSONField(encoder=PrettyJSONEncoder)
+
+    class Meta:
+        model = GenericMode
+        fields = '__all__'
 
 
 class GenericModeGroupAdminForm(forms.ModelForm):
@@ -31,7 +59,7 @@ class GenericModeGroupAdminForm(forms.ModelForm):
     def clean(self):
         if 'validation_schema' in self.cleaned_data:
             try:
-                Validator(self.cleaned_data['validation_schema'])
+                OCSValidator(self.cleaned_data['validation_schema'])
             except Exception as e:
                 raise ValidationError(f"Invalid cerberus validation_schema: {repr(e)}")
 
@@ -51,6 +79,8 @@ class OpticalElementGroupAdminForm(forms.ModelForm):
 
 
 class InstrumentTypeAdminForm(forms.ModelForm):
+    validation_schema = ProperJSONField(encoder=PrettyJSONEncoder)
+
     class Meta:
         model = InstrumentType
         fields = '__all__'
@@ -58,7 +88,7 @@ class InstrumentTypeAdminForm(forms.ModelForm):
     def clean(self):
         if 'validation_schema' in self.cleaned_data:
             try:
-                Validator(self.cleaned_data['validation_schema'])
+                OCSValidator(self.cleaned_data['validation_schema'])
             except Exception as e:
                 raise ValidationError(f"Invalid cerberus validation_schema: {repr(e)}")
 
@@ -100,6 +130,7 @@ class ConfigurationTypeAdmin(HardwareAdmin):
 
 @admin.register(ConfigurationTypeProperties)
 class ConfigurationTypePropertiesAdmin(HardwareAdmin):
+    form = ConfigurationTypePropertiesAdminForm
     list_display = ('configuration_type', 'instrument_type', 'schedulable', 'config_change_overhead', 'force_acquisition_off', 'requires_optical_elements')
     list_filter = ('schedulable', 'configuration_type__code', 'instrument_type__code')
     search_fields = ['configuration_type__code', 'instrument_type__code']
@@ -165,6 +196,7 @@ class GenericModeGroupAdmin(HardwareAdmin):
 
 @admin.register(GenericMode)
 class GenericModeAdmin(HardwareAdmin):
+    form = GenericModeAdminForm
     list_display = ('name', 'code', 'overhead', 'schedulable')
     search_fields = ('name', 'code')
 

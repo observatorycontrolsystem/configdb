@@ -1,10 +1,11 @@
 from rest_framework import serializers
-from cerberus import Validator
 
 from .models import (
     Site, Enclosure, Telescope, OpticalElement, GenericMode, Instrument, Camera, OpticalElementGroup,
     CameraType, GenericModeGroup, InstrumentType, ConfigurationTypeProperties
 )
+from configdb.hardware.validator import OCSValidator
+
 
 class OpticalElementSerializer(serializers.ModelSerializer):
 
@@ -42,7 +43,7 @@ class GenericModeSerializer(serializers.ModelSerializer):
 
     def validate_validation_schema(self, value):
         try:
-            Validator(value)
+            OCSValidator(value)
         except Exception as e:
             raise serializers.ValidationError(f"Invalid cerberus validation_schema: {repr(e)}")
 
@@ -108,7 +109,7 @@ class InstrumentTypeSerializer(serializers.ModelSerializer):
 
     def validate_validation_schema(self, value):
         try:
-            Validator(value)
+            OCSValidator(value)
         except Exception as e:
             raise serializers.ValidationError(f"Invalid cerberus validation_schema: {repr(e)}")
 
