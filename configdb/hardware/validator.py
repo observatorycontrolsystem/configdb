@@ -8,6 +8,6 @@ class OCSValidator(Validator):
 
     def _validate_label(self, constraint, field, value):
         pass
-    
+
     def _validate_show(self, constraint, field, value):
         pass
