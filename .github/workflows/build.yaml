@@ -43,7 +43,9 @@ jobs:
         pip install --upgrade poetry
         poetry install
     - name: Run tests
-      run: poetry run coverage run manage.py test
+      run: |
+        poetry run coverage run manage.py test
+        poetry run coverage xml
       env:
         SECRET_KEY: test_secret_key
         DB_USER: postgres
