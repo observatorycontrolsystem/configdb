@@ -1,3 +1,7 @@
+3.0.6
+2024-10-08
+Add custom Cerberus Validator and make it easier to edit cerberus validation schema
+
 3.0.5
 2024-03-01
 Add /api/availability_history endpoint that leverages the django-reversion-redux version
