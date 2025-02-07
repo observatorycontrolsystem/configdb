@@ -72,7 +72,7 @@ class OpticalElementGroupSerializer(serializers.ModelSerializer):
             optical_element_group.optical_elements.add(optical_element_instance)
 
         for optical_element in optical_elements:
-            optical_element_instance, created = OpticalElement.objects.get_or_create(code=optical_element.pop('code'), defaults=optical_element)
+            optical_element_instance, _ = OpticalElement.objects.get_or_create(code=optical_element.pop('code'), defaults=optical_element)
             optical_element_group.optical_elements.add(optical_element_instance)
 
         return optical_element_group
@@ -125,6 +125,12 @@ class GenericModeGroupSerializer(serializers.ModelSerializer):
         fields = ('id', 'type', 'modes', 'mode_ids', 'default', 'instrument_type')
         model = GenericModeGroup
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data.get('default', None) is None:
+            data['default'] = ''
+        return data
+
     def validate(self, data):
         instance = getattr(self, 'instance', None)
         mode_codes = []
@@ -148,7 +154,7 @@ class GenericModeGroupSerializer(serializers.ModelSerializer):
             generic_mode_group.modes.add(generic_mode_instance)
 
         for generic_mode in generic_modes:
-            generic_mode_instance, created = GenericMode.objects.get_or_create(**generic_mode)
+            generic_mode_instance, _ = GenericMode.objects.get_or_create(**generic_mode)
             generic_mode_group.modes.add(generic_mode_instance)
 
         return generic_mode_group

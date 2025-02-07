@@ -386,7 +386,7 @@ class TestCreationThroughAPI(APITestCase):
         config_type1 = mixer.blend(ConfigurationType)
         config_type2 = mixer.blend(ConfigurationType)
         instrument_type = mixer.blend(InstrumentType, instrument_category=inst_category1)
-        ctp1 = mixer.blend(ConfigurationTypeProperties, configuration_type=config_type1, instrument_type=instrument_type)
+        mixer.blend(ConfigurationTypeProperties, configuration_type=config_type1, instrument_type=instrument_type)
         updates = {
             'name': 'MyInstType',
             'observation_front_padding': 12.3,
