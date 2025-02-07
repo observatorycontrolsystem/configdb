@@ -106,7 +106,16 @@
                 Telescopes: <a href="{% url 'telescope-list' %}">{% url 'telescope-list' %}</a>
               </li>
               <li>
+                Instrument Categories: <a href="{% url 'instrumentcategory-list' %}">{% url 'instrumentcategory-list' %}</a>
+              </li>
+              <li>
+                Instrument Types: <a href="{% url 'instrumenttype-list' %}">{% url 'instrumenttype-list' %}</a>
+              </li>
+              <li>
                 Instruments: <a href="{% url 'instrument-list' %}">{% url 'instrument-list' %}</a>
+              </li>
+              <li>
+                Camera Types: <a href="{% url 'cameratype-list' %}">{% url 'cameratype-list' %}</a>
               </li>
               <li>
                 Cameras: <a href="{% url 'camera-list' %}">{% url 'camera-list' %}</a>
@@ -122,6 +131,15 @@
               </li>
               <li>
                 Generic Modes: <a href="{% url 'genericmode-list' %}">{% url 'genericmode-list' %}</a>
+              </li>
+              <li>
+                Mode Types: <a href="{% url 'modetype-list' %}">{% url 'modetype-list' %}</a>
+              </li>
+              <li>
+                Configuration Types: <a href="{% url 'configurationtype-list' %}">{% url 'configurationtype-list' %}</a>
+              </li>
+              <li>
+                Configuration Type Properties: <a href="{% url 'configurationtypeproperties-list' %}">{% url 'configurationtypeproperties-list' %}</a>
               </li>
             </ul>
             {% endblock %}

@@ -21,6 +21,10 @@ router.register(r'opticalelementgroups', api_views.OpticalElementGroupViewSet)
 router.register(r'opticalelements', api_views.OpticalElementViewSet)
 router.register(r'genericmodegroups', api_views.GenericModeGroupViewSet)
 router.register(r'genericmodes', api_views.GenericModeViewSet)
+router.register(r'modetypes', api_views.ModeTypeViewSet)
+router.register(r'configurationtypes', api_views.ConfigurationTypeViewSet)
+router.register(r'configurationtypeproperties', api_views.ConfigurationTypePropertiesViewSet)
+router.register(r'instrumentcategories', api_views.InstrumentCategoryViewSet)
 
 urlpatterns = [
     re_path(r'^$', IndexView.as_view(), name='index'),

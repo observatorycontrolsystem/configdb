@@ -6,11 +6,13 @@ from http import HTTPStatus
 from django.test import TestCase
 from django.test import Client
 from django.urls import reverse
+from rest_framework.test import APITestCase
 from django.contrib.auth.models import User
 from mixer.backend.django import mixer
 
 from .models import (Site, Instrument, Enclosure, Telescope, Camera, CameraType, InstrumentType,
-                     GenericMode, GenericModeGroup, ModeType, OpticalElement, OpticalElementGroup)
+                     GenericMode, GenericModeGroup, ModeType, OpticalElement, OpticalElementGroup,
+                     ConfigurationType, ConfigurationTypeProperties, InstrumentCategory)
 from .serializers import GenericModeSerializer, InstrumentTypeSerializer
 
 
@@ -138,6 +140,268 @@ class SimpleHardwareTest(BaseHardwareTest):
         self.assertEqual(str(oe1), 'oe1')
         oeg = mixer.blend(OpticalElementGroup, type='oeg_type', name='oeg_name', optical_elements=[oe1, oe2])
         self.assertEqual(str(oeg), 'oeg_name - oeg_type: oe1,oe2')
+
+
+class TestCreationThroughAPI(APITestCase):
+    def setUp(self):
+        super().setUp()
+        self.user = mixer.blend(User)
+        self.client.force_login(self.user)
+
+    def test_create_optical_element(self):
+        optical_element = {'code': 'Ha', 'name': 'H-Alpha', 'schedulable': True}
+        response = self.client.post(reverse('opticalelement-list'), data=optical_element)
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
+        self.assertEqual(OpticalElement.objects.all().count(), 1)
+        oe = OpticalElement.objects.first()
+        self.assertEqual(oe.code, optical_element['code'])
+        self.assertEqual(oe.name, optical_element['name'])
+        self.assertEqual(oe.schedulable, optical_element['schedulable'])
+        # Try to create the same optical element again and it will fail since code isn't unique
+        response = self.client.post(reverse('opticalelement-list'), data=optical_element)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+
+    def test_create_optical_element_group(self):
+        # Create an optical element group with 2 optical elements
+        optical_element1 = {'code': 'Ha', 'name': 'H-Alpha', 'schedulable': True}
+        optical_element2 = {'code': 'r', 'name': 'Red', 'schedulable': True}
+        optical_element_group = {'name': 'myGroup', 'type': 'filters',
+                                 'optical_elements': [optical_element1, optical_element2]}
+        response = self.client.post(reverse('opticalelementgroup-list'),
+                                    data=optical_element_group, format='json')
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
+        self.assertEqual(OpticalElement.objects.all().count(), 2)
+        self.assertEqual(OpticalElementGroup.objects.all().count(), 1)
+        oeg = OpticalElementGroup.objects.first()
+        self.assertEqual(oeg.default, None)
+        self.assertEqual(oeg.name, optical_element_group['name'])
+        self.assertEqual(oeg.optical_elements.first().code, optical_element1['code'])
+        self.assertEqual(oeg.optical_elements.last().code, optical_element2['code'])
+
+        # Now update the default value
+        default = {'default': optical_element2['code']}
+        response = self.client.patch(reverse('opticalelementgroup-detail', args=(oeg.id,)), data=default)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        oeg.refresh_from_db()
+        self.assertEqual(oeg.default.code, optical_element2['code'])
+
+        # Now create another optical element group re-using the same two optical elements
+        optical_element_group2 = {'name': 'secondGroup', 'type': 'filters',
+                                  'optical_elements': [optical_element1, optical_element2]}
+        response = self.client.post(reverse('opticalelementgroup-list'),
+                                    data=optical_element_group2, format='json')
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
+        # See that there are still only 2 optical elements in the db
+        self.assertEqual(OpticalElement.objects.all().count(), 2)
+        self.assertEqual(OpticalElementGroup.objects.all().count(), 2)
+
+    def test_create_optical_element_group_from_existing_optical_elements(self):
+        # Create an optical element group with 2 optical elements
+        optical_element1 = mixer.blend(OpticalElement)
+        optical_element2 = mixer.blend(OpticalElement)
+        optical_element_group = {'name': 'myGroup', 'type': 'filters', 'default': optical_element1.code,
+                                 'optical_element_ids': [optical_element1.id, optical_element2.id]}
+        response = self.client.post(reverse('opticalelementgroup-list'),
+                                    data=optical_element_group, format='json')
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
+        self.assertEqual(OpticalElement.objects.all().count(), 2)
+        self.assertEqual(OpticalElementGroup.objects.all().count(), 1)
+        oeg = OpticalElementGroup.objects.first()
+        self.assertEqual(oeg.default.code, optical_element1.code)
+        self.assertEqual(oeg.name, optical_element_group['name'])
+        self.assertEqual(oeg.optical_elements.first().code, optical_element1.code)
+        self.assertEqual(oeg.optical_elements.last().code, optical_element2.code)
+
+    def test_default_mode_types_exist(self):
+        response = self.client.get(reverse('modetype-list'))
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertEqual(response.json()['count'], 5)
+        self.assertContains(response, 'readout')
+        self.assertContains(response, 'guiding')
+        self.assertContains(response, 'acquisition')
+        self.assertContains(response, 'exposure')
+        self.assertContains(response, 'rotator')
+
+    def test_create_mode_type(self):
+        mode_type = {'id': 'newMode'}
+        response = self.client.post(reverse('modetype-list'), data=mode_type, format='json')
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
+        self.assertEqual(response.json()['id'], mode_type['id'])
+        self.assertEqual(ModeType.objects.all().count(), 6)
+
+    def test_create_generic_mode(self):
+        generic_mode = {'name': 'testMode', 'code': 'tM', 'schedulable': True, 'overhead': 45.0,
+                        'validation_schema': {}}
+        response = self.client.post(reverse('genericmode-list'), data=generic_mode, format='json')
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
+        self.assertEqual(GenericMode.objects.all().count(), 1)
+        self.assertEqual(response.json()['code'], generic_mode['code'])
+        self.assertEqual(response.json()['overhead'], generic_mode['overhead'])
+        self.assertEqual(response.json()['name'], generic_mode['name'])
+        self.assertEqual(response.json()['schedulable'], generic_mode['schedulable'])
+
+    def test_create_generic_mode_group(self):
+        instrument_type = mixer.blend(InstrumentType)
+        generic_mode1 = {'name': 'testMode', 'code': 'tM'}
+        generic_mode2 = {'name': 'testMode2', 'code': 'tM2'}
+        generic_mode_group = {'type': 'readout', 'instrument_type': instrument_type.id,
+                              'modes': [generic_mode1, generic_mode2]}
+        response = self.client.post(reverse('genericmodegroup-list'), data=generic_mode_group, format='json')
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
+        self.assertEqual(GenericMode.objects.all().count(), 2)
+        self.assertEqual(GenericModeGroup.objects.all().count(), 1)
+        gmg = GenericModeGroup.objects.first()
+        self.assertEqual(gmg.default, None)
+        self.assertEqual(gmg.type.id, generic_mode_group['type'])
+        self.assertEqual(gmg.instrument_type.code, instrument_type.code)
+        self.assertEqual(gmg.modes.first().code, generic_mode1['code'])
+        self.assertEqual(gmg.modes.last().code, generic_mode2['code'])
+        # Now update the default value
+        default = {'default': generic_mode2['code']}
+        response = self.client.patch(reverse('genericmodegroup-detail', args=(gmg.id,)), data=default)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        gmg.refresh_from_db()
+        self.assertEqual(gmg.default.code, generic_mode2['code'])
+
+        # Now create another optical element group re-using the same two optical elements
+        instrument_type2 = mixer.blend(InstrumentType)
+        generic_mode_group2 = {'type': 'readout', 'instrument_type': instrument_type2.id,
+                               'modes': [generic_mode1, generic_mode2]}
+        response = self.client.post(reverse('genericmodegroup-list'), data=generic_mode_group2, format='json')
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
+        # See that there are still only 2 generic modes in the db
+        self.assertEqual(GenericMode.objects.all().count(), 2)
+        self.assertEqual(GenericModeGroup.objects.all().count(), 2)
+
+    def test_create_generic_mode_group_from_existing_modes(self):
+        instrument_type = mixer.blend(InstrumentType)
+        mode1 = mixer.blend(GenericMode)
+        mode2 = mixer.blend(GenericMode)
+        # Since the modes are existing, we can set the default in the initial creation
+        generic_mode_group = {'type': 'readout', 'instrument_type': instrument_type.id,
+                              'mode_ids': [mode1.id, mode2.id], 'default': mode1.code}
+        response = self.client.post(reverse('genericmodegroup-list'), data=generic_mode_group, format='json')
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
+        self.assertEqual(GenericMode.objects.all().count(), 2)
+        self.assertEqual(GenericModeGroup.objects.all().count(), 1)
+        gmg = GenericModeGroup.objects.first()
+        self.assertEqual(gmg.default.code, mode1.code)
+        self.assertEqual(gmg.type.id, generic_mode_group['type'])
+        self.assertEqual(gmg.instrument_type.code, instrument_type.code)
+        self.assertEqual(gmg.modes.first().code, mode1.code)
+        self.assertEqual(gmg.modes.last().code, mode2.code)
+
+    def test_create_configuration_type(self):
+        configuration_type = {'name': 'Repeat Exposure', 'code': 'REPEAT_EXPOSE'}
+        response = self.client.post(reverse('configurationtype-list'), data=configuration_type)
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
+        self.assertEqual(ConfigurationType.objects.all().count(), 1)
+        self.assertEqual(response.json()['code'], configuration_type['code'])
+
+    def test_create_configuration_type_must_have_unique_code(self):
+        config_type = mixer.blend(ConfigurationType)
+        configuration_type = {'name': 'Repeat Exposure', 'code': config_type.code}
+        response = self.client.post(reverse('configurationtype-list'), data=configuration_type)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+        self.assertIn('configuration type with this code already exists.', response.json()['code'])
+
+    def test_create_configuration_type_properties(self):
+        config_type = mixer.blend(ConfigurationType)
+        inst_type = mixer.blend(InstrumentType)
+        configuration_type_properties = {
+            'configuration_type': config_type.code, 'instrument_type': inst_type.id,
+            'config_change_overhead': 33.3, 'schedulable': False
+        }
+        response = self.client.post(reverse('configurationtypeproperties-list'), data=configuration_type_properties, format='json')
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
+        self.assertEqual(ConfigurationTypeProperties.objects.all().count(), 1)
+        self.assertEqual(response.json()['configuration_type'], config_type.code)
+        self.assertEqual(response.json()['instrument_type'], inst_type.id)
+        self.assertEqual(response.json()['config_change_overhead'], 33.3)
+
+    def test_create_configuration_type_properties_must_be_unique(self):
+        config_type = mixer.blend(ConfigurationType)
+        inst_type = mixer.blend(InstrumentType)
+        mixer.blend(ConfigurationTypeProperties, configuration_type=config_type, instrument_type=inst_type)
+        configuration_type_properties = {
+            'configuration_type': config_type.code, 'instrument_type': inst_type.id,
+            'config_change_overhead': 33.3, 'schedulable': False
+        }
+        response = self.client.post(reverse('configurationtypeproperties-list'), data=configuration_type_properties, format='json')
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+        self.assertIn('The fields instrument_type, configuration_type must make a unique set', response.json()['non_field_errors'][0])
+
+    def test_create_instrument_category(self):
+        instrument_category = {'code': 'IMAGE'}
+        response = self.client.post(reverse('instrumentcategory-list'), data=instrument_category)
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
+        self.assertEqual(InstrumentCategory.objects.all().count(), 1)
+        self.assertEqual(response.json()['code'], instrument_category['code'])
+
+    def test_create_instrument_category_must_have_unique_code(self):
+        inst_category = mixer.blend(InstrumentCategory)
+        instrument_category = {'code': inst_category.code}
+        response = self.client.post(reverse('instrumentcategory-list'), data=instrument_category)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+        self.assertIn('instrument category with this code already exists.', response.json()['code'])
+
+    def test_create_simple_instrument_type(self):
+        inst_category = mixer.blend(InstrumentCategory)
+        instrument_type = {
+            'name': 'MyTestInstrumentType',
+            'code': 'test01',
+            'instrument_category': inst_category.code
+        }
+        response = self.client.post(reverse('instrumenttype-list'), data=instrument_type)
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
+        self.assertEqual(InstrumentType.objects.all().count(), 1)
+        self.assertEqual(response.json()['code'], instrument_type['code'])
+
+    def test_create_instrument_type_with_configuration_types(self):
+        inst_category = mixer.blend(InstrumentCategory)
+        config_type1 = mixer.blend(ConfigurationType)
+        config_type2 = mixer.blend(ConfigurationType)
+
+        instrument_type = {
+            'name': 'MyTestInstrumentType',
+            'code': 'test01',
+            'instrument_category': inst_category.code,
+            'configuration_types': [
+                {'configuration_type': config_type1.code, 'schedulable': True, 'config_change_overhead': 45.0},
+                {'configuration_type': config_type2.code, 'schedulable': True, 'config_change_overhead': 5.0},
+            ]
+        }
+        response = self.client.post(reverse('instrumenttype-list'), data=instrument_type, format='json')
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
+        self.assertEqual(InstrumentType.objects.all().count(), 1)
+        self.assertEqual(ConfigurationTypeProperties.objects.all().count(), 2)
+        self.assertEqual(response.json()['code'], instrument_type['code'])
+        self.assertEqual(response.json()['instrument_category'], inst_category.code)
+        self.assertEqual(response.json()['configuration_types'][1]['code'], config_type2.code)
+        self.assertEqual(response.json()['configuration_types'][1]['config_change_overhead'], 5.0)
+
+    def test_patch_instrument_type(self):
+        inst_category1 = mixer.blend(InstrumentCategory)
+        inst_category2 = mixer.blend(InstrumentCategory)
+        config_type1 = mixer.blend(ConfigurationType)
+        config_type2 = mixer.blend(ConfigurationType)
+        instrument_type = mixer.blend(InstrumentType, instrument_category=inst_category1)
+        ctp1 = mixer.blend(ConfigurationTypeProperties, configuration_type=config_type1, instrument_type=instrument_type)
+        updates = {
+            'name': 'MyInstType',
+            'observation_front_padding': 12.3,
+            'instrument_category': inst_category2.code,
+            'allow_self_guiding': False,
+            'configuration_types': [{'configuration_type': config_type2.code, 'config_change_overhead': 6.6}]
+        }
+        response = self.client.patch(reverse('instrumenttype-detail', args=(instrument_type.id,)), data=updates, format='json')
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        it = InstrumentType.objects.first()
+        self.assertEqual(it.name, updates['name'])
+        self.assertEqual(it.instrument_category.code, inst_category2.code)
+        self.assertEqual(it.observation_front_padding, updates['observation_front_padding'])
+        self.assertEqual(it.configuration_types.first().code, config_type2.code)
+        self.assertEqual(response.json()['configuration_types'][0]['config_change_overhead'], 6.6)
 
 
 class TestAvailabilityHistory(BaseHardwareTest):
