@@ -6,7 +6,8 @@ from rest_framework.schemas.openapi import AutoSchema
 from configdb.hardware import serializers
 from .models import (
     Site, Enclosure, Telescope, OpticalElementGroup, Instrument, Camera, OpticalElement,
-    CameraType, GenericMode, GenericModeGroup, InstrumentType
+    CameraType, GenericMode, GenericModeGroup, InstrumentType, ModeType, ConfigurationType,
+    InstrumentCategory, ConfigurationTypeProperties
 )
 
 
@@ -150,6 +151,30 @@ class OpticalElementViewSet(FilterableViewSet):
     queryset = OpticalElement.objects.all()
     serializer_class = serializers.OpticalElementSerializer
     filter_fields = ('id', 'name', 'code', 'schedulable')
+
+
+class ModeTypeViewSet(FilterableViewSet):
+    schema = CustomViewSchema(tags=['Mode Types'])
+    queryset = ModeType.objects.all()
+    serializer_class = serializers.ModeTypeSerializer
+
+
+class InstrumentCategoryViewSet(FilterableViewSet):
+    schema = CustomViewSchema(tags=['Instrument Category'])
+    queryset = InstrumentCategory.objects.all()
+    serializer_class = serializers.InstrumentCategorySerializer
+
+
+class ConfigurationTypeViewSet(FilterableViewSet):
+    schema = CustomViewSchema(tags=['Configuration Types'])
+    queryset = ConfigurationType.objects.all()
+    serializer_class = serializers.ConfigurationTypeSerializer
+
+
+class ConfigurationTypePropertiesViewSet(FilterableViewSet):
+    schema = CustomViewSchema(tags=['Configuration Type Properties'])
+    queryset = ConfigurationTypeProperties.objects.all()
+    serializer_class = serializers.ConfigurationTypePropertiesSerializer
 
 
 class GenericModeGroupViewSet(FilterableViewSet):

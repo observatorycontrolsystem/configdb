@@ -102,10 +102,23 @@ The admin interface is used to define the components of the Observatory. It is a
 7. Camera - A specific instance of a camera type with a set of optical element groups
 8. Generic modes - A generic definition for a single mode, including an associated overhead and validation schema
 9. Generic mode group - A grouping of one or more generic modes of a single type associated with a camera type. The type is user definable, but some examples used in the Observation Portal include `readout`, `acquisition`, `guiding`, `exposure`, and `rotator`
-10. Instrument - A combination of one or more science cameras and a guide camera on a specific Telescope
+10. Instrument Category - Generic category of instruments. Usually used to differentiate `IMAGE` or `SPECTRA` in the OCS, but you are free to define additional categories and use them differently
+11. Configuration Types - Generic types defining the configurations available on your telescope, i.e. `EXPOSE`, `BIAS`, `FLAT`, etc.
+12. Instrument Type - The generic properties of a single type of instrument
+13. Configuration Type Properties - Links a configuration type to an instrument type with additional settings specific to it
+14. Instrument - A specific instance of an instrument type with a combination of one or more science cameras and a guide camera on a specific Telescope
 
 -   Check out the updated step-by-step setup guide [here](https://observatorycontrolsystem.github.io/deployment/configdb_setup/)
 -   It is recommended that all codes use lowercase characters by convention, except for type codes such as instrument type, camera type, and mode type which should use all upper case. While this convention isn't strictly required, it is useful to choose a convention and apply it consistently when defining your codes.
+
+
+#### Notes on using the API to write
+The API has recently been updated so all data structures should now be writable. Due to the heavily nested structure of the data, it is still highly recommended to write the data structures in the order defined above. There are a few api differencies when writing some structures, including:
+
+1. Optical Element Groups - Can either link existing Optical Elements or create them itself. Set `optical_element_ids` to a list of existing Optical Element ids, or set the `optical_elements` field to a list of objects containing at least the optical elements `code` and `name` field, which will either match an existing optical element by `code` or create a new one. The `default` field should be populated with the code of an existing optical element. If the optical element doesn't exist yet, you must patch the group after creation to add the default.
+2. Generic Mode Groups - Can either link existing Generic Modes or create them itself. Set `mode_ids` to a list of existing Generic Mode ids, or set the `modes` field to a list of objects containing at least the mode `code` and `name` field, which will either match an existing generic mode by `code` or create a new one. The `default` field should be populated with the code of an existing generic mode. If the generic mode doesn't exist yet, you must patch the group after creation to add the default.
+3. Instrument Types - When setting or updating the configuration type properties associated with an Instrument Type, you must first have the Configuration Types created in advance. Then you can send `configuration_types` on creation that contain a list of objects with configuration type property settings and the `configuration_type` field which is the code of the configuration type you want to link. You can alternatively use the configuration type properties API to create those individually, referencing the corresponding configuration type code and instrument type id.
+
 
 #### Generic Mode Validation Schema
 GenericMode structures have a field called `validation_schema` which accepts a dictionary [Cerberus Validation Schema](https://docs.python-cerberus.org/en/stable/schemas.html). This validation schema will be used to provide automatic validation and setting of defaults within the [Observation Portal](https://github.com/observatorycontrolsystem/observation-portal). The validation schema will act on the structure in which the GenericMode is a part of. For example:

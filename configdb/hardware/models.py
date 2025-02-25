@@ -301,6 +301,7 @@ class GenericMode(BaseModel):
     name = models.CharField(max_length=200, help_text='Generic mode name')
     code = models.CharField(max_length=200, help_text='Generic mode code')
     overhead = models.FloatField(
+        default=0.0,
         validators=[MinValueValidator(0)],
         help_text='Overhead associated with the generic mode. Where this overhead is applied depends on what type '
                   'of generic mode this is for. For example, a readout mode is applied per exposure, while an acquisition '

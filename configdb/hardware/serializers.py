@@ -2,7 +2,8 @@ from rest_framework import serializers
 
 from .models import (
     Site, Enclosure, Telescope, OpticalElement, GenericMode, Instrument, Camera, OpticalElementGroup,
-    CameraType, GenericModeGroup, InstrumentType, ConfigurationTypeProperties
+    CameraType, GenericModeGroup, InstrumentType, ConfigurationTypeProperties, ConfigurationType, ModeType,
+    InstrumentCategory
 )
 from configdb.hardware.validator import OCSValidator
 
@@ -11,35 +12,93 @@ class OpticalElementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OpticalElement
-        fields = ('name', 'code', 'schedulable')
+        fields = ('id', 'name', 'code', 'schedulable')
+        read_only_fields = ['id']
+
+
+class OpticalElementNestedSerializer(OpticalElementSerializer):
+    # This nested serializer allows us to choose an existing optical element for the group
+    # Since the groups create method will use get_or_create to link optical elements
+    class Meta(OpticalElementSerializer.Meta):
+        extra_kwargs = {
+            'code': {
+                'validators': [],
+            }
+        }
 
 
 class OpticalElementGroupSerializer(serializers.ModelSerializer):
-    optical_elements = OpticalElementSerializer(many=True, help_text='Optical elements belonging to this optical element group')
-    default = serializers.SerializerMethodField('get_default_code', help_text='Default optical element code')
+    optical_elements = OpticalElementNestedSerializer(
+        many=True, required=False,
+        help_text='Optical elements belonging to this optical element group'
+    )
+    optical_element_ids = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=OpticalElement.objects.all(), required=False, write_only=True,
+        help_text='Existing Optical Element ids to attach to this group'
+    )
+    default = serializers.SlugRelatedField(slug_field='code', queryset=OpticalElement.objects.all(), required=False,
+                                           help_text='Default optical element code')
 
     class Meta:
         model = OpticalElementGroup
-        fields = ('name', 'type', 'optical_elements', 'element_change_overhead', 'default')
-        depth = 1
+        fields = ('id', 'name', 'type', 'optical_elements', 'optical_element_ids', 'element_change_overhead', 'default')
 
-    def get_default_code(self, obj):
-        return obj.default.code if obj.default else ''
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data.get('default', None) is None:
+            data['default'] = ''
+        return data
 
     def validate(self, data):
-        if data['default'] not in [oe['code'] for oe in data['optical_elements']]:
-            raise serializers.ValidationError("Default must be the code of an optical element in this group")
+        instance = getattr(self, 'instance', None)
+        oe_codes = []
+        if instance:
+            oe_codes = [oe.code for oe in instance.optical_elements.all()]
+        else:
+            if 'optical_elements' in data:
+                oe_codes.extend([oe['code'] for oe in data['optical_elements']])
+            if 'optical_element_ids' in data:
+                oe_codes.extend([oe.code for oe in data['optical_element_ids']])
+        if ('default' in data and data['default'].code not in oe_codes):
+            raise serializers.ValidationError(f"Default optical element {data['default']} must be a member of this groups optical elements")
+        return super().validate(data)
 
-        return data
+    def create(self, validated_data):
+        optical_elements = validated_data.pop('optical_elements', [])
+        optical_element_instances = validated_data.pop('optical_element_ids', [])
+        optical_element_group = super().create(validated_data)
+
+        for optical_element_instance in optical_element_instances:
+            optical_element_group.optical_elements.add(optical_element_instance)
+
+        for optical_element in optical_elements:
+            optical_element_instance, _ = OpticalElement.objects.get_or_create(code=optical_element.pop('code'), defaults=optical_element)
+            optical_element_group.optical_elements.add(optical_element_instance)
+
+        return optical_element_group
+
+
+class ModeTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('id',)
+        model = ModeType
+
+
+class InstrumentCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('code',)
+        model = InstrumentCategory
 
 
 class GenericModeSerializer(serializers.ModelSerializer):
-    validation_schema = serializers.JSONField(help_text='Cerberus styled validation schema used to validate '
+    validation_schema = serializers.JSONField(required=False, default=dict,
+                                              help_text='Cerberus styled validation schema used to validate '
                                                         'instrument configs using this generic mode')
 
     class Meta:
-        fields = ('name', 'overhead', 'code', 'schedulable', 'validation_schema')
+        fields = ('id', 'name', 'overhead', 'code', 'schedulable', 'validation_schema')
         model = GenericMode
+        read_only_fields = ['id']
 
     def validate_validation_schema(self, value):
         try:
@@ -51,21 +110,54 @@ class GenericModeSerializer(serializers.ModelSerializer):
 
 
 class GenericModeGroupSerializer(serializers.ModelSerializer):
-    modes = GenericModeSerializer(many=True, help_text='Set of modes belonging to this generic mode group')
-    default = serializers.SerializerMethodField('get_default_code', help_text='Default mode within this generic mode group')
+    instrument_type = serializers.PrimaryKeyRelatedField(
+        write_only=True, queryset=InstrumentType.objects.all(),
+        help_text='ID for the instrument type associated with this group'
+    )
+    modes = GenericModeSerializer(many=True, required=False,
+                                  help_text='Set of modes belonging to this generic mode group')
+    mode_ids = serializers.PrimaryKeyRelatedField(many=True, queryset=GenericMode.objects.all(), required=False,
+                                                  write_only=True, help_text='Existing mode ids to attach to this group')
+    default = serializers.SlugRelatedField(slug_field='code', queryset=GenericMode.objects.all(), required=False,
+                                           help_text='Default mode within this generic mode group')
 
     class Meta:
-        fields = ('type', 'modes', 'default')
+        fields = ('id', 'type', 'modes', 'mode_ids', 'default', 'instrument_type')
         model = GenericModeGroup
 
-    def get_default_code(self, obj):
-        return obj.default.code if obj.default else ''
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data.get('default', None) is None:
+            data['default'] = ''
+        return data
 
     def validate(self, data):
-        if data['default'] not in [mode['code'] for mode in data['modes']]:
-            raise serializers.ValidationError("Default must be the code of a mode in this group")
+        instance = getattr(self, 'instance', None)
+        mode_codes = []
+        if instance:
+            mode_codes = [mode.code for mode in instance.modes.all()]
+        else:
+            if 'modes' in data:
+                mode_codes.extend([mode['code'] for mode in data['modes']])
+            if 'mode_ids' in data:
+                mode_codes.extend([mode.code for mode in data['mode_ids']])
+        if ('default' in data and data['default'].code not in mode_codes):
+            raise serializers.ValidationError(f"Default generic mode {data['default']} must be a member of this groups modes")
+        return super().validate(data)
 
-        return data
+    def create(self, validated_data):
+        generic_modes = validated_data.pop('modes', [])
+        generic_mode_instances = validated_data.pop('mode_ids', [])
+        generic_mode_group = super().create(validated_data)
+
+        for generic_mode_instance in generic_mode_instances:
+            generic_mode_group.modes.add(generic_mode_instance)
+
+        for generic_mode in generic_modes:
+            generic_mode_instance, _ = GenericMode.objects.get_or_create(**generic_mode)
+            generic_mode_group.modes.add(generic_mode_instance)
+
+        return generic_mode_group
 
 
 class CameraTypeSerializer(serializers.ModelSerializer):
@@ -86,20 +178,36 @@ class CameraSerializer(serializers.ModelSerializer):
         model = Camera
 
 
-class ConfigurationTypePropertiesSerializer(serializers.ModelSerializer):
+class ConfigurationTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('name', 'code')
+        model = ConfigurationType
+
+
+class ConfigurationTypePropertiesNestedSerializer(serializers.ModelSerializer):
     name = serializers.ReadOnlyField(source='configuration_type.name', help_text='Configuration type name')
     code = serializers.ReadOnlyField(source='configuration_type.code', help_text='Configuration type code')
+    configuration_type = serializers.PrimaryKeyRelatedField(queryset=ConfigurationType.objects.all(), write_only=True, required=False)
 
     class Meta:
-        fields = ('name', 'code', 'config_change_overhead', 'schedulable', 'force_acquisition_off', 'requires_optical_elements', 'validation_schema')
+        fields = ('name', 'code', 'configuration_type', 'config_change_overhead',
+                  'schedulable', 'force_acquisition_off', 'requires_optical_elements', 'validation_schema')
+        model = ConfigurationTypeProperties
+
+
+class ConfigurationTypePropertiesSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('id', 'configuration_type', 'instrument_type', 'config_change_overhead',
+                  'schedulable', 'force_acquisition_off', 'requires_optical_elements', 'validation_schema')
         model = ConfigurationTypeProperties
 
 
 class InstrumentTypeSerializer(serializers.ModelSerializer):
     mode_types = GenericModeGroupSerializer(many=True, required=False, help_text='Set of generic modes that this instrument type supports')
-    configuration_types = ConfigurationTypePropertiesSerializer(source='configurationtypeproperties_set', many=True, required=False, read_only=True,
-                                                                help_text='Set of configuration types that this instrument type supports')
-
+    configuration_types = ConfigurationTypePropertiesNestedSerializer(
+        source='configurationtypeproperties_set', many=True, required=False,
+        help_text='Set of configuration types that this instrument type supports'
+    )
     class Meta:
         fields = ('id', 'name', 'code', 'fixed_overhead_per_exposure', 'instrument_category',
                   'observation_front_padding', 'acquire_exposure_time', 'default_configuration_type',
@@ -114,6 +222,24 @@ class InstrumentTypeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(f"Invalid cerberus validation_schema: {repr(e)}")
 
         return value
+
+    def update(self, instance, validated_data):
+        if 'configurationtypeproperties_set' in validated_data:
+            configuration_type_properties = validated_data.pop('configurationtypeproperties_set')
+            # Clear all existing configuration type properties if we are setting a new set on an update
+            instance.configuration_types.all().delete()
+            for configuration_type_property in configuration_type_properties:
+                ConfigurationTypeProperties.objects.get_or_create(instrument_type=instance, **configuration_type_property)
+        return super().update(instance, validated_data)
+
+    def create(self, validated_data):
+        configuration_type_properties = validated_data.pop('configurationtypeproperties_set', [])
+        instrument_type = InstrumentType.objects.create(**validated_data)
+
+        for configuration_type_property in configuration_type_properties:
+            ConfigurationTypeProperties.objects.get_or_create(instrument_type=instrument_type, **configuration_type_property)
+
+        return instrument_type
 
 
 class InstrumentSerializer(serializers.ModelSerializer):
