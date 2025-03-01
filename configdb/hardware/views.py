@@ -5,6 +5,7 @@ from django.views.generic import TemplateView
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotFound
 from rest_framework.generics import RetrieveAPIView
 
+from configdb.hardware.serializers import AvailabilityHistorySerializer
 from configdb.hardware.models import Site, Telescope, Camera, Instrument, OpticalElementGroup, GenericModeGroup
 from configdb.hardware.availability import build_instrument_availability_history, build_telescope_availability_history
 
@@ -26,6 +27,9 @@ class AvailabilityHistoryView(RetrieveAPIView):
     """ Use django-reversion models to build a set of timestamps for when an instrument or telescope has availability
         Meaning it has at least one schedulable instrument
     """
+    serializer_class = AvailabilityHistorySerializer
+    schema = None
+
     def get(self, request):
         instrument_id = request.GET.get('instrument_id')
         telescope_id = request.GET.get('telescope_id')

@@ -310,3 +310,14 @@ class SiteSerializer(serializers.ModelSerializer):
             '__str__',
         )
         model = Site
+
+
+class AvailabilityHistorySerializer(serializers.Serializer):
+    instrument_id = serializers.CharField(required=True, write_only=True)
+    telescope_id = serializers.CharField(required=True, write_only=True)
+    site_id = serializers.CharField(required=True, write_only=True)
+    enclosure_id = serializers.CharField(required=True, write_only=True)
+    # Start/end are optional parameters to cap what is returned
+    start = serializers.DateTimeField(required=False, write_only=True)
+    end = serializers.DateTimeField(required=False, write_only=True)
+    availability_intervals = serializers.DictField(read_only=True)
