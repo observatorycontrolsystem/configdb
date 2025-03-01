@@ -10,6 +10,9 @@ jobs:
   build:
     if: github.event_name == 'create' && github.event.ref_type == 'tag' && github.event.repository.fork == false
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
     env:
       SECRET_KEY: fakesecretkey
     steps:
