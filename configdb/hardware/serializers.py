@@ -6,6 +6,7 @@ from .models import (
     InstrumentCategory
 )
 from configdb.hardware.validator import OCSValidator
+from configdb.hardware.heroic import update_heroic_instrument_capabilities
 
 
 class OpticalElementSerializer(serializers.ModelSerializer):
@@ -14,6 +15,16 @@ class OpticalElementSerializer(serializers.ModelSerializer):
         model = OpticalElement
         fields = ('id', 'name', 'code', 'schedulable')
         read_only_fields = ['id']
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        # Update done so update HEROIC here - this catches optical elements name, code, or schedulability changes
+        if 'name' in validated_data or 'code' in validated_data or 'schedulable' in validated_data:
+            for oeg in instance.opticalelementgroup_set.all():
+                for camera in oeg.camera_set.all():
+                    for instrument in camera.instrument_set.all():
+                        update_heroic_instrument_capabilities(instrument)
+        return instance
 
 
 class OpticalElementNestedSerializer(OpticalElementSerializer):
@@ -77,6 +88,25 @@ class OpticalElementGroupSerializer(serializers.ModelSerializer):
 
         return optical_element_group
 
+    def update(self, instance, validated_data):
+        optical_elements = validated_data.pop('optical_elements', [])
+        optical_element_instances = validated_data.pop('optical_element_ids', [])
+        instance = super().update(instance, validated_data)
+        if (optical_elements or optical_element_instances):
+            instance.optical_elements.clear()  # If we are updating optical elements, clear out old optical elements first
+        for optical_element_instance in optical_element_instances:
+            instance.optical_elements.add(optical_element_instance)
+
+        for optical_element in optical_elements:
+            optical_element_instance, _ = OpticalElement.objects.get_or_create(code=optical_element.pop('code'), defaults=optical_element)
+            instance.optical_elements.add(optical_element_instance)
+        # Update done so update HEROIC here - this catches optical elements changes in the optical elements group
+        if optical_elements or optical_element_instances or 'default' in validated_data or 'type' in validated_data:
+            for camera in instance.camera_set.all():
+                for instrument in camera.instrument_set.all():
+                    update_heroic_instrument_capabilities(instrument)
+        return instance
+
 
 class ModeTypeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -107,6 +137,16 @@ class GenericModeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(f"Invalid cerberus validation_schema: {repr(e)}")
 
         return value
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        # Update done so update HEROIC here - this catches generic mode name, code, or schedulability updates
+        if 'name' in validated_data or 'code' in validated_data or 'schedulable' in validated_data:
+            for gmg in instance.genericmodegroup_set.all():
+                if gmg.instrument_type:
+                    for instrument in gmg.instrument_type.instrument_set.all():
+                        update_heroic_instrument_capabilities(instrument)
+        return instance
 
 
 class GenericModeGroupSerializer(serializers.ModelSerializer):
@@ -157,7 +197,36 @@ class GenericModeGroupSerializer(serializers.ModelSerializer):
             generic_mode_instance, _ = GenericMode.objects.get_or_create(**generic_mode)
             generic_mode_group.modes.add(generic_mode_instance)
 
+        # Update heroic when a new GenericModeGroup is created for the first time for an instrument_type
+        for instrument in generic_mode_group.instrument_type.instrument_set.all():
+            update_heroic_instrument_capabilities(instrument)
         return generic_mode_group
+
+    def update(self, instance, validated_data):
+        old_instrument_type = None
+        generic_modes = validated_data.pop('modes', [])
+        generic_mode_instances = validated_data.pop('mode_ids', [])
+        if 'instrument_type' in validated_data and validated_data['instrument_type'] != instance.instrument_type:
+            # In this special case, we need to update instruments of this old instrument type at the end
+            old_instrument_type = instance.instrument_type
+        instance = super().update(instance, validated_data)
+        if (generic_modes or generic_mode_instances):
+            instance.modes.clear()  # If we are updating modes, clear out old modes first
+        for generic_mode_instance in generic_mode_instances:
+            instance.modes.add(generic_mode_instance)
+
+        for generic_mode in generic_modes:
+            generic_mode_instance, _ = GenericMode.objects.get_or_create(**generic_mode)
+            instance.modes.add(generic_mode_instance)
+        # Update done so update HEROIC here - this catches generic mode changes in the generic mode group
+        if instance.instrument_type and (generic_modes or generic_mode_instances or 'default' in validated_data or 'type' in validated_data):
+            for instrument in instance.instrument_type.instrument_set.all():
+                update_heroic_instrument_capabilities(instrument)
+        if old_instrument_type:
+            # Also update instruments of this old instrument type since they will have lost this generic mode group
+            for instrument in Instrument.objects.filter(instrument_type=old_instrument_type):
+                update_heroic_instrument_capabilities(instrument)
+        return instance
 
 
 class CameraTypeSerializer(serializers.ModelSerializer):
@@ -171,11 +240,22 @@ class CameraSerializer(serializers.ModelSerializer):
     camera_type_id = serializers.IntegerField(write_only=True, help_text='Model ID number that corresponds to this camera\'s type')
     optical_element_groups = OpticalElementGroupSerializer(many=True, read_only=True,
                                                            help_text='Optical element groups that this camera contains')
+    optical_element_group_ids = serializers.PrimaryKeyRelatedField(write_only=True, many=True,
+                                                             queryset=OpticalElementGroup.objects.all(), source='optical_element_groups',
+                                                             help_text='Model ID numbers for the optical element groups belonging to this camera')
 
     class Meta:
         fields = ('id', 'code', 'camera_type', 'camera_type_id', 'orientation',
-                  'optical_elements', 'optical_element_groups', 'host')
+                  'optical_elements', 'optical_element_groups', 'optical_element_group_ids', 'host')
         model = Camera
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        # Update done so update HEROIC here - this catches optical element group changes on the camera
+        if 'optical_element_groups' in validated_data or 'optical_element_group_ids' in validated_data:
+            for instrument in instance.instrument_set.all():
+                update_heroic_instrument_capabilities(instrument)
+        return instance
 
 
 class ConfigurationTypeSerializer(serializers.ModelSerializer):
@@ -264,6 +344,12 @@ class InstrumentSerializer(serializers.ModelSerializer):
                   'telescope_id', 'autoguider_camera', 'science_cameras', 'science_cameras_ids', 'instrument_type',
                   'instrument_type_id', '__str__')
         model = Instrument
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        # Update done so update HEROIC here - this catches state or camera changes on the instrument
+        update_heroic_instrument_capabilities(instance)
+        return instance
 
 
 class TelescopeSerializer(serializers.ModelSerializer):

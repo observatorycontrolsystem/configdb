@@ -3,17 +3,19 @@ import reversion
 import time_machine
 from datetime import datetime
 from http import HTTPStatus
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.test import Client
 from django.urls import reverse
+from unittest.mock import patch
 from rest_framework.test import APITestCase
 from django.contrib.auth.models import User
 from mixer.backend.django import mixer
 
-from .models import (Site, Instrument, Enclosure, Telescope, Camera, CameraType, InstrumentType,
+from configdb.hardware.models import (Site, Instrument, Enclosure, Telescope, Camera, CameraType, InstrumentType,
                      GenericMode, GenericModeGroup, ModeType, OpticalElement, OpticalElementGroup,
                      ConfigurationType, ConfigurationTypeProperties, InstrumentCategory)
-from .serializers import GenericModeSerializer, InstrumentTypeSerializer
+from configdb.hardware.serializers import GenericModeSerializer, InstrumentTypeSerializer
+from configdb.hardware.heroic import heroic_instrument_id
 
 
 class BaseHardwareTest(TestCase):
@@ -140,6 +142,215 @@ class SimpleHardwareTest(BaseHardwareTest):
         self.assertEqual(str(oe1), 'oe1')
         oeg = mixer.blend(OpticalElementGroup, type='oeg_type', name='oeg_name', optical_elements=[oe1, oe2])
         self.assertEqual(str(oeg), 'oeg_name - oeg_type: oe1,oe2')
+
+
+@override_settings(HEROIC_API_URL='http://fake', HEROIC_API_TOKEN='123fake', HEROIC_OBSERVATORY='tst')
+@patch('configdb.hardware.heroic.send_to_heroic')
+class TestHeroicUpdates(APITestCase):
+    def setUp(self):
+        super().setUp()
+        self.site = mixer.blend(Site, code='tst')
+        self.enclosure = mixer.blend(Enclosure, site=self.site, code='doma')
+        self.telescope = mixer.blend(Telescope, enclosure=self.enclosure, code='1m0a', active=True)
+        self.camera_type = mixer.blend(CameraType)
+        self.instrument_type = mixer.blend(InstrumentType)
+        self.camera_type.save()
+        self.camera = mixer.blend(Camera, camera_type=self.camera_type)
+        self.instrument = mixer.blend(Instrument, autoguider_camera=self.camera, telescope=self.telescope,
+                                      instrument_type=self.instrument_type, science_cameras=[self.camera],
+                                      state=Instrument.SCHEDULABLE, code='myInst01')
+        self.user = mixer.blend(User)
+        self.client.force_login(self.user)
+
+    def test_update_instrument_state_calls_out_to_heroic(self, mock_send):
+        instrument_update = {
+            'state': Instrument.MANUAL
+        }
+        self.client.patch(
+            reverse('instrument-detail', args=(self.instrument.id,)),
+            data=instrument_update, format='json'
+        )
+        expected_capabilities = {
+            'instrument': heroic_instrument_id(self.instrument),
+            'status': 'UNAVAILABLE',
+            'optical_element_groups': {},
+            'operation_modes': {}
+        }
+        mock_send.assert_called_with('instrument-capabilities/', expected_capabilities)
+
+    def test_update_instrument_cameras_calls_out_to_heroic(self, mock_send):
+        optical_element = mixer.blend(OpticalElement, name='myOE', code='myoe1', schedulable=True)
+        optical_element_group = mixer.blend(OpticalElementGroup, optical_elements=[optical_element], type='filters')
+        camera2 = mixer.blend(Camera, camera_type=self.camera_type, optical_element_groups=[optical_element_group])
+        instrument_update = {
+            'science_cameras_ids': [camera2.id]
+        }
+        self.client.patch(
+            reverse('instrument-detail', args=(self.instrument.id,)),
+            data=instrument_update, format='json'
+        )
+        expected_capabilities = {
+            'instrument': heroic_instrument_id(self.instrument),
+            'status': 'SCHEDULABLE',
+            'optical_element_groups': {'filters': {'options': [{'id': 'myoe1', 'name': 'myOE', 'schedulable': True}]}},
+            'operation_modes': {}
+        }
+        mock_send.assert_called_with('instrument-capabilities/', expected_capabilities)
+
+    def test_update_cameras_optical_element_group_calls_out_to_heroic(self, mock_send):
+        optical_element = mixer.blend(OpticalElement, name='myOE', code='myoe1', schedulable=True)
+        optical_element_group = mixer.blend(OpticalElementGroup, optical_elements=[optical_element], type='filters')
+        camera_update = {
+            'optical_element_group_ids': [optical_element_group.id]
+        }
+        self.client.patch(
+            reverse('camera-detail', args=(self.camera.id,)),
+            data=camera_update, format='json'
+        )
+        expected_capabilities = {
+            'instrument': heroic_instrument_id(self.instrument),
+            'status': 'SCHEDULABLE',
+            'optical_element_groups': {'filters': {'options': [{'id': 'myoe1', 'name': 'myOE', 'schedulable': True}]}},
+            'operation_modes': {}
+        }
+        mock_send.assert_called_with('instrument-capabilities/', expected_capabilities)
+
+    def test_update_optical_element_of_group_calls_out_to_heroic(self, mock_send):
+        optical_element = mixer.blend(OpticalElement, name='myOE', code='myoe1', schedulable=True)
+        optical_element_group = mixer.blend(OpticalElementGroup, optical_elements=[optical_element], type='filters')
+        self.camera.optical_element_groups.add(optical_element_group)
+        self.camera.save()
+        optical_element2 = mixer.blend(OpticalElement, name='myOE2', code='myoe2', schedulable=True)
+        oeg_update = {
+            'optical_element_ids': [optical_element2.id],
+            'optical_elements': [{'code': optical_element2.code}]
+        }
+        self.client.patch(
+            reverse('opticalelementgroup-detail', args=(optical_element_group.id,)),
+            data=oeg_update, format='json'
+        )
+        expected_capabilities = {
+            'instrument': heroic_instrument_id(self.instrument),
+            'status': 'SCHEDULABLE',
+            'optical_element_groups': {'filters': {'options': [{'id': 'myoe2', 'name': 'myOE2', 'schedulable': True}]}},
+            'operation_modes': {}
+        }
+        mock_send.assert_called_with('instrument-capabilities/', expected_capabilities)
+
+    def test_update_optical_element_alt_of_group_calls_out_to_heroic(self, mock_send):
+        optical_element = mixer.blend(OpticalElement, name='myOE', code='myoe1', schedulable=True)
+        optical_element_group = mixer.blend(OpticalElementGroup, optical_elements=[optical_element], type='filters')
+        self.camera.optical_element_groups.add(optical_element_group)
+        self.camera.save()
+        optical_element2 = mixer.blend(OpticalElement, name='myOE2', code='myoe2', schedulable=True)
+        oeg_update = {
+            'optical_elements': [{'code': optical_element2.code}]
+        }
+        self.client.patch(
+            reverse('opticalelementgroup-detail', args=(optical_element_group.id,)),
+            data=oeg_update, format='json'
+        )
+        expected_capabilities = {
+            'instrument': heroic_instrument_id(self.instrument),
+            'status': 'SCHEDULABLE',
+            'optical_element_groups': {'filters': {'options': [{'id': 'myoe2', 'name': 'myOE2', 'schedulable': True}]}},
+            'operation_modes': {}
+        }
+        mock_send.assert_called_with('instrument-capabilities/', expected_capabilities)
+
+    def test_update_optical_element_calls_out_to_heroic(self, mock_send):
+        optical_element = mixer.blend(OpticalElement, name='myOE', code='myoe1', schedulable=True)
+        optical_element_group = mixer.blend(OpticalElementGroup, optical_elements=[optical_element], type='filters')
+        self.camera.optical_element_groups.add(optical_element_group)
+        self.camera.save()
+        oe_update = {
+            'name': 'myNewOeName',
+            'schedulable': False
+        }
+        self.client.patch(
+            reverse('opticalelement-detail', args=(optical_element.id,)),
+            data=oe_update, format='json'
+        )
+        expected_capabilities = {
+            'instrument': heroic_instrument_id(self.instrument),
+            'status': 'SCHEDULABLE',
+            'optical_element_groups': {'filters': {'options': [{'id': 'myoe1', 'name': 'myNewOeName', 'schedulable': False}]}},
+            'operation_modes': {}
+        }
+        mock_send.assert_called_with('instrument-capabilities/', expected_capabilities)
+
+    def test_create_generic_mode_group_of_instrument_type_calls_out_to_heroic(self, mock_send):
+        generic_mode1 = {'name': 'testMode1', 'code': 'tM1', 'schedulable': True}
+        generic_mode_group = {'type': 'readout', 'instrument_type': self.instrument_type.id,
+                              'modes': [generic_mode1]}
+        self.client.post(reverse('genericmodegroup-list'), data=generic_mode_group, format='json')
+        expected_capabilities = {
+            'instrument': heroic_instrument_id(self.instrument),
+            'status': 'SCHEDULABLE',
+            'optical_element_groups': {},
+            'operation_modes': {'readout': {'options': [{'id': 'tM1', 'name': 'testMode1', 'schedulable': True}]}}
+        }
+        mock_send.assert_called_with('instrument-capabilities/', expected_capabilities)
+
+    def test_update_generic_mode_group_calls_out_to_heroic(self, mock_send):
+        readout_mode = mixer.blend(ModeType, id='readout')
+        generic_mode1 = mixer.blend(GenericMode, name='testMode1', code='tM1', schedulable=True)
+        generic_mode_group = mixer.blend(GenericModeGroup, type=readout_mode, instrument_type=self.instrument_type, modes=[generic_mode1])
+        generic_mode2 = mixer.blend(GenericMode, name='testMode2', code='tM2', schedulable=True)
+        gmg_update = {
+            'mode_ids': [generic_mode2.id]
+        }
+        self.client.patch(
+            reverse('genericmodegroup-detail', args=(generic_mode_group.id,)),
+            data=gmg_update, format='json'
+        )
+        expected_capabilities = {
+            'instrument': heroic_instrument_id(self.instrument),
+            'status': 'SCHEDULABLE',
+            'optical_element_groups': {},
+            'operation_modes': {'readout': {'options': [{'id': 'tM2', 'name': 'testMode2', 'schedulable': True}]}}
+        }
+        mock_send.assert_called_with('instrument-capabilities/', expected_capabilities)
+
+    def test_update_generic_mode_group_alt_calls_out_to_heroic(self, mock_send):
+        readout_mode = mixer.blend(ModeType, id='readout')
+        generic_mode1 = mixer.blend(GenericMode, name='testMode1', code='tM1', schedulable=True)
+        generic_mode_group = mixer.blend(GenericModeGroup, type=readout_mode, instrument_type=self.instrument_type, modes=[generic_mode1])
+        generic_mode2 = mixer.blend(GenericMode, name='testMode2', code='tM2', schedulable=True)
+        gmg_update = {
+            'modes': [{'code': generic_mode2.code}]
+        }
+        self.client.patch(
+            reverse('genericmodegroup-detail', args=(generic_mode_group.id,)),
+            data=gmg_update, format='json'
+        )
+        expected_capabilities = {
+            'instrument': heroic_instrument_id(self.instrument),
+            'status': 'SCHEDULABLE',
+            'optical_element_groups': {},
+            'operation_modes': {'readout': {'options': [{'id': 'tM2', 'name': 'testMode2', 'schedulable': True}]}}
+        }
+        mock_send.assert_called_with('instrument-capabilities/', expected_capabilities)
+
+    def test_update_generic_mode_calls_out_to_heroic(self, mock_send):
+        readout_mode = mixer.blend(ModeType, id='readout')
+        generic_mode = mixer.blend(GenericMode, name='testMode1', code='tM1', schedulable=True)
+        mixer.blend(GenericModeGroup, type=readout_mode, instrument_type=self.instrument_type, modes=[generic_mode])
+        gm_update = {
+            'name': 'testModeNewName',
+            'schedulable': False
+        }
+        self.client.patch(
+            reverse('genericmode-detail', args=(generic_mode.id,)),
+            data=gm_update, format='json'
+        )
+        expected_capabilities = {
+            'instrument': heroic_instrument_id(self.instrument),
+            'status': 'SCHEDULABLE',
+            'optical_element_groups': {},
+            'operation_modes': {'readout': {'options': [{'id': 'tM1', 'name': 'testModeNewName', 'schedulable': False}]}}
+        }
+        mock_send.assert_called_with('instrument-capabilities/', expected_capabilities)
 
 
 class TestCreationThroughAPI(APITestCase):
