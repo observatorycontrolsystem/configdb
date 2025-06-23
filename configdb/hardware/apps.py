@@ -8,7 +8,7 @@ def can_submit_to_heroic():
 
 class HardwareConfig(AppConfig):
     name = 'configdb.hardware'
-    
+
     def ready(self):
         # Only load the heroic communication signals if heroic settings are set
         if can_submit_to_heroic():
