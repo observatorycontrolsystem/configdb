@@ -1,5 +1,5 @@
 ''' These signals right now are only used for when HEROIC details are set in the settings
-    They are used to propogate model information to the HEROIC service
+    They are used to propagate model information to the HEROIC service
 '''
 from django.dispatch import receiver
 from django.db.models.signals import pre_save

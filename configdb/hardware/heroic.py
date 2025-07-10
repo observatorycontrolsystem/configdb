@@ -29,14 +29,14 @@ def heroic_site_id(site: Site):
     ''' Extract a HEROIC id for the site.
         This concatenates the observatory.site for human readability
     '''
-    return settings.HEROIC_OBSERVATORY + '.' + site.code
+    return f"{settings.HEROIC_OBSERVATORY}.{site.code}"
 
 
 def heroic_telescope_id(telescope: Telescope):
     ''' Extract a HEROIC id for the telescope
         This concatenates the observatory.site.telescope for human readability
     '''
-    return heroic_site_id(telescope.enclosure.site) + '.' + telescope.enclosure.code + '-' + telescope.code
+    return f"{heroic_site_id(telescope.enclosure.site)}.{telescope.enclosure.code}-{telescope.code}"
 
 
 def heroic_instrument_id(instrument: Instrument):
@@ -44,7 +44,7 @@ def heroic_instrument_id(instrument: Instrument):
         This concatenates the observatory.site.telescope.instrument
         for human-readability.
     '''
-    return heroic_telescope_id(instrument.telescope) + '.' + instrument.code
+    return f"{heroic_telescope_id(instrument.telescope)}.{instrument.code}"
 
 
 def heroic_optical_element_groups(instrument: Instrument):
@@ -128,23 +128,24 @@ def send_to_heroic(api_endpoint: str, payload: dict, update: bool = False):
 def create_heroic_instrument(instrument: Instrument):
     ''' Create a new instrument payload and send it to HEROIC
     '''
-    instrument_payload = {
-        'id': heroic_instrument_id(instrument),
-        'name': f"{instrument.instrument_type.name} - {instrument.code}",
-        'telescope': heroic_telescope_id(instrument.telescope),
-        'available': True
-    }
-    try:
-        send_to_heroic('instruments/', instrument_payload)
-    except Exception as e:
-        logger.error(f'Failed to create heroic instrument {str(instrument)}: {repr(e)}')
+    if (instrument.telescope.enclosure.site.code not in settings.HEROIC_EXCLUDE_SITES):
+        instrument_payload = {
+            'id': heroic_instrument_id(instrument),
+            'name': f"{instrument.instrument_type.name} - {instrument.code}",
+            'telescope': heroic_telescope_id(instrument.telescope),
+            'available': True
+        }
+        try:
+            send_to_heroic('instruments/', instrument_payload)
+        except Exception as e:
+            logger.error(f'Failed to create heroic instrument {str(instrument)}: {repr(e)}')
 
 
 def update_heroic_instrument_capabilities(instrument: Instrument):
     ''' Send the current instrument capabilities of an instrument to HEROIC
         if it is not DISABLED and heroic is set up in settings.py
     '''
-    if can_submit_to_heroic() and instrument.state != 'DISABLED':
+    if can_submit_to_heroic() and instrument.state != 'DISABLED' and instrument.telescope.enclosure.site.code not in settings.HEROIC_EXCLUDE_SITES:
         capabilities = instrument_to_heroic_instrument_capabilities(instrument)
         try:
             send_to_heroic('instrument-capabilities/', capabilities)
@@ -155,25 +156,27 @@ def update_heroic_instrument_capabilities(instrument: Instrument):
 def create_heroic_telescope(telescope: Telescope):
     ''' Create a new telescope payload and send it to HEROIC
     '''
-    telescope_payload = telescope_to_heroic_telescope_properties(telescope)
-    telescope_payload['id'] = heroic_telescope_id(telescope)
-    telescope_payload['status'] = telescope_status_conversion(telescope)
-    if telescope_payload['status'] != 'SCHEDULABLE':
-        telescope_payload['reason'] = 'Telescope is currently marked as inactive to prevent usage'
-    try:
-        send_to_heroic('telescopes/', telescope_payload)
-    except Exception as e:
-        logger.error(f'Failed to create heroic telescope {str(telescope)}: {repr(e)}')
+    if telescope.enclosure.site.code not in settings.HEROIC_EXCLUDE_SITES:
+        telescope_payload = telescope_to_heroic_telescope_properties(telescope)
+        telescope_payload['id'] = heroic_telescope_id(telescope)
+        telescope_payload['status'] = telescope_status_conversion(telescope)
+        if telescope_payload['status'] != 'SCHEDULABLE':
+            telescope_payload['reason'] = 'Telescope is currently marked as inactive to prevent usage'
+        try:
+            send_to_heroic('telescopes/', telescope_payload)
+        except Exception as e:
+            logger.error(f'Failed to create heroic telescope {str(telescope)}: {repr(e)}')
 
 
 def update_heroic_telescope_properties(telescope: Telescope):
     ''' Send updated telescope properties to HEROIC when they change
     '''
-    telescope_update_payload = telescope_to_heroic_telescope_properties(telescope)
-    try:
-        send_to_heroic(f'telescopes/{heroic_telescope_id(telescope)}/', telescope_update_payload, update=True)
-    except Exception as e:
-        logger.error(f'Failed to update heroic telescope {str(telescope)}: {repr(e)}')
+    if telescope.enclosure.site.code not in settings.HEROIC_EXCLUDE_SITES:
+        telescope_update_payload = telescope_to_heroic_telescope_properties(telescope)
+        try:
+            send_to_heroic(f'telescopes/{heroic_telescope_id(telescope)}/', telescope_update_payload, update=True)
+        except Exception as e:
+            logger.error(f'Failed to update heroic telescope {str(telescope)}: {repr(e)}')
 
 
 def site_to_heroic_site_properties(site: Site):
@@ -191,19 +194,21 @@ def site_to_heroic_site_properties(site: Site):
 def create_heroic_site(site: Site):
     ''' Create a new site payload and send it to HEROIC
     '''
-    site_payload = site_to_heroic_site_properties(site)
-    site_payload['id'] = heroic_site_id(site)
-    try:
-        send_to_heroic('sites/', site_payload)
-    except Exception as e:
-        logger.error(f'Failed to create heroic site {str(site)}: {repr(e)}')
+    if site.code not in settings.HEROIC_EXCLUDE_SITES:
+        site_payload = site_to_heroic_site_properties(site)
+        site_payload['id'] = heroic_site_id(site)
+        try:
+            send_to_heroic('sites/', site_payload)
+        except Exception as e:
+            logger.error(f'Failed to create heroic site {str(site)}: {repr(e)}')
 
 
 def update_heroic_site(site: Site):
     ''' Send updated site properties to HEROIC when they change
     '''
-    site_payload = site_to_heroic_site_properties(site)
-    try:
-        send_to_heroic(f'sites/{heroic_site_id(site)}/', site_payload, update=True)
-    except Exception as e:
-        logger.error(f'Failed to update heroic site {str(site)}: {repr(e)}')
+    if site.code not in settings.HEROIC_EXCLUDE_SITES:
+        site_payload = site_to_heroic_site_properties(site)
+        try:
+            send_to_heroic(f'sites/{heroic_site_id(site)}/', site_payload, update=True)
+        except Exception as e:
+            logger.error(f'Failed to update heroic site {str(site)}: {repr(e)}')
