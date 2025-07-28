@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "configdb"
-version = "3.0.7"
+version = "3.0.8"
 description = "Configuration Database"
 authors = ["Observatory Control System Project <ocs@lco.global>"]
 license = "GPL-3.0-only"
