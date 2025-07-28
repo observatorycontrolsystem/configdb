@@ -128,7 +128,7 @@ def send_to_heroic(api_endpoint: str, payload: dict, update: bool = False):
 def create_heroic_instrument(instrument: Instrument):
     ''' Create a new instrument payload and send it to HEROIC
     '''
-    if (instrument.telescope.enclosure.site.code not in settings.HEROIC_EXCLUDE_SITES):
+    if (instrument.telescope.enclosure.site.code not in settings.HEROIC_EXCLUDE_SITES and str(instrument.telescope) not in settings.HEROIC_EXCLUDE_TELESCOPES):
         instrument_payload = {
             'id': heroic_instrument_id(instrument),
             'name': f"{instrument.instrument_type.name} - {instrument.code}",
@@ -145,7 +145,7 @@ def update_heroic_instrument_capabilities(instrument: Instrument):
     ''' Send the current instrument capabilities of an instrument to HEROIC
         if it is not DISABLED and heroic is set up in settings.py
     '''
-    if can_submit_to_heroic() and instrument.state != 'DISABLED' and instrument.telescope.enclosure.site.code not in settings.HEROIC_EXCLUDE_SITES:
+    if can_submit_to_heroic() and instrument.state != 'DISABLED' and instrument.telescope.enclosure.site.code not in settings.HEROIC_EXCLUDE_SITES and str(instrument.telescope) not in settings.HEROIC_EXCLUDE_TELESCOPES:
         capabilities = instrument_to_heroic_instrument_capabilities(instrument)
         try:
             send_to_heroic('instrument-capabilities/', capabilities)
@@ -156,7 +156,7 @@ def update_heroic_instrument_capabilities(instrument: Instrument):
 def create_heroic_telescope(telescope: Telescope):
     ''' Create a new telescope payload and send it to HEROIC
     '''
-    if telescope.enclosure.site.code not in settings.HEROIC_EXCLUDE_SITES:
+    if telescope.enclosure.site.code not in settings.HEROIC_EXCLUDE_SITES and str(telescope) not in settings.HEROIC_EXCLUDE_TELESCOPES:
         telescope_payload = telescope_to_heroic_telescope_properties(telescope)
         telescope_payload['id'] = heroic_telescope_id(telescope)
         telescope_payload['status'] = telescope_status_conversion(telescope)
@@ -171,7 +171,7 @@ def create_heroic_telescope(telescope: Telescope):
 def update_heroic_telescope_properties(telescope: Telescope):
     ''' Send updated telescope properties to HEROIC when they change
     '''
-    if telescope.enclosure.site.code not in settings.HEROIC_EXCLUDE_SITES:
+    if telescope.enclosure.site.code not in settings.HEROIC_EXCLUDE_SITES and str(telescope) not in settings.HEROIC_EXCLUDE_TELESCOPES:
         telescope_update_payload = telescope_to_heroic_telescope_properties(telescope)
         try:
             send_to_heroic(f'telescopes/{heroic_telescope_id(telescope)}/', telescope_update_payload, update=True)

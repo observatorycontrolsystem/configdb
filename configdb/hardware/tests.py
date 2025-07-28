@@ -189,6 +189,17 @@ class TestHeroicUpdates(APITestCase):
         )
         mock_send.assert_not_called()
 
+    @override_settings(HEROIC_EXCLUDE_TELESCOPES=['tst.doma.1m0a'])
+    def test_update_instrument_state_on_excluded_telescope_does_not_call_out_to_heroic(self, mock_send):
+        instrument_update = {
+            'state': Instrument.MANUAL
+        }
+        self.client.patch(
+            reverse('instrument-detail', args=(self.instrument.id,)),
+            data=instrument_update, format='json'
+        )
+        mock_send.assert_not_called()
+
     def test_update_instrument_cameras_calls_out_to_heroic(self, mock_send):
         optical_element = mixer.blend(OpticalElement, name='myOE', code='myoe1', schedulable=True)
         optical_element_group = mixer.blend(OpticalElementGroup, optical_elements=[optical_element], type='filters')
