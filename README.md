@@ -33,6 +33,11 @@ This project is configured using environment variables.
 | `OAUTH_TOKEN_URL`     | OAuth2 token URL, set this to use OAuth2 authentication                            | `""`                            |
 | `OAUTH_PROFILE_URL`   | Observation portal profile endpoint, used to retrieve details on user accounts     | `""`                            |
 | `OAUTH_SERVER_KEY`    | Observation portal server secret key to authenticate calls from the server         | `""`                            |
+| `HEROIC_API_URL`    | HEROIC server api url, required for submitting your observatory updates to the HEROIC service         | `""`                            |
+| `HEROIC_API_TOKEN`    | HEROIC server api token, required for submitting your observatory updates to the HEROIC service         | `""`                            |
+| `HEROIC_OBSERVATORY`    | HEROIC server observatory code, required for submitting your observatory updates to the HEROIC service         | `""`                            |
+| `HEROIC_EXCLUDE_SITES`    | Comma delimited list of site codes to ignore when sending updates to HEROIC         | `""`                            |
+| `HEROIC_EXCLUDE_TELESCOPES`    | Comma delimited list of site.enclosure.telescope codes to ignore when sending updates to HEROIC      | `""`                            |
 
 ## Local Development
 
@@ -145,3 +150,7 @@ Return a specific camera's configuration
 Return all instruments that are in the SCHEDULABLE state
 
     GET /instruments/?state=SCHEDULABLE
+
+## Sending data to HEROIC
+
+HEROIC is a service provided by Scimma through the NSF that accepts and stores observatory information, including instrument configuration and telescope status. By default, no data will be sent to the HEROIC service. If you want to send your observatory updates to HEROIC, you must set all the `HEROIC_*` environment variables. You must login to the HEROIC server, retrieve your API token, and request that an Observatory is created for you with your account as the admin for that observatory. Afterwards, by setting the appropriate environment variables your configuration database should automatically send updates to HEROIC when updates are made through the API or admin interface.
