@@ -62,7 +62,7 @@ INSTALLED_APPS = (
     'reversion',
     'rest_framework',
     'rest_framework.authtoken',
-    'configdb.hardware',
+    'configdb.hardware.apps.HardwareConfig',
     'corsheaders',
     'django_extensions',
 )
@@ -156,6 +156,15 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ),
 }
+
+# To submit instrument capability updates to the SCIMMA Heroic service
+# You must first login to heroic and get your API token, and your account
+# must be listed as the admin account for an observatory
+HEROIC_API_URL = os.getenv('HEROIC_API_URL', '')
+HEROIC_API_TOKEN = os.getenv('HEROIC_API_TOKEN', '')
+HEROIC_OBSERVATORY = os.getenv('HEROIC_OBSERVATORY', '')
+HEROIC_EXCLUDE_SITES = get_list_from_env('HEROIC_EXCLUDE_SITES', '')
+HEROIC_EXCLUDE_TELESCOPES = get_list_from_env('HEROIC_EXCLUDE_TELESCOPES', '')
 
 CORS_ORIGIN_ALLOW_ALL = True
 

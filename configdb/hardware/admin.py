@@ -11,6 +11,7 @@ from reversion.models import Version
 from reversion.admin import VersionAdmin
 from reversion.errors import RegistrationError
 
+from configdb.hardware.heroic import update_heroic_instrument_capabilities
 from configdb.hardware.models import (
     Site, Enclosure, GenericMode, ModeType, GenericModeGroup, Telescope, Instrument, Camera, CameraType,
     OpticalElementGroup, OpticalElement, InstrumentType, InstrumentCategory, ConfigurationType, ConfigurationTypeProperties
@@ -165,11 +166,26 @@ class InstrumentAdmin(HardwareAdmin):
     def science_camera_codes(self, obj):
         return ','.join([science_camera.code for science_camera in obj.science_cameras.all()])
 
+    def save_related(self, request, form, formsets, change):
+        # This is the best way to trigger on saving m2m admin relationships on the Instrument, like Science Cameras
+        finished = super().save_related(request, form, formsets, change)
+        update_heroic_instrument_capabilities(form.instance)
+        return finished
+
 @admin.register(Camera)
 class CameraAdmin(HardwareAdmin):
     form = CameraAdminForm
     list_display = ('code', 'camera_type')
     search_fields = ('code',)
+
+    def save_related(self, request, form, formsets, change):
+        # This is the best way to trigger on saving m2m admin relationships on the Camera, like Optical Element Groups
+        old_oegs = set(form.instance.optical_element_groups.all())
+        finished = super().save_related(request, form, formsets, change)
+        if old_oegs != set(form.instance.optical_element_groups.all()):
+            for instrument in form.instance.instrument_set.all():
+                update_heroic_instrument_capabilities(instrument)
+        return finished
 
 
 @admin.register(InstrumentType)
@@ -193,12 +209,46 @@ class GenericModeGroupAdmin(HardwareAdmin):
     search_fields = ('instrument_type', 'type')
     list_filter = ('type', 'instrument_type')
 
+    def save_model(self, request, obj, form, change):
+        old_instrument_type = None
+        if obj.pk:
+            old_obj = self.model.objects.get(pk=obj.pk)
+            if old_obj.instrument_type != obj.instrument_type:
+                old_instrument_type = old_obj.instrument_type
+        # Now update the model so the new model details are saved
+        finished = super().save_model(request, obj, form, change)
+
+        if old_instrument_type:
+            # The instrument_type has changed so update heroic for the old instrument type
+            for instrument in old_instrument_type.instrument_set.all():
+                update_heroic_instrument_capabilities(instrument)
+        return finished
+
+    def save_related(self, request, form, formsets, change):
+        # This is the best way to trigger on saving m2m admin relationships on the GenericModeGroup,
+        # like when its members change
+        finished = super().save_related(request, form, formsets, change)
+        if form.instance.instrument_type:
+            for instrument in form.instance.instrument_type.instrument_set.all():
+                update_heroic_instrument_capabilities(instrument)
+        return finished
+
 
 @admin.register(GenericMode)
 class GenericModeAdmin(HardwareAdmin):
     form = GenericModeAdminForm
     list_display = ('name', 'code', 'overhead', 'schedulable')
     search_fields = ('name', 'code')
+
+    def save_related(self, request, form, formsets, change):
+        # This is the best way to trigger on saving m2m admin relationships on the GenericMode,
+        # like when its membersships change
+        finished = super().save_related(request, form, formsets, change)
+        for gmg in form.instance.genericmodegroup_set.all():
+            if gmg.instrument_type:
+                for instrument in gmg.instrument_type.instrument_set.all():
+                    update_heroic_instrument_capabilities(instrument)
+        return finished
 
 
 @admin.register(OpticalElementGroup)
@@ -208,11 +258,30 @@ class OpticalElementGroupAdmin(HardwareAdmin):
     search_fields = ('name', 'type')
     list_filter = ('type',)
 
+    def save_related(self, request, form, formsets, change):
+        # This is the best way to trigger on saving m2m admin relationships on the OpticalElementGroup,
+        # like when its members change
+        finished = super().save_related(request, form, formsets, change)
+        for camera in form.instance.camera_set.all():
+            for instrument in camera.instrument_set.all():
+                update_heroic_instrument_capabilities(instrument)
+        return finished
+
 
 @admin.register(OpticalElement)
 class OpticalElementAdmin(HardwareAdmin):
     list_display = ('name', 'code', 'schedulable')
     search_fields = ('name', 'code')
+
+    def save_related(self, request, form, formsets, change):
+        # This is the best way to trigger on saving m2m admin relationships on the OpticalElement,
+        # like when its memberships change
+        finished = super().save_related(request, form, formsets, change)
+        for oeg in form.instance.opticalelementgroup_set.all():
+            for camera in oeg.camera_set.all():
+                for instrument in camera.instrument_set.all():
+                    update_heroic_instrument_capabilities(instrument)
+        return finished
 
 
 @admin.register(LogEntry)
