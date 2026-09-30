@@ -3,6 +3,7 @@ import reversion
 import time_machine
 from datetime import datetime
 from http import HTTPStatus
+from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from django.test import Client
 from django.urls import reverse
@@ -13,7 +14,8 @@ from mixer.backend.django import mixer
 
 from configdb.hardware.models import (Site, Instrument, Enclosure, Telescope, Camera, CameraType, InstrumentType,
                      GenericMode, GenericModeGroup, ModeType, OpticalElement, OpticalElementGroup,
-                     ConfigurationType, ConfigurationTypeProperties, InstrumentCategory)
+                     ConfigurationType, ConfigurationTypeProperties, InstrumentCategory,
+                     CalibrationSchedule)
 from configdb.hardware.serializers import GenericModeSerializer, InstrumentTypeSerializer
 from configdb.hardware.heroic import heroic_instrument_id
 
@@ -749,3 +751,149 @@ class TestAvailabilityHistory(BaseHardwareTest):
         expected_intervals = {'availability_intervals': [
             {'start': datetime(2023, 1, 1).isoformat(), 'end': datetime(2024, 1, 1).isoformat()}]}
         self.assertEqual(response.json(), expected_intervals)
+
+
+class CalibrationScheduleResolutionTest(BaseHardwareTest):
+    """The scope ladder: instrument, telescope, instrument type, site, network default."""
+
+    def setUp(self):
+        super().setUp()
+        self.bias = mixer.blend(ConfigurationType, code='BIAS')
+        self.instrument.instrument_type = self.instrument_type
+        self.instrument.telescope = self.telescope
+        self.instrument.save()
+
+    def _schedule(self, **kwargs):
+        kwargs.setdefault('configuration_type', self.bias)
+        kwargs.setdefault('direct_submission', True)
+        return mixer.blend(CalibrationSchedule, **kwargs)
+
+    def test_no_rows_returns_none(self):
+        self.assertIsNone(CalibrationSchedule.effective(self.instrument, self.bias, True))
+
+    def test_network_default_applies_when_nothing_more_specific(self):
+        row = self._schedule(instrument=None, telescope=None, instrument_type=None, site=None,
+                             exposures_per_run=15)
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, True), [row])
+
+    def test_deeper_location_wins(self):
+        self._schedule(site=self.site, instrument=None, telescope=None, instrument_type=None,
+                       exposures_per_run=15)
+        by_telescope = self._schedule(telescope=self.telescope, instrument=None, site=None,
+                                      instrument_type=None, exposures_per_run=9)
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, True)[0], by_telescope)
+        self.assertEqual(CalibrationSchedule.effective(self.instrument, self.bias, True)['exposures_per_run'], 9)
+
+    def test_any_location_beats_an_instrument_type_alone(self):
+        by_type = self._schedule(instrument_type=self.instrument_type, instrument=None,
+                                 telescope=None, site=None, exposures_per_run=9)
+        by_site = self._schedule(site=self.site, instrument=None, telescope=None,
+                                 instrument_type=None, exposures_per_run=15)
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, True), [by_site, by_type])
+
+    def test_blank_values_inherit_from_the_next_level_out(self):
+        self._schedule(instrument_type=self.instrument_type, instrument=None, telescope=None,
+                       site=None, exposures_per_run=15, sun_alt_start=-6.0, exposure_time=None)
+        self._schedule(instrument=self.instrument, telescope=None, instrument_type=None, site=None,
+                       exposures_per_run=None, sun_alt_start=None, exposure_time=30.0)
+        settings = CalibrationSchedule.effective(self.instrument, self.bias, True)
+        self.assertEqual(settings['exposure_time'], 30.0)      # from the instrument row
+        self.assertEqual(settings['exposures_per_run'], 15)    # inherited
+        self.assertEqual(settings['sun_alt_start'], -6.0)      # inherited
+
+    def test_rows_for_other_hardware_do_not_match(self):
+        other_site = mixer.blend(Site, code='oth')
+        self._schedule(site=other_site, instrument=None, telescope=None, instrument_type=None)
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, True), [])
+
+    def test_a_disabled_row_yields_nothing(self):
+        self._schedule(instrument_type=self.instrument_type, instrument=None, telescope=None,
+                       site=None, enabled=False)
+        self.assertIsNone(CalibrationSchedule.effective(self.instrument, self.bias, True))
+
+    def test_a_site_row_switches_off_an_instrument_type_default(self):
+        """Operations stopping one site must beat a network-wide instrument type rule."""
+        self._schedule(instrument_type=self.instrument_type, instrument=None, telescope=None,
+                       site=None, enabled=True, exposures_per_run=15)
+        self._schedule(site=self.site, instrument=None, telescope=None, instrument_type=None,
+                       enabled=False)
+        self.assertIsNone(CalibrationSchedule.effective(self.instrument, self.bias, True))
+
+    def test_instrument_type_qualifies_a_location_rather_than_competing_with_it(self):
+        broad = self._schedule(site=self.site, instrument=None, telescope=None,
+                               instrument_type=None, exposures_per_run=15)
+        narrow = self._schedule(site=self.site, instrument=None, telescope=None,
+                                instrument_type=self.instrument_type, exposures_per_run=9)
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, True), [narrow, broad])
+
+    def test_a_narrow_enabled_row_switches_on_a_broader_disabled_one(self):
+        self._schedule(site=self.site, instrument=None, telescope=None, instrument_type=None,
+                       enabled=False)
+        self._schedule(instrument=self.instrument, telescope=None, instrument_type=None,
+                       site=None, enabled=True, exposures_per_run=15)
+        self.assertEqual(CalibrationSchedule.effective(self.instrument, self.bias, True)['exposures_per_run'], 15)
+
+    def test_twilight_specific_row_beats_both_at_the_same_scope(self):
+        both = self._schedule(instrument_type=self.instrument_type, instrument=None, telescope=None,
+                              site=None, when=CalibrationSchedule.BOTH, exposures_per_run=15)
+        evening = self._schedule(telescope=None, instrument=None, site=None,
+                                 instrument_type=self.instrument_type,
+                                 when=CalibrationSchedule.EVENING, exposures_per_run=9)
+        rows = CalibrationSchedule.matching(self.instrument, self.bias, True,
+                                            when=CalibrationSchedule.EVENING)
+        self.assertEqual(rows, [evening, both])
+        morning = CalibrationSchedule.matching(self.instrument, self.bias, True,
+                                               when=CalibrationSchedule.MORNING)
+        self.assertEqual(morning, [both])
+
+    def test_more_than_one_location_is_rejected(self):
+        row = CalibrationSchedule(configuration_type=self.bias, site=self.site,
+                                  telescope=self.telescope)
+        with self.assertRaises(ValidationError):
+            row.clean()
+
+    def test_a_location_with_an_instrument_type_is_allowed(self):
+        row = CalibrationSchedule(configuration_type=self.bias, site=self.site,
+                                  instrument_type=self.instrument_type)
+        row.clean()
+
+    def test_direct_and_queued_rows_coexist_and_do_not_merge(self):
+        """AUTO_FOCUS runs both ways, so the same scope holds one row of each."""
+        direct = self._schedule(instrument_type=self.instrument_type, instrument=None,
+                                telescope=None, site=None, direct_submission=True,
+                                exposures_per_run=1, sun_alt_start=-9.9)
+        queued = self._schedule(instrument_type=self.instrument_type, instrument=None,
+                                telescope=None, site=None, direct_submission=False,
+                                exposures_per_run=12, sun_alt_start=-12.0)
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, True), [direct])
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, False), [queued])
+        self.assertEqual(
+            CalibrationSchedule.effective(self.instrument, self.bias, True)['sun_alt_start'], -9.9)
+        self.assertEqual(
+            CalibrationSchedule.effective(self.instrument, self.bias, False)['sun_alt_start'], -12.0)
+
+    def test_window_shape_inherits_like_any_other_value(self):
+        """Routine focus tiles the night; a narrower row caps it without restating the rest."""
+        self._schedule(instrument_type=self.instrument_type, instrument=None, telescope=None,
+                       site=None, direct_submission=False, window_count=None,
+                       window_length_minutes=60, sun_alt_start=-12.0)
+        self._schedule(telescope=self.telescope, instrument=None, instrument_type=None,
+                       site=None, direct_submission=False, window_count=2,
+                       window_length_minutes=None, sun_alt_start=None)
+        got = CalibrationSchedule.effective(self.instrument, self.bias, False)
+        self.assertEqual(got['window_count'], 2)              # from the telescope row
+        self.assertEqual(got['window_length_minutes'], 60)    # inherited
+        self.assertEqual(got['sun_alt_start'], -12.0)         # inherited
+
+    def test_readout_modes_inherit_rather_than_widening(self):
+        """An empty set on a narrow row must not undo a restriction set further out."""
+        full_frame = mixer.blend(GenericMode, code='full_frame')
+        broad = self._schedule(instrument_type=self.instrument_type, instrument=None,
+                               telescope=None, site=None, exposures_per_run=15)
+        broad.readout_modes.add(full_frame)
+        narrow = self._schedule(instrument=self.instrument, telescope=None,
+                                instrument_type=None, site=None, exposures_per_run=9)
+        narrow.readout_modes.clear()
+        got = CalibrationSchedule.effective(self.instrument, self.bias, True)
+        self.assertEqual(got['exposures_per_run'], 9)
+        self.assertEqual(got['readout_modes'], [full_frame])

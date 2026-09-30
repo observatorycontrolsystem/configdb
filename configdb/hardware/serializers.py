@@ -3,7 +3,7 @@ from rest_framework import serializers
 from .models import (
     Site, Enclosure, Telescope, OpticalElement, GenericMode, Instrument, Camera, OpticalElementGroup,
     CameraType, GenericModeGroup, InstrumentType, ConfigurationTypeProperties, ConfigurationType, ModeType,
-    InstrumentCategory
+    InstrumentCategory, CalibrationSchedule, CalibrationTarget, FilterSet, SkyFlatFilter
 )
 from configdb.hardware.validator import OCSValidator
 from configdb.hardware.heroic import update_heroic_instrument_capabilities
@@ -13,7 +13,7 @@ class OpticalElementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OpticalElement
-        fields = ('id', 'name', 'code', 'schedulable')
+        fields = ('id', 'name', 'code', 'schedulable', 'sky_flat_order', 'sky_flat_cadence_days')
         read_only_fields = ['id']
 
     def update(self, instance, validated_data):
@@ -407,3 +407,69 @@ class AvailabilityHistorySerializer(serializers.Serializer):
     start = serializers.DateTimeField(required=False, write_only=True)
     end = serializers.DateTimeField(required=False, write_only=True)
     availability_intervals = serializers.DictField(read_only=True)
+
+
+class FilterSetSerializer(serializers.ModelSerializer):
+    optical_elements = serializers.SlugRelatedField(
+        slug_field='code', many=True, queryset=OpticalElement.objects.all(),
+        help_text='Optical element codes making up this set'
+    )
+
+    class Meta:
+        model = FilterSet
+        fields = ('id', 'name', 'optical_elements')
+        read_only_fields = ['id']
+
+
+class SkyFlatFilterSerializer(serializers.ModelSerializer):
+    instrument_type = serializers.SlugRelatedField(
+        slug_field='code', queryset=InstrumentType.objects.all())
+    optical_element = serializers.SlugRelatedField(
+        slug_field='code', queryset=OpticalElement.objects.all())
+
+    class Meta:
+        model = SkyFlatFilter
+        fields = ('id', 'instrument_type', 'optical_element', 'order', 'cadence_days')
+        read_only_fields = ['id']
+
+
+class CalibrationTargetSerializer(serializers.ModelSerializer):
+    configuration_type = serializers.SlugRelatedField(
+        slug_field='code', queryset=ConfigurationType.objects.all())
+    site = serializers.SlugRelatedField(
+        slug_field='code', queryset=Site.objects.all(), required=False, allow_null=True)
+
+    class Meta:
+        model = CalibrationTarget
+        fields = ('id', 'name', 'ra', 'dec', 'proper_motion_ra', 'proper_motion_dec',
+                  'configuration_type', 'site', 'season_start', 'season_end', 'config')
+        read_only_fields = ['id']
+
+
+class CalibrationScheduleSerializer(serializers.ModelSerializer):
+    configuration_type = serializers.SlugRelatedField(
+        slug_field='code', queryset=ConfigurationType.objects.all())
+    instrument_type = serializers.SlugRelatedField(
+        slug_field='code', queryset=InstrumentType.objects.all(), required=False, allow_null=True)
+    site = serializers.SlugRelatedField(
+        slug_field='code', queryset=Site.objects.all(), required=False, allow_null=True)
+    readout_modes = serializers.SlugRelatedField(
+        slug_field='code', many=True, queryset=GenericMode.objects.all(), required=False)
+    filter_set = serializers.SlugRelatedField(
+        slug_field='name', queryset=FilterSet.objects.all(), required=False, allow_null=True)
+
+    class Meta:
+        model = CalibrationSchedule
+        fields = ('id', 'configuration_type', 'instrument', 'telescope', 'instrument_type', 'site',
+                  'enabled', 'when', 'direct_submission', 'readout_modes', 'filter_set', 'exposures_per_run',
+                  'exposure_time', 'cadence_days', 'sun_alt_start', 'sun_alt_end', 'proposal',
+                  'window_offset_minutes', 'window_count', 'window_length_minutes')
+        read_only_fields = ['id']
+
+    def validate(self, data):
+        locations = [f for f in CalibrationSchedule.LOCATION_FIELDS if data.get(f)]
+        if len(locations) > 1:
+            raise serializers.ValidationError(
+                f'Set at most one location. This row sets {", ".join(locations)}. '
+                f'An instrument type can be combined with any one of them.')
+        return data

@@ -14,7 +14,8 @@ from reversion.errors import RegistrationError
 from configdb.hardware.heroic import update_heroic_instrument_capabilities
 from configdb.hardware.models import (
     Site, Enclosure, GenericMode, ModeType, GenericModeGroup, Telescope, Instrument, Camera, CameraType,
-    OpticalElementGroup, OpticalElement, InstrumentType, InstrumentCategory, ConfigurationType, ConfigurationTypeProperties
+    OpticalElementGroup, OpticalElement, InstrumentType, InstrumentCategory, ConfigurationType, ConfigurationTypeProperties,
+    CalibrationSchedule, CalibrationTarget, FilterSet, SkyFlatFilter
 )
 from configdb.hardware.validator import OCSValidator
 
@@ -370,3 +371,41 @@ class LogEntryAdmin(admin.ModelAdmin):
 
     def queryset(self, request):
         return super().queryset(request).prefetch_related('content_type')
+
+
+@admin.register(FilterSet)
+class FilterSetAdmin(HardwareAdmin):
+    list_display = ('name', '__str__')
+    search_fields = ('name', 'optical_elements__code')
+    filter_horizontal = ('optical_elements',)
+
+
+@admin.register(SkyFlatFilter)
+class SkyFlatFilterAdmin(HardwareAdmin):
+    list_display = ('instrument_type', 'optical_element', 'order', 'cadence_days')
+    list_filter = ('instrument_type__code',)
+    search_fields = ('instrument_type__code', 'optical_element__code')
+
+
+@admin.register(CalibrationTarget)
+class CalibrationTargetAdmin(HardwareAdmin):
+    list_display = ('name', 'configuration_type', 'site', 'ra', 'dec', 'season_start', 'season_end')
+    list_filter = ('configuration_type__code', 'site__code')
+    search_fields = ('name',)
+
+
+@admin.register(CalibrationSchedule)
+class CalibrationScheduleAdmin(HardwareAdmin):
+    list_display = ('configuration_type', 'scope', 'when', 'direct_submission', 'enabled',
+                    'exposures_per_run', 'exposure_time', 'sun_alt_start', 'sun_alt_end', 'proposal')
+    list_filter = ('enabled', 'direct_submission', 'when', 'configuration_type__code',
+                   'site__code', 'instrument_type__code')
+    search_fields = ('configuration_type__code', 'site__code', 'instrument_type__code',
+                     'telescope__code', 'instrument__code', 'proposal')
+    filter_horizontal = ('readout_modes',)
+
+    def scope(self, obj):
+        for field in obj.SCOPE_FIELDS:
+            if getattr(obj, f'{field}_id', None):
+                return f'{field}: {getattr(obj, field)}'
+        return 'network default'

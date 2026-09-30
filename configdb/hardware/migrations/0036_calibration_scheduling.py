@@ -1,0 +1,423 @@
+# Calibration scheduling configuration.
+
+import django.core.validators
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("hardware", "0035_configurationtypeproperties_validation_schema"),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name="opticalelement",
+            name="sky_flat_cadence_days",
+            field=models.IntegerField(
+                blank=True,
+                help_text="Target interval in days between sky flats through this element. Leave blank to take sky flats through it only when nothing else is due. SkyFlatFilter overrides this per instrument type.",
+                null=True,
+                validators=[django.core.validators.MinValueValidator(1)],
+            ),
+        ),
+        migrations.AddField(
+            model_name="opticalelement",
+            name="sky_flat_order",
+            field=models.IntegerField(
+                blank=True,
+                help_text="Position of this element in the evening sky flat sequence, lowest first. The morning sequence runs in reverse. Leave blank to take no sky flats through this element.",
+                null=True,
+            ),
+        ),
+        migrations.CreateModel(
+            name="FilterSet",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("modified", models.DateTimeField(auto_now=True)),
+                (
+                    "name",
+                    models.CharField(
+                        help_text="Filter set name", max_length=100, unique=True
+                    ),
+                ),
+                (
+                    "optical_elements",
+                    models.ManyToManyField(
+                        help_text="Optical elements making up this set",
+                        to="hardware.opticalelement",
+                    ),
+                ),
+            ],
+            options={
+                "abstract": False,
+            },
+        ),
+        migrations.CreateModel(
+            name="CalibrationTarget",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("modified", models.DateTimeField(auto_now=True)),
+                ("name", models.CharField(help_text="Target name", max_length=200)),
+                (
+                    "ra",
+                    models.FloatField(
+                        help_text="Right ascension in degrees",
+                        validators=[
+                            django.core.validators.MinValueValidator(0.0),
+                            django.core.validators.MaxValueValidator(360.0),
+                        ],
+                    ),
+                ),
+                (
+                    "dec",
+                    models.FloatField(
+                        help_text="Declination in degrees",
+                        validators=[
+                            django.core.validators.MinValueValidator(-90.0),
+                            django.core.validators.MaxValueValidator(90.0),
+                        ],
+                    ),
+                ),
+                (
+                    "proper_motion_ra",
+                    models.FloatField(
+                        blank=True, help_text="Proper motion in RA, mas/year", null=True
+                    ),
+                ),
+                (
+                    "proper_motion_dec",
+                    models.FloatField(
+                        blank=True,
+                        help_text="Proper motion in Dec, mas/year",
+                        null=True,
+                    ),
+                ),
+                (
+                    "season_start",
+                    models.CharField(
+                        blank=True,
+                        help_text="MM-DD, inclusive. Leave blank for all year.",
+                        max_length=5,
+                    ),
+                ),
+                (
+                    "season_end",
+                    models.CharField(
+                        blank=True,
+                        help_text="MM-DD, inclusive. Leave blank for all year.",
+                        max_length=5,
+                    ),
+                ),
+                (
+                    "config",
+                    models.JSONField(
+                        blank=True,
+                        default=dict,
+                        help_text="Per-target overrides such as exposure time, slit, max airmass and acquire radius.",
+                    ),
+                ),
+                (
+                    "configuration_type",
+                    models.ForeignKey(
+                        help_text="Configuration type this target is used for",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="hardware.configurationtype",
+                    ),
+                ),
+                (
+                    "site",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="Restrict this target to one site. Leave blank for any site.",
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="hardware.site",
+                    ),
+                ),
+            ],
+            options={
+                "abstract": False,
+            },
+        ),
+        migrations.CreateModel(
+            name="SkyFlatFilter",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("modified", models.DateTimeField(auto_now=True)),
+                (
+                    "order",
+                    models.IntegerField(
+                        blank=True,
+                        help_text="Overrides OpticalElement.sky_flat_order for this instrument type.",
+                        null=True,
+                    ),
+                ),
+                (
+                    "cadence_days",
+                    models.IntegerField(
+                        blank=True,
+                        help_text="Overrides OpticalElement.sky_flat_cadence_days for this instrument type.",
+                        null=True,
+                        validators=[django.core.validators.MinValueValidator(1)],
+                    ),
+                ),
+                (
+                    "instrument_type",
+                    models.ForeignKey(
+                        help_text="Instrument type this override applies to",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="hardware.instrumenttype",
+                    ),
+                ),
+                (
+                    "optical_element",
+                    models.ForeignKey(
+                        help_text="Optical element this override applies to",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="hardware.opticalelement",
+                    ),
+                ),
+            ],
+            options={
+                "unique_together": {("instrument_type", "optical_element")},
+            },
+        ),
+        migrations.CreateModel(
+            name="CalibrationSchedule",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("modified", models.DateTimeField(auto_now=True)),
+                (
+                    "enabled",
+                    models.BooleanField(
+                        default=True,
+                        help_text="Uncheck to stop submitting without deleting the row",
+                    ),
+                ),
+                (
+                    "when",
+                    models.CharField(
+                        choices=[
+                            ("EVENING", "Evening"),
+                            ("MORNING", "Morning"),
+                            ("BOTH", "Both"),
+                        ],
+                        default="BOTH",
+                        help_text="Which twilight this run belongs to",
+                        max_length=8,
+                    ),
+                ),
+                (
+                    "direct_submission",
+                    models.BooleanField(
+                        default=True,
+                        help_text="Place the observation directly through /api/schedule/, which takes "
+                                  "the slot. Uncheck to queue it through /api/requestgroups/ and let "
+                                  "the scheduler decide. AUTO_FOCUS runs both ways, so a row of each "
+                                  "can exist at the same scope.",
+                    ),
+                ),
+                (
+                    "exposures_per_run",
+                    models.IntegerField(
+                        blank=True,
+                        help_text="Number of exposures per run",
+                        null=True,
+                        validators=[django.core.validators.MinValueValidator(1)],
+                    ),
+                ),
+                (
+                    "exposure_time",
+                    models.FloatField(
+                        blank=True,
+                        help_text="Exposure time in seconds",
+                        null=True,
+                        validators=[django.core.validators.MinValueValidator(0)],
+                    ),
+                ),
+                (
+                    "cadence_days",
+                    models.IntegerField(
+                        blank=True,
+                        help_text="Target interval in days between runs",
+                        null=True,
+                        validators=[django.core.validators.MinValueValidator(1)],
+                    ),
+                ),
+                (
+                    "sun_alt_start",
+                    models.FloatField(
+                        blank=True,
+                        validators=[
+                            django.core.validators.MinValueValidator(-90),
+                            django.core.validators.MaxValueValidator(90),
+                        ],
+                        help_text="Solar altitude in degrees at which the window opens",
+                        null=True,
+                    ),
+                ),
+                (
+                    "sun_alt_end",
+                    models.FloatField(
+                        blank=True,
+                        validators=[
+                            django.core.validators.MinValueValidator(-90),
+                            django.core.validators.MaxValueValidator(90),
+                        ],
+                        help_text="Solar altitude in degrees at which the window closes",
+                        null=True,
+                    ),
+                ),
+                (
+                    "proposal",
+                    models.CharField(
+                        blank=True,
+                        help_text="Portal proposal to submit under. Leave blank for the default for this configuration type. Set it only to change priority, as elp does with rescue_auto_focus.",
+                        max_length=64,
+                    ),
+                ),
+                (
+                    "window_offset_minutes",
+                    models.IntegerField(
+                        blank=True,
+                        help_text="Delay the window opening this many minutes past the point sun_alt_start is reached. The observing window, not the submission.",
+                        null=True,
+                    ),
+                ),
+                (
+                    "window_count",
+                    models.IntegerField(
+                        blank=True,
+                        help_text="How many windows to offer. Leave blank to tile until sun_alt_end "
+                                  "is reached, which is what routine autofocus does today.",
+                        null=True,
+                        validators=[django.core.validators.MinValueValidator(1)],
+                    ),
+                ),
+                (
+                    "window_length_minutes",
+                    models.IntegerField(
+                        blank=True,
+                        help_text="Length of each window. Leave blank for a single window spanning "
+                                  "sun_alt_start to sun_alt_end, which is what every calibration "
+                                  "except the queued autofocus uses.",
+                        null=True,
+                        validators=[django.core.validators.MinValueValidator(1)],
+                    ),
+                ),
+                (
+                    "configuration_type",
+                    models.ForeignKey(
+                        help_text="Configuration type to submit",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="hardware.configurationtype",
+                    ),
+                ),
+                (
+                    "filter_set",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="Filter set to observe through",
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="hardware.filterset",
+                    ),
+                ),
+                (
+                    "instrument",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="Scope this row to a single instrument",
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="hardware.instrument",
+                    ),
+                ),
+                (
+                    "instrument_type",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="Scope this row to an instrument type",
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="hardware.instrumenttype",
+                    ),
+                ),
+                (
+                    "readout_modes",
+                    models.ManyToManyField(
+                        blank=True,
+                        help_text="Readout modes this run covers. Leave empty for every mode the instrument has.",
+                        to="hardware.genericmode",
+                    ),
+                ),
+                (
+                    "site",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="Scope this row to a site",
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="hardware.site",
+                    ),
+                ),
+                (
+                    "telescope",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="Scope this row to a telescope, letting the submitter pick the instrument",
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="hardware.telescope",
+                    ),
+                ),
+            ],
+            options={
+                "unique_together": {
+                    (
+                        "configuration_type",
+                        "instrument",
+                        "telescope",
+                        "instrument_type",
+                        "site",
+                        "when",
+                        "direct_submission",
+                    )
+                },
+            },
+        ),
+    ]

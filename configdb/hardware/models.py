@@ -1,6 +1,8 @@
 import datetime
 
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 class BaseModel(models.Model):
@@ -117,6 +119,17 @@ class Telescope(BaseModel):
 class OpticalElement(BaseModel):
     name = models.CharField(max_length=200, help_text='Optical element name')
     code = models.CharField(max_length=200, unique=True, help_text='Optical element code')
+    sky_flat_order = models.IntegerField(
+        null=True, blank=True,
+        help_text='Position of this element in the evening sky flat sequence, lowest first. The morning '
+                  'sequence runs in reverse. Leave blank to take no sky flats through this element.'
+    )
+    sky_flat_cadence_days = models.IntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text='Target interval in days between sky flats through this element. Leave blank to take '
+                  'sky flats through it only when nothing else is due. SkyFlatFilter overrides this per '
+                  'instrument type.'
+    )
     schedulable = models.BooleanField(
         default=True,
         help_text='Whether this optical element should be usable by scheduled observations, or only via direct submission.'
@@ -402,3 +415,229 @@ class Instrument(BaseModel):
 
     def __str__(self):
         return '{0}.{1}'.format(self.telescope, self.code)
+
+
+class FilterSet(BaseModel):
+    name = models.CharField(max_length=100, unique=True, help_text='Filter set name')
+    optical_elements = models.ManyToManyField(
+        OpticalElement, help_text='Optical elements making up this set'
+    )
+
+    def __str__(self):
+        return self.name
+
+
+class SkyFlatFilter(BaseModel):
+    instrument_type = models.ForeignKey(InstrumentType, on_delete=models.CASCADE,
+                                        help_text='Instrument type this override applies to')
+    optical_element = models.ForeignKey(OpticalElement, on_delete=models.CASCADE,
+                                        help_text='Optical element this override applies to')
+    order = models.IntegerField(
+        null=True, blank=True,
+        help_text='Overrides OpticalElement.sky_flat_order for this instrument type.'
+    )
+    cadence_days = models.IntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text='Overrides OpticalElement.sky_flat_cadence_days for this instrument type.'
+    )
+
+    class Meta:
+        unique_together = ('instrument_type', 'optical_element')
+
+    def __str__(self):
+        return f'{self.instrument_type.code}-{self.optical_element.code}'
+
+
+class CalibrationTarget(BaseModel):
+    name = models.CharField(max_length=200, help_text='Target name')
+    ra = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(360.0)],
+        help_text='Right ascension in degrees'
+    )
+    dec = models.FloatField(
+        validators=[MinValueValidator(-90.0), MaxValueValidator(90.0)],
+        help_text='Declination in degrees'
+    )
+    proper_motion_ra = models.FloatField(null=True, blank=True, help_text='Proper motion in RA, mas/year')
+    proper_motion_dec = models.FloatField(null=True, blank=True, help_text='Proper motion in Dec, mas/year')
+    configuration_type = models.ForeignKey(ConfigurationType, on_delete=models.PROTECT,
+                                           help_text='Configuration type this target is used for')
+    site = models.ForeignKey(Site, null=True, blank=True, on_delete=models.CASCADE,
+                             help_text='Restrict this target to one site. Leave blank for any site.')
+    season_start = models.CharField(max_length=5, blank=True,
+                                    help_text='MM-DD, inclusive. Leave blank for all year.')
+    season_end = models.CharField(max_length=5, blank=True,
+                                  help_text='MM-DD, inclusive. Leave blank for all year.')
+    config = models.JSONField(
+        default=dict, blank=True,
+        help_text='Per-target overrides such as exposure time, slit, max airmass and acquire radius.'
+    )
+
+    def __str__(self):
+        return f'{self.name} ({self.configuration_type_id})'
+
+
+class CalibrationSchedule(BaseModel):
+    """What the calibration poller submits, and with what settings.
+
+    Scope has two independent axes. A location, being at most one of instrument,
+    telescope or site, and an optional instrument_type qualifier. A lookup takes
+    the most specific row that matches and fills any value left blank from the
+    next row out.
+
+    Location is ranked first, so a row naming a site beats one naming only an
+    instrument type. That is what lets operations stop a calibration at one site
+    without editing the network-wide defaults.
+    """
+    EVENING = 'EVENING'
+    MORNING = 'MORNING'
+    BOTH = 'BOTH'
+    WHEN_CHOICES = ((EVENING, 'Evening'), (MORNING, 'Morning'), (BOTH, 'Both'))
+
+    # Location axis, most specific first. At most one may be set on a row.
+    LOCATION_FIELDS = ('instrument', 'telescope', 'site')
+    SCOPE_FIELDS = LOCATION_FIELDS + ('instrument_type',)
+    VALUE_FIELDS = ('filter_set', 'exposures_per_run', 'exposure_time', 'cadence_days',
+                    'sun_alt_start', 'sun_alt_end', 'proposal', 'window_offset_minutes',
+                    'window_count', 'window_length_minutes')
+
+    configuration_type = models.ForeignKey(ConfigurationType, on_delete=models.PROTECT,
+                                           help_text='Configuration type to submit')
+
+    instrument = models.ForeignKey('Instrument', null=True, blank=True, on_delete=models.CASCADE,
+                                   help_text='Scope this row to a single instrument')
+    telescope = models.ForeignKey(Telescope, null=True, blank=True, on_delete=models.CASCADE,
+                                  help_text='Scope this row to a telescope, letting the submitter pick the instrument')
+    instrument_type = models.ForeignKey(InstrumentType, null=True, blank=True, on_delete=models.CASCADE,
+                                        help_text='Scope this row to an instrument type')
+    site = models.ForeignKey(Site, null=True, blank=True, on_delete=models.CASCADE,
+                             help_text='Scope this row to a site')
+
+    enabled = models.BooleanField(default=True, help_text='Uncheck to stop submitting without deleting the row')
+    when = models.CharField(max_length=8, choices=WHEN_CHOICES, default=BOTH,
+                            help_text='Which twilight this run belongs to')
+    direct_submission = models.BooleanField(
+        default=True,
+        help_text='Place the observation directly through /api/schedule/, which takes the slot. '
+                  'Uncheck to queue it through /api/requestgroups/ and let the scheduler decide. '
+                  'AUTO_FOCUS runs both ways, so a row of each can exist at the same scope.'
+    )
+    readout_modes = models.ManyToManyField(
+        GenericMode, blank=True,
+        help_text='Readout modes this run covers. Leave empty for every mode the instrument has.'
+    )
+
+    filter_set = models.ForeignKey(FilterSet, null=True, blank=True, on_delete=models.PROTECT,
+                                   help_text='Filter set to observe through')
+    exposures_per_run = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(1)],
+                                            help_text='Number of exposures per run')
+    exposure_time = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)],
+                                      help_text='Exposure time in seconds')
+    cadence_days = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(1)],
+                                       help_text='Target interval in days between runs')
+    sun_alt_start = models.FloatField(
+        null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)],
+        help_text='Solar altitude in degrees at which the window opens'
+    )
+    sun_alt_end = models.FloatField(
+        null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)],
+        help_text='Solar altitude in degrees at which the window closes'
+    )
+    proposal = models.CharField(
+        max_length=64, blank=True,
+        help_text='Portal proposal to submit under. Leave blank for the default for this configuration '
+                  'type. Set it only to change priority, as elp does with rescue_auto_focus.'
+    )
+    window_offset_minutes = models.IntegerField(
+        null=True, blank=True,
+        help_text='Delay the window opening this many minutes past the point sun_alt_start '
+                  'is reached. The observing window, not the submission.'
+    )
+    window_count = models.IntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text='How many windows to offer. Leave blank to tile until sun_alt_end is '
+                  'reached, which is what routine autofocus does today.'
+    )
+    window_length_minutes = models.IntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text='Length of each window. Leave blank for a single window spanning '
+                  'sun_alt_start to sun_alt_end, which is what every calibration except '
+                  'the queued autofocus uses.'
+    )
+
+    class Meta:
+        unique_together = ('configuration_type', 'instrument', 'telescope', 'instrument_type',
+                           'site', 'when', 'direct_submission')
+
+    def clean(self):
+        locations = [f for f in self.LOCATION_FIELDS if getattr(self, f'{f}_id', None)]
+        if len(locations) > 1:
+            raise ValidationError(
+                f'Set at most one location. This row sets {", ".join(locations)}. '
+                f'An instrument type can be combined with any one of them.'
+            )
+
+    @property
+    def specificity(self):
+        """Sort key, lowest first. Location outranks the instrument type qualifier."""
+        location = next(
+            (i for i, f in enumerate(self.LOCATION_FIELDS) if getattr(self, f'{f}_id', None)),
+            len(self.LOCATION_FIELDS)
+        )
+        return (location, 0 if self.instrument_type_id else 1)
+
+    @classmethod
+    def matching(cls, instrument, configuration_type, direct_submission, when=BOTH):
+        """Rows that apply to this instrument, most specific first.
+
+        Disabled rows are included so that a narrow row can switch off what a
+        broader one turns on. Use effective() to get the answer that counts.
+        """
+        site = instrument.telescope.enclosure.site
+        rows = cls.objects.filter(
+            configuration_type=configuration_type, direct_submission=direct_submission
+        ).filter(
+            Q(when=when) | Q(when=cls.BOTH)
+        ).filter(
+            Q(instrument=instrument) | Q(instrument__isnull=True)
+        ).filter(
+            Q(telescope=instrument.telescope) | Q(telescope__isnull=True)
+        ).filter(
+            Q(site=site) | Q(site__isnull=True)
+        ).filter(
+            Q(instrument_type=instrument.instrument_type) | Q(instrument_type__isnull=True)
+        )
+        # A row naming this twilight beats one that covers both at the same scope.
+        return sorted(rows, key=lambda r: (r.specificity, r.when == cls.BOTH))
+
+    @classmethod
+    def effective(cls, instrument, configuration_type, direct_submission, when=BOTH):
+        """Merged settings for this instrument, or None if nothing should be submitted.
+
+        Values come from the most specific row that sets them, so a per-instrument
+        row can override one setting and inherit the rest. The most specific row
+        also decides whether anything runs at all, so a site row with enabled off
+        suppresses an instrument type row that is on.
+        """
+        rows = cls.matching(instrument, configuration_type, direct_submission, when)
+        if not rows or not rows[0].enabled:
+            return None
+        settings = {}
+        for row in rows:
+            for field in cls.VALUE_FIELDS:
+                if settings.get(field) in (None, ''):
+                    settings[field] = getattr(row, field)
+        # An empty set means every mode, so it inherits like any other blank value
+        # rather than widening a narrow row back to the full set.
+        settings['readout_modes'] = []
+        for row in rows:
+            modes = list(row.readout_modes.all())
+            if modes:
+                settings['readout_modes'] = modes
+                break
+        return settings
+
+    def __str__(self):
+        parts = [str(getattr(self, f)) for f in self.SCOPE_FIELDS if getattr(self, f'{f}_id', None)]
+        how = 'direct' if self.direct_submission else 'queued'
+        return f'{self.configuration_type_id} on {" ".join(parts) or "network"} ({self.when.lower()}, {how})'

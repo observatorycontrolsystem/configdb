@@ -7,7 +7,8 @@ from configdb.hardware import serializers
 from .models import (
     Site, Enclosure, Telescope, OpticalElementGroup, Instrument, Camera, OpticalElement,
     CameraType, GenericMode, GenericModeGroup, InstrumentType, ModeType, ConfigurationType,
-    InstrumentCategory, ConfigurationTypeProperties
+    InstrumentCategory, ConfigurationTypeProperties, CalibrationSchedule, CalibrationTarget,
+    FilterSet, SkyFlatFilter
 )
 
 
@@ -188,3 +189,34 @@ class GenericModeViewSet(FilterableViewSet):
     queryset = GenericMode.objects.all()
     serializer_class = serializers.GenericModeSerializer
     filter_fields = ('name', 'code', 'schedulable')
+
+
+class FilterSetViewSet(FilterableViewSet):
+    schema = CustomViewSchema(tags=['Filter Sets'])
+    queryset = FilterSet.objects.all().prefetch_related('optical_elements')
+    serializer_class = serializers.FilterSetSerializer
+    filter_fields = ('name',)
+
+
+class SkyFlatFilterViewSet(FilterableViewSet):
+    schema = CustomViewSchema(tags=['Sky Flat Filters'])
+    queryset = SkyFlatFilter.objects.all().select_related('instrument_type', 'optical_element')
+    serializer_class = serializers.SkyFlatFilterSerializer
+    filter_fields = ('instrument_type__code', 'optical_element__code')
+
+
+class CalibrationTargetViewSet(FilterableViewSet):
+    schema = CustomViewSchema(tags=['Calibration Targets'])
+    queryset = CalibrationTarget.objects.all().select_related('configuration_type', 'site')
+    serializer_class = serializers.CalibrationTargetSerializer
+    filter_fields = ('name', 'configuration_type__code', 'site__code')
+
+
+class CalibrationScheduleViewSet(FilterableViewSet):
+    schema = CustomViewSchema(tags=['Calibration Schedules'])
+    queryset = CalibrationSchedule.objects.all().select_related(
+        'configuration_type', 'instrument', 'telescope', 'instrument_type', 'site', 'filter_set'
+    ).prefetch_related('readout_modes')
+    serializer_class = serializers.CalibrationScheduleSerializer
+    filter_fields = ('configuration_type__code', 'instrument__code', 'telescope__code',
+                     'instrument_type__code', 'site__code', 'enabled', 'when')
