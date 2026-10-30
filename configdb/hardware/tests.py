@@ -1,9 +1,13 @@
 import json
+import os
+import tempfile
 import reversion
 import time_machine
 from datetime import datetime
 from http import HTTPStatus
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.db import IntegrityError
 from django.test import TestCase, override_settings
 from django.test import Client
 from django.urls import reverse
@@ -15,8 +19,9 @@ from mixer.backend.django import mixer
 from configdb.hardware.models import (Site, Instrument, Enclosure, Telescope, Camera, CameraType, InstrumentType,
                      GenericMode, GenericModeGroup, ModeType, OpticalElement, OpticalElementGroup,
                      ConfigurationType, ConfigurationTypeProperties, InstrumentCategory,
-                     CalibrationSchedule)
-from configdb.hardware.serializers import GenericModeSerializer, InstrumentTypeSerializer
+                     CalibrationSchedule, SkyFlatFilter, SkyFlatReadout)
+from configdb.hardware.serializers import (GenericModeSerializer, InstrumentTypeSerializer,
+                                           CalibrationScheduleSerializer)
 from configdb.hardware.heroic import heroic_instrument_id
 
 
@@ -897,3 +902,277 @@ class CalibrationScheduleResolutionTest(BaseHardwareTest):
         got = CalibrationSchedule.effective(self.instrument, self.bias, True)
         self.assertEqual(got['exposures_per_run'], 9)
         self.assertEqual(got['readout_modes'], [full_frame])
+
+
+class EffectiveScheduleEndpointTest(BaseHardwareTest):
+    """The resolved-settings endpoint the submitters and poller read."""
+
+    def setUp(self):
+        super().setUp()
+        self.bias = mixer.blend(ConfigurationType, code='BIAS')
+        self.instrument.instrument_type = self.instrument_type
+        self.instrument.telescope = self.telescope
+        self.instrument.code = 'xx01'
+        self.instrument.state = 'SCHEDULABLE'
+        self.instrument.save()
+        self.url = reverse('calibrationschedule-effective')
+
+    def _get(self, **params):
+        return self.client.get(self.url, params)
+
+    def test_site_is_required(self):
+        self.assertEqual(self._get().status_code, 400)
+
+    def test_nothing_scheduled_returns_an_empty_list(self):
+        r = self._get(site=self.site.code)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['schedules'], [])
+
+    def test_a_row_resolves_for_every_twilight_it_covers(self):
+        mixer.blend(CalibrationSchedule, configuration_type=self.bias,
+                    instrument_type=self.instrument_type, instrument=None, telescope=None,
+                    site=None, direct_submission=True, when=CalibrationSchedule.BOTH,
+                    enabled=True, exposures_per_run=15, sun_alt_start=-6.0)
+        got = self._get(site=self.site.code).json()['schedules']
+        self.assertEqual({row['when'] for row in got},
+                         {CalibrationSchedule.EVENING, CalibrationSchedule.MORNING})
+        self.assertTrue(all(row['exposures_per_run'] == 15 for row in got))
+        self.assertTrue(all(row['instrument'] == 'xx01' for row in got))
+        self.assertTrue(all(row['direct_submission'] for row in got))
+
+    def test_a_disabled_row_is_omitted(self):
+        mixer.blend(CalibrationSchedule, configuration_type=self.bias,
+                    instrument_type=self.instrument_type, instrument=None, telescope=None,
+                    site=None, direct_submission=True, enabled=False)
+        self.assertEqual(self._get(site=self.site.code).json()['schedules'], [])
+
+    def test_a_narrow_row_overrides_a_broad_one(self):
+        mixer.blend(CalibrationSchedule, configuration_type=self.bias,
+                    instrument_type=self.instrument_type, instrument=None, telescope=None,
+                    site=None, direct_submission=True, when=CalibrationSchedule.BOTH,
+                    enabled=True, exposures_per_run=15, sun_alt_start=-6.0)
+        mixer.blend(CalibrationSchedule, configuration_type=self.bias, instrument=self.instrument,
+                    instrument_type=None, telescope=None, site=None, direct_submission=True,
+                    when=CalibrationSchedule.BOTH, enabled=True, exposures_per_run=9,
+                    sun_alt_start=None)
+        got = self._get(site=self.site.code).json()['schedules']
+        self.assertTrue(all(row['exposures_per_run'] == 9 for row in got))
+        self.assertTrue(all(row['sun_alt_start'] == -6.0 for row in got))  # inherited
+
+    def test_another_site_is_not_included(self):
+        mixer.blend(CalibrationSchedule, configuration_type=self.bias,
+                    site=mixer.blend(Site, code='oth'), instrument=None, telescope=None,
+                    instrument_type=None, direct_submission=True, enabled=True)
+        self.assertEqual(self._get(site=self.site.code).json()['schedules'], [])
+
+    def test_an_offset_without_a_dark_bound_is_rejected(self):
+        """A duration-sized window has no room to be delayed into."""
+        row = CalibrationSchedule(configuration_type=self.bias, sun_alt_start=6,
+                                  sun_alt_end=None, window_offset_minutes=10)
+        with self.assertRaises(ValidationError):
+            row.clean()
+
+    def test_an_offset_with_both_bounds_is_allowed(self):
+        row = CalibrationSchedule(configuration_type=self.bias, sun_alt_start=-9,
+                                  sun_alt_end=-12, window_offset_minutes=10)
+        row.clean()
+
+    def test_an_offset_can_inherit_its_dark_bound(self):
+        mixer.blend(CalibrationSchedule, configuration_type=self.bias,
+                    instrument_type=self.instrument_type, instrument=None, telescope=None,
+                    site=None, direct_submission=True, enabled=True, sun_alt_start=-9,
+                    sun_alt_end=-12, window_offset_minutes=None)
+        CalibrationSchedule(configuration_type=self.bias, instrument=self.instrument,
+                            window_offset_minutes=10).clean()
+
+    def test_a_disabled_instrument_is_omitted(self):
+        mixer.blend(CalibrationSchedule, configuration_type=self.bias,
+                    instrument_type=self.instrument_type, instrument=None, telescope=None,
+                    site=None, direct_submission=True, enabled=True)
+        self.instrument.state = Instrument.DISABLED
+        self.instrument.save()
+        self.assertEqual(self._get(site=self.site.code).json()['schedules'], [])
+
+
+class CalibrationScheduleUniquenessTest(BaseHardwareTest):
+    def setUp(self):
+        super().setUp()
+        self.bias = mixer.blend(ConfigurationType, code='BIAS')
+        self.key = dict(configuration_type=self.bias, instrument_type=self.instrument_type,
+                        when=CalibrationSchedule.BOTH, direct_submission=True)
+        self.row = CalibrationSchedule.objects.create(**self.key)
+
+    def test_the_database_rejects_a_duplicate_with_null_scope(self):
+        with self.assertRaises(IntegrityError):
+            CalibrationSchedule.objects.create(**self.key)
+
+    def test_the_api_rejects_a_duplicate(self):
+        serializer = CalibrationScheduleSerializer(data={
+            'configuration_type': 'BIAS', 'instrument_type': self.instrument_type.code,
+            'when': CalibrationSchedule.BOTH, 'direct_submission': True})
+        self.assertFalse(serializer.is_valid())
+
+    def test_a_patch_cannot_add_a_second_location(self):
+        self.row.instrument = self.instrument
+        self.row.save()
+        serializer = CalibrationScheduleSerializer(self.row, data={'site': self.site.code},
+                                                   partial=True)
+        self.assertFalse(serializer.is_valid())
+
+    def test_the_api_checks_the_window_offset(self):
+        serializer = CalibrationScheduleSerializer(self.row, data={'window_offset_minutes': 10},
+                                                   partial=True)
+        self.assertFalse(serializer.is_valid())
+
+
+class ResolutionOrderTest(BaseHardwareTest):
+    """matching() ranks every scope and twilight correctly against a full table."""
+
+    # Index into `scopes` below, most specific first: instrument, telescope,
+    # site and type, site, type, network. Scope 6 is another site and never matches.
+    EXPECTED_SCOPE_ORDER = [5, 4, 3, 1, 2, 0]
+
+    def setUp(self):
+        super().setUp()
+        self.types = [mixer.blend(ConfigurationType, code=c) for c in ('BIAS', 'SKY_FLAT')]
+        other_site = mixer.blend(Site, code='oth')
+
+        scopes = [
+            {},
+            {'site': self.site},
+            {'instrument_type': self.instrument_type},
+            {'site': self.site, 'instrument_type': self.instrument_type},
+            {'telescope': self.telescope},
+            {'instrument': self.instrument},
+            {'site': other_site},
+        ]
+        self.pks = {}
+        for configuration_type in self.types:
+            for i, scope in enumerate(scopes):
+                for when in (CalibrationSchedule.EVENING, CalibrationSchedule.MORNING,
+                             CalibrationSchedule.BOTH):
+                    for direct in (True, False):
+                        base = dict(instrument=None, telescope=None, instrument_type=None,
+                                    site=None)
+                        base.update(scope)
+                        row = mixer.blend(CalibrationSchedule, configuration_type=configuration_type,
+                                          when=when, direct_submission=direct, enabled=(i != 0),
+                                          exposures_per_run=i + 1, **base)
+                        self.pks[configuration_type.code, i, when, direct] = row.pk
+
+    def test_rows_come_back_most_specific_first(self):
+        rows = CalibrationSchedule.all_rows()
+        for configuration_type in self.types:
+            for direct in (True, False):
+                for when in (CalibrationSchedule.EVENING, CalibrationSchedule.MORNING,
+                             CalibrationSchedule.BOTH):
+                    whens = [when] if when == CalibrationSchedule.BOTH else [when, CalibrationSchedule.BOTH]
+                    expected = [self.pks[configuration_type.code, i, w, direct]
+                                for i in self.EXPECTED_SCOPE_ORDER for w in whens]
+                    got = CalibrationSchedule.matching(self.instrument, configuration_type, direct,
+                                                       when=when, rows=rows)
+                    self.assertEqual([r.pk for r in got], expected)
+
+    def test_the_instrument_row_wins_over_a_disabled_network_row(self):
+        settings = CalibrationSchedule.effective(self.instrument, self.types[0], True,
+                                                 when=CalibrationSchedule.EVENING)
+        self.assertEqual(settings['exposures_per_run'], 6)
+
+
+class SkyFlatCadenceIsReadableFromTheSitesPayloadTest(BaseHardwareTest):
+    """The flat selection reads its cadences from the sites payload, so they have to
+    survive serialization. Both carry an explicit field tuple that omits them by
+    default."""
+
+    def setUp(self):
+        super().setUp()
+        self.filter = mixer.blend(OpticalElement, code='U', sky_flat_order=6,
+                                  sky_flat_cadence_days=3, schedulable=True)
+        group = mixer.blend(OpticalElementGroup, type='filters',
+                            optical_elements=[self.filter], default=self.filter)
+        self.camera.optical_element_groups.add(group)
+
+
+    def _payload(self):
+        response = self.client.get(reverse('site-list'))
+        self.assertEqual(response.status_code, 200)
+        return response.json()['results']
+
+    def test_the_element_carries_its_order_and_cadence(self):
+        groups = [g for site in self._payload()
+                  for enc in site['enclosure_set']
+                  for tel in enc['telescope_set']
+                  for inst in tel['instrument_set']
+                  for cam in inst['science_cameras']
+                  for g in cam['optical_element_groups']
+                  if g['type'] == 'filters']
+        elements = [oe for g in groups for oe in g['optical_elements']]
+        self.assertEqual([(oe['code'], oe['sky_flat_order'], oe['sky_flat_cadence_days'])
+                          for oe in elements], [('U', 6, 3)])
+
+
+class SkyFlatCombinationsTest(BaseHardwareTest):
+    """The effective endpoint resolves sky flat order and cadence in one place."""
+
+    def setUp(self):
+        super().setUp()
+        self.sky_flat = mixer.blend(ConfigurationType, code='SKY_FLAT')
+        u = mixer.blend(OpticalElement, code='U', sky_flat_order=6, sky_flat_cadence_days=3)
+        v = mixer.blend(OpticalElement, code='V', sky_flat_order=12, sky_flat_cadence_days=3)
+        opaque = mixer.blend(OpticalElement, code='opaque', sky_flat_order=None)
+        group = mixer.blend(OpticalElementGroup, type='filters', optical_elements=[u, v, opaque],
+                            default=u)
+        self.camera.optical_element_groups.add(group)
+        SkyFlatFilter.objects.create(instrument_type=self.instrument_type, optical_element=v,
+                                     order=1, cadence_days=7)
+
+        primary = mixer.blend(GenericMode, code='full_frame')
+        secondary = mixer.blend(GenericMode, code='central_2k_2x2')
+        mixer.blend(GenericModeGroup, instrument_type=self.instrument_type,
+                    type=mixer.blend(ModeType, id='readout'), modes=[primary, secondary],
+                    default=primary)
+        SkyFlatReadout.objects.create(instrument_type=self.instrument_type,
+                                      readout_mode=secondary, cadence_days=45)
+        mixer.blend(CalibrationSchedule, configuration_type=self.sky_flat,
+                    instrument_type=self.instrument_type, instrument=None, telescope=None,
+                    site=None, direct_submission=True, when=CalibrationSchedule.BOTH, enabled=True)
+
+    def test_order_and_cadence_resolve_by_precedence(self):
+        got = self.client.get(reverse('calibrationschedule-effective'),
+                              {'site': self.site.code}).json()['schedules'][0]['sky_flats']
+        self.assertEqual([(c['optical_element'], c['readout_mode'], c['cadence_days']) for c in got], [
+            ('V', 'central_2k_2x2', 45),
+            ('V', 'full_frame', 7),
+            ('U', 'central_2k_2x2', 45),
+            ('U', 'full_frame', 3),
+        ])
+
+
+class LoadSitesPayloadTest(TestCase):
+    def test_shared_codes_stay_separate_and_a_missing_camera_type_loads(self):
+        def instrument(code, type_code, overhead):
+            camera = {'code': f'{code}-cam', 'optical_element_groups': [
+                {'name': 'filters', 'type': 'filters', 'element_change_overhead': overhead,
+                 'optical_elements': [{'code': 'V', 'name': 'V'}]}]}
+            return {'code': code, 'state': 'SCHEDULABLE', 'science_cameras': [camera],
+                    'instrument_type': {'code': type_code, 'name': type_code, 'mode_types': [
+                        {'type': 'readout', 'default': 'full_frame',
+                         'modes': [{'code': 'full_frame', 'name': 'Full', 'overhead': overhead}]}]}}
+
+        telescope = {'code': '1m0a', 'lat': 0, 'long': 0, 'horizon': 15, 'ha_limit_neg': -4.6,
+                     'ha_limit_pos': 4.6, 'instrument_set': [instrument('a01', 'TYPE-A', 1),
+                                                            instrument('b01', 'TYPE-B', 2)]}
+        payload = [{'code': 'tst', 'elevation': 0, 'timezone': 0,
+                    'enclosure_set': [{'code': 'doma', 'telescope_set': [telescope]}]}]
+        with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as f:
+            json.dump(payload, f)
+        try:
+            for _ in range(2):
+                call_command('load_sites_payload', f.name, stdout=open(os.devnull, 'w'))
+        finally:
+            os.remove(f.name)
+
+        self.assertEqual(sorted(GenericMode.objects.values_list('overhead', flat=True)), [1, 2])
+        self.assertEqual(sorted(OpticalElementGroup.objects.values_list(
+            'element_change_overhead', flat=True)), [1, 2])
+        self.assertEqual(CameraType.objects.get().pscale, 0.0)

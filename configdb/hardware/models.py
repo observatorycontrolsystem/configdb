@@ -2,7 +2,8 @@ import datetime
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q
+from django.db.models import F, Value
+from django.db.models.functions import Coalesce
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 class BaseModel(models.Model):
@@ -128,7 +129,7 @@ class OpticalElement(BaseModel):
         null=True, blank=True, validators=[MinValueValidator(1)],
         help_text='Target interval in days between sky flats through this element. Leave blank to take '
                   'sky flats through it only when nothing else is due. SkyFlatFilter overrides this per '
-                  'instrument type.'
+                  'instrument type, and SkyFlatReadout overrides both for a readout mode.'
     )
     schedulable = models.BooleanField(
         default=True,
@@ -447,6 +448,66 @@ class SkyFlatFilter(BaseModel):
     def __str__(self):
         return f'{self.instrument_type.code}-{self.optical_element.code}'
 
+    @classmethod
+    def combinations(cls, instrument, readout_modes):
+        """Optical element and readout mode pairs to sky flat on this instrument, in evening order.
+
+        Order and cadence come from the SkyFlatFilter for the instrument type, falling
+        back to the element's own. A SkyFlatReadout cadence beats both, so a secondary
+        readout mode can be flat-fielded less often than its filters imply. Elements
+        with no order are never flat-fielded. Empty `readout_modes` means every readout
+        mode the instrument type has.
+        """
+        elements = OpticalElement.objects.filter(
+            opticalelementgroup__camera__instrument=instrument).distinct()
+        overrides = {f.optical_element_id: f for f in cls.objects.filter(
+            instrument_type_id=instrument.instrument_type_id)}
+        readout_cadence = dict(SkyFlatReadout.objects.filter(
+            instrument_type_id=instrument.instrument_type_id
+        ).values_list('readout_mode_id', 'cadence_days'))
+        if not readout_modes:
+            readout_modes = GenericMode.objects.filter(
+                genericmodegroup__instrument_type_id=instrument.instrument_type_id,
+                genericmodegroup__type_id='readout')
+
+        result = []
+        for element in elements:
+            override = overrides.get(element.pk)
+            order = getattr(override, 'order', None)
+            order = element.sky_flat_order if order is None else order
+            if order is None:
+                continue
+            cadence = getattr(override, 'cadence_days', None)
+            cadence = element.sky_flat_cadence_days if cadence is None else cadence
+            for mode in readout_modes:
+                result.append({'order': order, 'optical_element': element.code,
+                               'readout_mode': mode.code,
+                               'cadence_days': readout_cadence.get(mode.pk, cadence)})
+        return sorted(result, key=lambda c: (c['order'], c['optical_element'], c['readout_mode']))
+
+
+class SkyFlatReadout(BaseModel):
+    """Sky flat cadence for one readout mode on one instrument type.
+
+    Modes are shared by code across instrument types, so the cadence lives here
+    rather than on GenericMode.
+    """
+    instrument_type = models.ForeignKey(InstrumentType, on_delete=models.CASCADE,
+                                        help_text='Instrument type this override applies to')
+    readout_mode = models.ForeignKey(GenericMode, on_delete=models.CASCADE,
+                                     help_text='Readout mode this override applies to')
+    cadence_days = models.IntegerField(
+        validators=[MinValueValidator(1)],
+        help_text='Target interval in days between sky flats in this readout mode, through any '
+                  'optical element. Overrides SkyFlatFilter and OpticalElement cadences.'
+    )
+
+    class Meta:
+        unique_together = ('instrument_type', 'readout_mode')
+
+    def __str__(self):
+        return f'{self.instrument_type.code}-{self.readout_mode.code}'
+
 
 class CalibrationTarget(BaseModel):
     name = models.CharField(max_length=200, help_text='Target name')
@@ -497,9 +558,9 @@ class CalibrationSchedule(BaseModel):
     # Location axis, most specific first. At most one may be set on a row.
     LOCATION_FIELDS = ('instrument', 'telescope', 'site')
     SCOPE_FIELDS = LOCATION_FIELDS + ('instrument_type',)
-    VALUE_FIELDS = ('filter_set', 'exposures_per_run', 'exposure_time', 'cadence_days',
-                    'sun_alt_start', 'sun_alt_end', 'proposal', 'window_offset_minutes',
-                    'window_count', 'window_length_minutes')
+    VALUE_FIELDS = ('filter_set', 'exposures_per_run', 'elements_per_run', 'exposure_time',
+                    'cadence_days', 'sun_alt_start', 'sun_alt_end', 'proposal',
+                    'window_offset_minutes', 'window_count', 'window_length_minutes')
 
     configuration_type = models.ForeignKey(ConfigurationType, on_delete=models.PROTECT,
                                            help_text='Configuration type to submit')
@@ -507,7 +568,7 @@ class CalibrationSchedule(BaseModel):
     instrument = models.ForeignKey('Instrument', null=True, blank=True, on_delete=models.CASCADE,
                                    help_text='Scope this row to a single instrument')
     telescope = models.ForeignKey(Telescope, null=True, blank=True, on_delete=models.CASCADE,
-                                  help_text='Scope this row to a telescope, letting the submitter pick the instrument')
+                                  help_text='Scope this row to a telescope, covering every instrument on it')
     instrument_type = models.ForeignKey(InstrumentType, null=True, blank=True, on_delete=models.CASCADE,
                                         help_text='Scope this row to an instrument type')
     site = models.ForeignKey(Site, null=True, blank=True, on_delete=models.CASCADE,
@@ -531,17 +592,24 @@ class CalibrationSchedule(BaseModel):
                                    help_text='Filter set to observe through')
     exposures_per_run = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(1)],
                                             help_text='Number of exposures per run')
+    elements_per_run = models.IntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text='How many optical element and readout mode combinations one run covers, taking the '
+                  'most overdue first. Blank covers every combination the instrument has.'
+    )
     exposure_time = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)],
                                       help_text='Exposure time in seconds')
     cadence_days = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(1)],
                                        help_text='Target interval in days between runs')
     sun_alt_start = models.FloatField(
         null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)],
-        help_text='Solar altitude in degrees at which the window opens'
+        help_text='The brighter of the two solar altitudes bounding the window. An evening '
+                  'window opens here, a morning window closes here.'
     )
     sun_alt_end = models.FloatField(
         null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)],
-        help_text='Solar altitude in degrees at which the window closes'
+        help_text='The darker of the two. Leave blank to anchor the window at sun_alt_start '
+                  'and size it from the exposures instead, which is what bias and dark do.'
     )
     proposal = models.CharField(
         max_length=64, blank=True,
@@ -566,8 +634,27 @@ class CalibrationSchedule(BaseModel):
     )
 
     class Meta:
-        unique_together = ('configuration_type', 'instrument', 'telescope', 'instrument_type',
-                           'site', 'when', 'direct_submission')
+        # Postgres treats NULLs as distinct and Django 4.2 has no nulls_distinct, so
+        # the nullable scope columns are coalesced for the constraint to bite.
+        constraints = [
+            models.UniqueConstraint(
+                F('configuration_type'),
+                Coalesce(F('instrument'), Value(0)),
+                Coalesce(F('telescope'), Value(0)),
+                Coalesce(F('instrument_type'), Value(0)),
+                Coalesce(F('site'), Value(0)),
+                F('when'),
+                F('direct_submission'),
+                name='unique_calibration_schedule_scope',
+                violation_error_message='A row with this configuration type, scope, twilight '
+                                        'and submission path already exists.',
+            ),
+        ]
+
+    # Instrument lookups that select the instruments a scope field covers.
+    INSTRUMENT_SCOPE_LOOKUPS = {'instrument': 'pk', 'telescope': 'telescope',
+                                'site': 'telescope__enclosure__site',
+                                'instrument_type': 'instrument_type'}
 
     def clean(self):
         locations = [f for f in self.LOCATION_FIELDS if getattr(self, f'{f}_id', None)]
@@ -576,6 +663,43 @@ class CalibrationSchedule(BaseModel):
                 f'Set at most one location. This row sets {", ".join(locations)}. '
                 f'An instrument type can be combined with any one of them.'
             )
+        self._check_window_offset()
+
+    def _check_window_offset(self):
+        """window_offset_minutes needs sun_alt_end once merged with the rows around this one.
+
+        Without sun_alt_end the window is sized from the exposures, and delaying the
+        start would make it too short to fit them. Either value can come from a
+        broader row, so the check runs on the merged settings of every instrument
+        this row covers.
+        """
+        if not self.configuration_type_id:
+            return
+        rows = [r for r in self.all_rows() if r.pk != self.pk] + [self]
+        instruments = Instrument.objects.exclude(state=Instrument.DISABLED).filter(**{
+            self.INSTRUMENT_SCOPE_LOOKUPS[f]: getattr(self, f'{f}_id')
+            for f in self.SCOPE_FIELDS if getattr(self, f'{f}_id', None)
+        }).select_related('telescope__enclosure')
+        whens = (self.EVENING, self.MORNING) if self.when == self.BOTH else (self.when,)
+
+        for instrument in instruments:
+            for when in whens:
+                applicable = self.matching(instrument, self.configuration_type,
+                                           self.direct_submission, when, rows)
+                if not applicable or not applicable[0].enabled:
+                    continue
+
+                def merged(field):
+                    return next((getattr(r, field) for r in applicable
+                                 if getattr(r, field) is not None), None)
+
+                if merged('window_offset_minutes') and merged('sun_alt_end') is None:
+                    raise ValidationError(
+                        f'window_offset_minutes needs sun_alt_end, and {instrument} '
+                        f'({when.lower()}) gets no sun_alt_end from this row or any row it '
+                        f'inherits from. Without it the window is sized from the exposures, '
+                        f'and delaying the start would make it too short to fit them.'
+                    )
 
     @property
     def specificity(self):
@@ -587,31 +711,51 @@ class CalibrationSchedule(BaseModel):
         return (location, 0 if self.instrument_type_id else 1)
 
     @classmethod
-    def matching(cls, instrument, configuration_type, direct_submission, when=BOTH):
+    def all_rows(cls):
+        """Every row, with the relations resolution needs, in one query each.
+
+        The table holds one row per scope per configuration type, so a few hundred
+        at most. Resolving a whole site against this list costs two queries rather
+        than one per combination.
+        """
+        return list(cls.objects.all().select_related(
+            'configuration_type', 'instrument', 'telescope', 'instrument_type', 'site',
+            'filter_set'
+        ).prefetch_related('readout_modes'))
+
+    @classmethod
+    def matching(cls, instrument, configuration_type, direct_submission, when=BOTH, rows=None):
         """Rows that apply to this instrument, most specific first.
 
         Disabled rows are included so that a narrow row can switch off what a
         broader one turns on. Use effective() to get the answer that counts.
+
+        Pass `rows` from all_rows() to resolve many combinations without a query
+        each.
         """
-        site = instrument.telescope.enclosure.site
-        rows = cls.objects.filter(
-            configuration_type=configuration_type, direct_submission=direct_submission
-        ).filter(
-            Q(when=when) | Q(when=cls.BOTH)
-        ).filter(
-            Q(instrument=instrument) | Q(instrument__isnull=True)
-        ).filter(
-            Q(telescope=instrument.telescope) | Q(telescope__isnull=True)
-        ).filter(
-            Q(site=site) | Q(site__isnull=True)
-        ).filter(
-            Q(instrument_type=instrument.instrument_type) | Q(instrument_type__isnull=True)
-        )
+        scope = {
+            'instrument': instrument.pk,
+            'telescope': instrument.telescope_id,
+            'site': instrument.telescope.enclosure.site_id,
+            'instrument_type': instrument.instrument_type_id,
+        }
+
+        def applies(row):
+            if row.configuration_type_id != configuration_type.pk:
+                return False
+            if row.direct_submission != direct_submission:
+                return False
+            if row.when not in (when, cls.BOTH):
+                return False
+            return all(getattr(row, f'{f}_id') in (None, scope[f]) for f in cls.SCOPE_FIELDS)
+
+        candidates = cls.all_rows() if rows is None else rows
         # A row naming this twilight beats one that covers both at the same scope.
-        return sorted(rows, key=lambda r: (r.specificity, r.when == cls.BOTH))
+        return sorted((r for r in candidates if applies(r)),
+                      key=lambda r: (r.specificity, r.when == cls.BOTH))
 
     @classmethod
-    def effective(cls, instrument, configuration_type, direct_submission, when=BOTH):
+    def effective(cls, instrument, configuration_type, direct_submission, when=BOTH, rows=None):
         """Merged settings for this instrument, or None if nothing should be submitted.
 
         Values come from the most specific row that sets them, so a per-instrument
@@ -619,22 +763,18 @@ class CalibrationSchedule(BaseModel):
         also decides whether anything runs at all, so a site row with enabled off
         suppresses an instrument type row that is on.
         """
-        rows = cls.matching(instrument, configuration_type, direct_submission, when)
-        if not rows or not rows[0].enabled:
+        applicable = cls.matching(instrument, configuration_type, direct_submission, when, rows)
+        if not applicable or not applicable[0].enabled:
             return None
-        settings = {}
-        for row in rows:
+        settings = {'readout_modes': []}
+        for row in applicable:
             for field in cls.VALUE_FIELDS:
                 if settings.get(field) in (None, ''):
                     settings[field] = getattr(row, field)
-        # An empty set means every mode, so it inherits like any other blank value
-        # rather than widening a narrow row back to the full set.
-        settings['readout_modes'] = []
-        for row in rows:
-            modes = list(row.readout_modes.all())
-            if modes:
-                settings['readout_modes'] = modes
-                break
+            # An empty set means every mode, so it inherits rather than widening a
+            # narrow row back to the full set.
+            if not settings['readout_modes']:
+                settings['readout_modes'] = list(row.readout_modes.all())
         return settings
 
     def __str__(self):

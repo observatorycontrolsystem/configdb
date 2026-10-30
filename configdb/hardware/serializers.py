@@ -1,3 +1,6 @@
+import copy
+
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from .models import (
@@ -462,14 +465,20 @@ class CalibrationScheduleSerializer(serializers.ModelSerializer):
         model = CalibrationSchedule
         fields = ('id', 'configuration_type', 'instrument', 'telescope', 'instrument_type', 'site',
                   'enabled', 'when', 'direct_submission', 'readout_modes', 'filter_set', 'exposures_per_run',
-                  'exposure_time', 'cadence_days', 'sun_alt_start', 'sun_alt_end', 'proposal',
-                  'window_offset_minutes', 'window_count', 'window_length_minutes')
+                  'elements_per_run', 'exposure_time', 'cadence_days', 'sun_alt_start', 'sun_alt_end',
+                  'proposal', 'window_offset_minutes', 'window_count', 'window_length_minutes')
         read_only_fields = ['id']
 
     def validate(self, data):
-        locations = [f for f in CalibrationSchedule.LOCATION_FIELDS if data.get(f)]
-        if len(locations) > 1:
-            raise serializers.ValidationError(
-                f'Set at most one location. This row sets {", ".join(locations)}. '
-                f'An instrument type can be combined with any one of them.')
+        # DRF never calls the model's own validation, and a PATCH carries only the
+        # fields it changes, so validate the row as it would be saved.
+        row = copy.copy(self.instance) if self.instance else CalibrationSchedule()
+        for field, value in data.items():
+            if field != 'readout_modes':
+                setattr(row, field, value)
+        try:
+            row.clean()
+            row.validate_constraints()
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.messages)
         return data

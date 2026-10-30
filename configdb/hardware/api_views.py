@@ -1,4 +1,8 @@
+from itertools import product
+
 from rest_framework import viewsets, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.schemas.openapi import AutoSchema
@@ -220,3 +224,52 @@ class CalibrationScheduleViewSet(FilterableViewSet):
     serializer_class = serializers.CalibrationScheduleSerializer
     filter_fields = ('configuration_type__code', 'instrument__code', 'telescope__code',
                      'instrument_type__code', 'site__code', 'enabled', 'when')
+
+    @action(detail=False, methods=['get'])
+    def effective(self, request):
+        """Resolved settings for every calibration due at a site.
+
+        Submitters and the poller read this instead of applying the scope ladder
+        themselves, so precedence has one implementation.
+
+        `?site=lsc` is required. Combinations with no enabled row are omitted, as are
+        DISABLED instruments. SKY_FLAT entries carry `sky_flats`, the optical element
+        and readout mode pairs to take in evening order, each with its resolved cadence.
+        """
+        site_code = request.query_params.get('site')
+        if not site_code:
+            return Response({'error': 'site is required, for example ?site=lsc'}, status=400)
+
+        instruments = Instrument.objects.filter(
+            telescope__enclosure__site__code=site_code
+        ).exclude(state=Instrument.DISABLED).select_related('instrument_type', 'telescope__enclosure__site')
+        # Only types anybody has scheduled, rather than every type in the network.
+        configuration_types = ConfigurationType.objects.filter(
+            calibrationschedule__isnull=False
+        ).distinct()
+
+        twilights = (CalibrationSchedule.EVENING, CalibrationSchedule.MORNING)
+        rows = CalibrationSchedule.all_rows()
+
+        resolved = []
+        for instrument, configuration_type, direct, when in product(
+                instruments, configuration_types, (True, False), twilights):
+            settings = CalibrationSchedule.effective(
+                instrument, configuration_type, direct, when=when, rows=rows)
+            if settings is None:
+                continue
+            if configuration_type.code == 'SKY_FLAT':
+                settings['sky_flats'] = SkyFlatFilter.combinations(instrument, settings['readout_modes'])
+            settings['filter_set'] = getattr(settings['filter_set'], 'name', None)
+            settings['readout_modes'] = [m.code for m in settings['readout_modes']]
+            resolved.append({
+                'instrument': instrument.code,
+                'instrument_type': getattr(instrument.instrument_type, 'code', None),
+                'telescope': str(instrument.telescope),
+                'state': instrument.state,
+                'configuration_type': configuration_type.code,
+                'direct_submission': direct,
+                'when': when,
+                **settings,
+            })
+        return Response({'site': site_code, 'schedules': resolved})

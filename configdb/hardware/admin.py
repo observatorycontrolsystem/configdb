@@ -15,7 +15,7 @@ from configdb.hardware.heroic import update_heroic_instrument_capabilities
 from configdb.hardware.models import (
     Site, Enclosure, GenericMode, ModeType, GenericModeGroup, Telescope, Instrument, Camera, CameraType,
     OpticalElementGroup, OpticalElement, InstrumentType, InstrumentCategory, ConfigurationType, ConfigurationTypeProperties,
-    CalibrationSchedule, CalibrationTarget, FilterSet, SkyFlatFilter
+    CalibrationSchedule, CalibrationTarget, FilterSet, SkyFlatFilter, SkyFlatReadout
 )
 from configdb.hardware.validator import OCSValidator
 
@@ -385,6 +385,13 @@ class SkyFlatFilterAdmin(HardwareAdmin):
     list_display = ('instrument_type', 'optical_element', 'order', 'cadence_days')
     list_filter = ('instrument_type__code',)
     search_fields = ('instrument_type__code', 'optical_element__code')
+
+
+@admin.register(SkyFlatReadout)
+class SkyFlatReadoutAdmin(HardwareAdmin):
+    list_display = ('instrument_type', 'readout_mode', 'cadence_days')
+    list_filter = ('instrument_type__code',)
+    search_fields = ('instrument_type__code', 'readout_mode__code')
 
 
 @admin.register(CalibrationTarget)
