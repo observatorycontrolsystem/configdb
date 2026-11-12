@@ -6,7 +6,7 @@ from rest_framework import serializers
 from .models import (
     Site, Enclosure, Telescope, OpticalElement, GenericMode, Instrument, Camera, OpticalElementGroup,
     CameraType, GenericModeGroup, InstrumentType, ConfigurationTypeProperties, ConfigurationType, ModeType,
-    InstrumentCategory, CalibrationSchedule, CalibrationTarget, FilterSet, SkyFlatFilter
+    InstrumentCategory, CalibrationSchedule, CalibrationTarget
 )
 from configdb.hardware.validator import OCSValidator
 from configdb.hardware.heroic import update_heroic_instrument_capabilities
@@ -16,7 +16,7 @@ class OpticalElementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OpticalElement
-        fields = ('id', 'name', 'code', 'schedulable', 'sky_flat_order', 'sky_flat_cadence_days')
+        fields = ('id', 'name', 'code', 'schedulable')
         read_only_fields = ['id']
 
     def update(self, instance, validated_data):
@@ -412,35 +412,10 @@ class AvailabilityHistorySerializer(serializers.Serializer):
     availability_intervals = serializers.DictField(read_only=True)
 
 
-class FilterSetSerializer(serializers.ModelSerializer):
-    optical_elements = serializers.SlugRelatedField(
-        slug_field='code', many=True, queryset=OpticalElement.objects.all(),
-        help_text='Optical element codes making up this set'
-    )
-
-    class Meta:
-        model = FilterSet
-        fields = ('id', 'name', 'optical_elements')
-        read_only_fields = ['id']
-
-
-class SkyFlatFilterSerializer(serializers.ModelSerializer):
-    instrument_type = serializers.SlugRelatedField(
-        slug_field='code', queryset=InstrumentType.objects.all())
-    optical_element = serializers.SlugRelatedField(
-        slug_field='code', queryset=OpticalElement.objects.all())
-
-    class Meta:
-        model = SkyFlatFilter
-        fields = ('id', 'instrument_type', 'optical_element', 'order', 'cadence_days')
-        read_only_fields = ['id']
-
-
 class CalibrationTargetSerializer(serializers.ModelSerializer):
     configuration_type = serializers.SlugRelatedField(
         slug_field='code', queryset=ConfigurationType.objects.all())
-    site = serializers.SlugRelatedField(
-        slug_field='code', queryset=Site.objects.all(), required=False, allow_null=True)
+    site = serializers.SlugRelatedField(slug_field='code', queryset=Site.objects.all())
 
     class Meta:
         model = CalibrationTarget
@@ -456,17 +431,16 @@ class CalibrationScheduleSerializer(serializers.ModelSerializer):
         slug_field='code', queryset=InstrumentType.objects.all(), required=False, allow_null=True)
     site = serializers.SlugRelatedField(
         slug_field='code', queryset=Site.objects.all(), required=False, allow_null=True)
-    readout_modes = serializers.SlugRelatedField(
-        slug_field='code', many=True, queryset=GenericMode.objects.all(), required=False)
-    filter_set = serializers.SlugRelatedField(
-        slug_field='name', queryset=FilterSet.objects.all(), required=False, allow_null=True)
 
     class Meta:
         model = CalibrationSchedule
         fields = ('id', 'configuration_type', 'instrument', 'telescope', 'instrument_type', 'site',
-                  'enabled', 'when', 'direct_submission', 'readout_modes', 'filter_set', 'exposures_per_run',
-                  'elements_per_run', 'exposure_time', 'cadence_days', 'sun_alt_start', 'sun_alt_end',
+                  'enabled', 'when', 'direct_submission', 'sun_alt_start', 'sun_alt_end',
                   'proposal', 'window_offset_minutes', 'window_count', 'window_length_minutes')
+        extra_kwargs = {
+            'instrument': {'help_text': 'Instrument id. Instrument codes are only unique per telescope.'},
+            'telescope': {'help_text': 'Telescope id. Telescope codes are only unique per enclosure.'},
+        }
         read_only_fields = ['id']
 
     def validate(self, data):
@@ -474,8 +448,7 @@ class CalibrationScheduleSerializer(serializers.ModelSerializer):
         # fields it changes, so validate the row as it would be saved.
         row = copy.copy(self.instance) if self.instance else CalibrationSchedule()
         for field, value in data.items():
-            if field != 'readout_modes':
-                setattr(row, field, value)
+            setattr(row, field, value)
         try:
             row.clean()
             row.validate_constraints()

@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Value
 from django.db.models.functions import Coalesce
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 
 class BaseModel(models.Model):
     modified = models.DateTimeField(auto_now=True)
@@ -120,17 +120,6 @@ class Telescope(BaseModel):
 class OpticalElement(BaseModel):
     name = models.CharField(max_length=200, help_text='Optical element name')
     code = models.CharField(max_length=200, unique=True, help_text='Optical element code')
-    sky_flat_order = models.IntegerField(
-        null=True, blank=True,
-        help_text='Position of this element in the evening sky flat sequence, lowest first. The morning '
-                  'sequence runs in reverse. Leave blank to take no sky flats through this element.'
-    )
-    sky_flat_cadence_days = models.IntegerField(
-        null=True, blank=True, validators=[MinValueValidator(1)],
-        help_text='Target interval in days between sky flats through this element. Leave blank to take '
-                  'sky flats through it only when nothing else is due. SkyFlatFilter overrides this per '
-                  'instrument type, and SkyFlatReadout overrides both for a readout mode.'
-    )
     schedulable = models.BooleanField(
         default=True,
         help_text='Whether this optical element should be usable by scheduled observations, or only via direct submission.'
@@ -418,95 +407,7 @@ class Instrument(BaseModel):
         return '{0}.{1}'.format(self.telescope, self.code)
 
 
-class FilterSet(BaseModel):
-    name = models.CharField(max_length=100, unique=True, help_text='Filter set name')
-    optical_elements = models.ManyToManyField(
-        OpticalElement, help_text='Optical elements making up this set'
-    )
-
-    def __str__(self):
-        return self.name
-
-
-class SkyFlatFilter(BaseModel):
-    instrument_type = models.ForeignKey(InstrumentType, on_delete=models.CASCADE,
-                                        help_text='Instrument type this override applies to')
-    optical_element = models.ForeignKey(OpticalElement, on_delete=models.CASCADE,
-                                        help_text='Optical element this override applies to')
-    order = models.IntegerField(
-        null=True, blank=True,
-        help_text='Overrides OpticalElement.sky_flat_order for this instrument type.'
-    )
-    cadence_days = models.IntegerField(
-        null=True, blank=True, validators=[MinValueValidator(1)],
-        help_text='Overrides OpticalElement.sky_flat_cadence_days for this instrument type.'
-    )
-
-    class Meta:
-        unique_together = ('instrument_type', 'optical_element')
-
-    def __str__(self):
-        return f'{self.instrument_type.code}-{self.optical_element.code}'
-
-    @classmethod
-    def combinations(cls, instrument, readout_modes):
-        """Optical element and readout mode pairs to sky flat on this instrument, in evening order.
-
-        Order and cadence come from the SkyFlatFilter for the instrument type, falling
-        back to the element's own. A SkyFlatReadout cadence beats both, so a secondary
-        readout mode can be flat-fielded less often than its filters imply. Elements
-        with no order are never flat-fielded. Empty `readout_modes` means every readout
-        mode the instrument type has.
-        """
-        elements = OpticalElement.objects.filter(
-            opticalelementgroup__camera__instrument=instrument).distinct()
-        overrides = {f.optical_element_id: f for f in cls.objects.filter(
-            instrument_type_id=instrument.instrument_type_id)}
-        readout_cadence = dict(SkyFlatReadout.objects.filter(
-            instrument_type_id=instrument.instrument_type_id
-        ).values_list('readout_mode_id', 'cadence_days'))
-        if not readout_modes:
-            readout_modes = GenericMode.objects.filter(
-                genericmodegroup__instrument_type_id=instrument.instrument_type_id,
-                genericmodegroup__type_id='readout')
-
-        result = []
-        for element in elements:
-            override = overrides.get(element.pk)
-            order = getattr(override, 'order', None)
-            order = element.sky_flat_order if order is None else order
-            if order is None:
-                continue
-            cadence = getattr(override, 'cadence_days', None)
-            cadence = element.sky_flat_cadence_days if cadence is None else cadence
-            for mode in readout_modes:
-                result.append({'order': order, 'optical_element': element.code,
-                               'readout_mode': mode.code,
-                               'cadence_days': readout_cadence.get(mode.pk, cadence)})
-        return sorted(result, key=lambda c: (c['order'], c['optical_element'], c['readout_mode']))
-
-
-class SkyFlatReadout(BaseModel):
-    """Sky flat cadence for one readout mode on one instrument type.
-
-    Modes are shared by code across instrument types, so the cadence lives here
-    rather than on GenericMode.
-    """
-    instrument_type = models.ForeignKey(InstrumentType, on_delete=models.CASCADE,
-                                        help_text='Instrument type this override applies to')
-    readout_mode = models.ForeignKey(GenericMode, on_delete=models.CASCADE,
-                                     help_text='Readout mode this override applies to')
-    cadence_days = models.IntegerField(
-        validators=[MinValueValidator(1)],
-        help_text='Target interval in days between sky flats in this readout mode, through any '
-                  'optical element. Overrides SkyFlatFilter and OpticalElement cadences.'
-    )
-
-    class Meta:
-        unique_together = ('instrument_type', 'readout_mode')
-
-    def __str__(self):
-        return f'{self.instrument_type.code}-{self.readout_mode.code}'
+MONTH_DAY = RegexValidator(r'^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$', 'Use MM-DD, month then day, for example 12-31 for 31 December.')
 
 
 class CalibrationTarget(BaseModel):
@@ -523,12 +424,14 @@ class CalibrationTarget(BaseModel):
     proper_motion_dec = models.FloatField(null=True, blank=True, help_text='Proper motion in Dec, mas/year')
     configuration_type = models.ForeignKey(ConfigurationType, on_delete=models.PROTECT,
                                            help_text='Configuration type this target is used for')
-    site = models.ForeignKey(Site, null=True, blank=True, on_delete=models.CASCADE,
-                             help_text='Restrict this target to one site. Leave blank for any site.')
-    season_start = models.CharField(max_length=5, blank=True,
-                                    help_text='MM-DD, inclusive. Leave blank for all year.')
-    season_end = models.CharField(max_length=5, blank=True,
-                                  help_text='MM-DD, inclusive. Leave blank for all year.')
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, help_text='Site this target is used at')
+    season_start = models.CharField(max_length=5, validators=[MONTH_DAY],
+                                    help_text='First day the target is used, as MM-DD (month then day). The '
+                                              'season may run across the new year. Use 01-01 to 12-31 '
+                                              'for all year.')
+    season_end = models.CharField(max_length=5, validators=[MONTH_DAY],
+                                  help_text='Last day the target is used, inclusive, as MM-DD (month then day), '
+                                            'for example 12-31 for 31 December.')
     config = models.JSONField(
         default=dict, blank=True,
         help_text='Per-target overrides such as exposure time, slit, max airmass and acquire radius.'
@@ -558,8 +461,7 @@ class CalibrationSchedule(BaseModel):
     # Location axis, most specific first. At most one may be set on a row.
     LOCATION_FIELDS = ('instrument', 'telescope', 'site')
     SCOPE_FIELDS = LOCATION_FIELDS + ('instrument_type',)
-    VALUE_FIELDS = ('filter_set', 'exposures_per_run', 'elements_per_run', 'exposure_time',
-                    'cadence_days', 'sun_alt_start', 'sun_alt_end', 'proposal',
+    VALUE_FIELDS = ('sun_alt_start', 'sun_alt_end', 'proposal',
                     'window_offset_minutes', 'window_count', 'window_length_minutes')
 
     configuration_type = models.ForeignKey(ConfigurationType, on_delete=models.PROTECT,
@@ -581,26 +483,9 @@ class CalibrationSchedule(BaseModel):
         default=True,
         help_text='Place the observation directly through /api/schedule/, which takes the slot. '
                   'Uncheck to queue it through /api/requestgroups/ and let the scheduler decide. '
-                  'AUTO_FOCUS runs both ways, so a row of each can exist at the same scope.'
-    )
-    readout_modes = models.ManyToManyField(
-        GenericMode, blank=True,
-        help_text='Readout modes this run covers. Leave empty for every mode the instrument has.'
+                  'A configuration type can have a row of each at the same scope.'
     )
 
-    filter_set = models.ForeignKey(FilterSet, null=True, blank=True, on_delete=models.PROTECT,
-                                   help_text='Filter set to observe through')
-    exposures_per_run = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(1)],
-                                            help_text='Number of exposures per run')
-    elements_per_run = models.IntegerField(
-        null=True, blank=True, validators=[MinValueValidator(1)],
-        help_text='How many optical element and readout mode combinations one run covers, taking the '
-                  'most overdue first. Blank covers every combination the instrument has.'
-    )
-    exposure_time = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)],
-                                      help_text='Exposure time in seconds')
-    cadence_days = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(1)],
-                                       help_text='Target interval in days between runs')
     sun_alt_start = models.FloatField(
         null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)],
         help_text='The brighter of the two solar altitudes bounding the window. An evening '
@@ -609,12 +494,12 @@ class CalibrationSchedule(BaseModel):
     sun_alt_end = models.FloatField(
         null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)],
         help_text='The darker of the two. Leave blank to anchor the window at sun_alt_start '
-                  'and size it from the exposures instead, which is what bias and dark do.'
+                  'and size it from the exposures instead.'
     )
     proposal = models.CharField(
         max_length=64, blank=True,
-        help_text='Portal proposal to submit under. Leave blank for the default for this configuration '
-                  'type. Set it only to change priority, as elp does with rescue_auto_focus.'
+        help_text='Portal proposal to submit under. Leave blank for the default for this '
+                  'configuration type.'
     )
     window_offset_minutes = models.IntegerField(
         null=True, blank=True,
@@ -623,14 +508,12 @@ class CalibrationSchedule(BaseModel):
     )
     window_count = models.IntegerField(
         null=True, blank=True, validators=[MinValueValidator(1)],
-        help_text='How many windows to offer. Leave blank to tile until sun_alt_end is '
-                  'reached, which is what routine autofocus does today.'
+        help_text='How many windows to offer. Leave blank to tile until sun_alt_end is reached.'
     )
     window_length_minutes = models.IntegerField(
         null=True, blank=True, validators=[MinValueValidator(1)],
         help_text='Length of each window. Leave blank for a single window spanning '
-                  'sun_alt_start to sun_alt_end, which is what every calibration except '
-                  'the queued autofocus uses.'
+                  'sun_alt_start to sun_alt_end.'
     )
 
     class Meta:
@@ -715,13 +598,12 @@ class CalibrationSchedule(BaseModel):
         """Every row, with the relations resolution needs, in one query each.
 
         The table holds one row per scope per configuration type, so a few hundred
-        at most. Resolving a whole site against this list costs two queries rather
+        at most. Resolving a whole site against this list costs one query rather
         than one per combination.
         """
         return list(cls.objects.all().select_related(
-            'configuration_type', 'instrument', 'telescope', 'instrument_type', 'site',
-            'filter_set'
-        ).prefetch_related('readout_modes'))
+            'configuration_type', 'instrument', 'telescope', 'instrument_type', 'site'
+        ))
 
     @classmethod
     def matching(cls, instrument, configuration_type, direct_submission, when=BOTH, rows=None):
@@ -766,15 +648,11 @@ class CalibrationSchedule(BaseModel):
         applicable = cls.matching(instrument, configuration_type, direct_submission, when, rows)
         if not applicable or not applicable[0].enabled:
             return None
-        settings = {'readout_modes': []}
+        settings = {}
         for row in applicable:
             for field in cls.VALUE_FIELDS:
                 if settings.get(field) in (None, ''):
                     settings[field] = getattr(row, field)
-            # An empty set means every mode, so it inherits rather than widening a
-            # narrow row back to the full set.
-            if not settings['readout_modes']:
-                settings['readout_modes'] = list(row.readout_modes.all())
         return settings
 
     def __str__(self):

@@ -27,8 +27,6 @@ router.register(r'configurationtypeproperties', api_views.ConfigurationTypePrope
 router.register(r'instrumentcategories', api_views.InstrumentCategoryViewSet)
 router.register(r'calibrationschedules', api_views.CalibrationScheduleViewSet)
 router.register(r'calibrationtargets', api_views.CalibrationTargetViewSet)
-router.register(r'filtersets', api_views.FilterSetViewSet)
-router.register(r'skyflatfilters', api_views.SkyFlatFilterViewSet)
 
 urlpatterns = [
     re_path(r'^$', IndexView.as_view(), name='index'),
