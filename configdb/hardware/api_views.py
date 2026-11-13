@@ -234,7 +234,8 @@ class CalibrationScheduleViewSet(FilterableViewSet):
 
     @action(detail=False, methods=['get'])
     def effective(self, request):
-        """Resolved settings for every calibration due at a site.
+        """
+        Resolved settings for every calibration due at a site.
 
         Clients read this instead of applying the scope rules themselves, so
         precedence has one implementation.

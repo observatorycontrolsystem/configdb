@@ -442,7 +442,8 @@ class CalibrationTarget(BaseModel):
 
 
 class CalibrationSchedule(BaseModel):
-    """What the calibration poller submits, and with what settings.
+    """
+    When one configuration type is taken, and with what settings.
 
     Scope has two independent axes. A location, being at most one of instrument,
     telescope or site, and an optional instrument_type qualifier. A lookup takes
@@ -453,6 +454,7 @@ class CalibrationSchedule(BaseModel):
     instrument type. That is what lets operations stop a calibration at one site
     without editing the network-wide defaults.
     """
+
     EVENING = 'EVENING'
     MORNING = 'MORNING'
     BOTH = 'BOTH'
@@ -549,12 +551,13 @@ class CalibrationSchedule(BaseModel):
         self._check_window_offset()
 
     def _check_window_offset(self):
-        """window_offset_minutes needs sun_alt_end once merged with the rows around this one.
+        """
+        window_offset_minutes needs sun_alt_end once merged with the rows around this one.
 
-        Without sun_alt_end the window is sized from the exposures, and delaying the
-        start would make it too short to fit them. Either value can come from a
-        broader row, so the check runs on the merged settings of every instrument
-        this row covers.
+        With only sun_alt_start, the window is anchored at that altitude and sized
+        by the length of the run, so there is no slack to delay its start into.
+        Either value can come from a broader row, so the check runs on the merged
+        settings of every instrument this row covers.
         """
         if not self.configuration_type_id:
             return
@@ -595,7 +598,8 @@ class CalibrationSchedule(BaseModel):
 
     @classmethod
     def all_rows(cls):
-        """Every row, with the relations resolution needs, in one query each.
+        """
+        Every row, with the relations resolution needs, in one query each.
 
         The table holds one row per scope per configuration type, so a few hundred
         at most. Resolving a whole site against this list costs one query rather
@@ -607,7 +611,8 @@ class CalibrationSchedule(BaseModel):
 
     @classmethod
     def matching(cls, instrument, configuration_type, direct_submission, when=BOTH, rows=None):
-        """Rows that apply to this instrument, most specific first.
+        """
+        Rows that apply to this instrument, most specific first.
 
         Disabled rows are included so that a narrow row can switch off what a
         broader one turns on. Use effective() to get the answer that counts.
@@ -638,7 +643,8 @@ class CalibrationSchedule(BaseModel):
 
     @classmethod
     def effective(cls, instrument, configuration_type, direct_submission, when=BOTH, rows=None):
-        """Merged settings for this instrument, or None if nothing should be submitted.
+        """
+        Merged settings for this instrument, or None if nothing should be submitted.
 
         Values come from the most specific row that sets them, so a per-instrument
         row can override one setting and inherit the rest. The most specific row

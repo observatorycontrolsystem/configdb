@@ -757,8 +757,11 @@ class TestAvailabilityHistory(BaseHardwareTest):
 
 
 class CalibrationScheduleResolutionTest(BaseHardwareTest):
-    """Most specific location first (instrument, telescope, site, network), with an
-    instrument type as the tie-breaker at each location."""
+    """
+    Most specific location first, with an instrument type as the tie-breaker.
+
+    Locations rank instrument, telescope, site, then network.
+    """
 
     def setUp(self):
         super().setUp()
