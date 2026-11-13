@@ -3,6 +3,8 @@ import reversion
 import time_machine
 from datetime import datetime
 from http import HTTPStatus
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.test import TestCase, override_settings
 from django.test import Client
 from django.urls import reverse
@@ -13,8 +15,10 @@ from mixer.backend.django import mixer
 
 from configdb.hardware.models import (Site, Instrument, Enclosure, Telescope, Camera, CameraType, InstrumentType,
                      GenericMode, GenericModeGroup, ModeType, OpticalElement, OpticalElementGroup,
-                     ConfigurationType, ConfigurationTypeProperties, InstrumentCategory)
-from configdb.hardware.serializers import GenericModeSerializer, InstrumentTypeSerializer
+                     ConfigurationType, ConfigurationTypeProperties, InstrumentCategory,
+                     CalibrationSchedule, CalibrationTarget)
+from configdb.hardware.serializers import (GenericModeSerializer, InstrumentTypeSerializer,
+                                           CalibrationScheduleSerializer, CalibrationTargetSerializer)
 from configdb.hardware.heroic import heroic_instrument_id
 
 
@@ -749,3 +753,345 @@ class TestAvailabilityHistory(BaseHardwareTest):
         expected_intervals = {'availability_intervals': [
             {'start': datetime(2023, 1, 1).isoformat(), 'end': datetime(2024, 1, 1).isoformat()}]}
         self.assertEqual(response.json(), expected_intervals)
+
+
+
+class CalibrationScheduleResolutionTest(BaseHardwareTest):
+    """
+    Most specific location first, with an instrument type as the tie-breaker.
+
+    Locations rank instrument, telescope, site, then network.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.bias = mixer.blend(ConfigurationType, code='BIAS')
+
+    def _schedule(self, **kwargs):
+        kwargs.setdefault('configuration_type', self.bias)
+        kwargs.setdefault('direct_submission', True)
+        for field in CalibrationSchedule.SCOPE_FIELDS:
+            kwargs.setdefault(field, None)
+        return mixer.blend(CalibrationSchedule, **kwargs)
+
+    def _effective(self, direct=True, **kwargs):
+        return CalibrationSchedule.effective(self.instrument, self.bias, direct, **kwargs)
+
+    def test_no_rows_returns_none(self):
+        self.assertIsNone(self._effective())
+
+    def test_network_default_applies_when_nothing_more_specific(self):
+        row = self._schedule(sun_alt_start=-6.0)
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, True), [row])
+
+    def test_deeper_location_wins(self):
+        self._schedule(site=self.site, sun_alt_start=-6.0)
+        by_telescope = self._schedule(telescope=self.telescope, sun_alt_start=-9.0)
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, True)[0], by_telescope)
+        self.assertEqual(self._effective()['sun_alt_start'], -9.0)
+
+    def test_any_location_beats_an_instrument_type_alone(self):
+        by_type = self._schedule(instrument_type=self.instrument_type, sun_alt_start=-9.0)
+        by_site = self._schedule(site=self.site, sun_alt_start=-6.0)
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, True), [by_site, by_type])
+
+    def test_blank_values_inherit_from_the_next_level_out(self):
+        self._schedule(instrument_type=self.instrument_type, sun_alt_start=-6.0, sun_alt_end=-12.0,
+                       proposal='')
+        self._schedule(instrument=self.instrument, sun_alt_start=None, sun_alt_end=-10.0,
+                       proposal='calibrations')
+        settings = self._effective()
+        self.assertEqual(settings['sun_alt_end'], -10.0)          # from the instrument row
+        self.assertEqual(settings['proposal'], 'calibrations')    # from the instrument row
+        self.assertEqual(settings['sun_alt_start'], -6.0)         # inherited
+
+    def test_rows_for_other_hardware_do_not_match(self):
+        self._schedule(site=mixer.blend(Site, code='oth'))
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, True), [])
+
+    def test_a_disabled_row_yields_nothing(self):
+        self._schedule(instrument_type=self.instrument_type, enabled=False)
+        self.assertIsNone(self._effective())
+
+    def test_a_site_row_switches_off_an_instrument_type_default(self):
+        """Stopping a calibration at one site must beat a network-wide instrument type row."""
+        self._schedule(instrument_type=self.instrument_type, enabled=True, sun_alt_start=-6.0)
+        self._schedule(site=self.site, enabled=False)
+        self.assertIsNone(self._effective())
+
+    def test_instrument_type_qualifies_a_location_rather_than_competing_with_it(self):
+        broad = self._schedule(site=self.site, sun_alt_start=-6.0)
+        narrow = self._schedule(site=self.site, instrument_type=self.instrument_type, sun_alt_start=-9.0)
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, True), [narrow, broad])
+
+    def test_a_narrow_enabled_row_switches_on_a_broader_disabled_one(self):
+        self._schedule(site=self.site, enabled=False)
+        self._schedule(instrument=self.instrument, enabled=True, sun_alt_start=-6.0)
+        self.assertEqual(self._effective()['sun_alt_start'], -6.0)
+
+    def test_twilight_specific_row_beats_both_at_the_same_scope(self):
+        both = self._schedule(instrument_type=self.instrument_type, when=CalibrationSchedule.BOTH)
+        evening = self._schedule(instrument_type=self.instrument_type, when=CalibrationSchedule.EVENING)
+        evening_rows = CalibrationSchedule.matching(self.instrument, self.bias, True,
+                                                    when=CalibrationSchedule.EVENING)
+        morning_rows = CalibrationSchedule.matching(self.instrument, self.bias, True,
+                                                    when=CalibrationSchedule.MORNING)
+        self.assertEqual(evening_rows, [evening, both])
+        self.assertEqual(morning_rows, [both])
+
+    def test_direct_and_queued_rows_coexist_and_do_not_merge(self):
+        direct = self._schedule(instrument_type=self.instrument_type, direct_submission=True,
+                                sun_alt_start=-9.9)
+        queued = self._schedule(instrument_type=self.instrument_type, direct_submission=False,
+                                sun_alt_start=-12.0)
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, True), [direct])
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, False), [queued])
+        self.assertEqual(self._effective(True)['sun_alt_start'], -9.9)
+        self.assertEqual(self._effective(False)['sun_alt_start'], -12.0)
+
+    def test_window_shape_inherits_like_any_other_value(self):
+        """A narrower row can cap the number of windows without restating the rest."""
+        self._schedule(instrument_type=self.instrument_type, direct_submission=False, window_count=None,
+                       window_length_minutes=60, sun_alt_start=-12.0)
+        self._schedule(telescope=self.telescope, direct_submission=False, window_count=2,
+                       window_length_minutes=None, sun_alt_start=None)
+        got = self._effective(False)
+        self.assertEqual(got['window_count'], 2)              # from the telescope row
+        self.assertEqual(got['window_length_minutes'], 60)    # inherited
+        self.assertEqual(got['sun_alt_start'], -12.0)         # inherited
+
+
+class CalibrationScheduleValidationTest(BaseHardwareTest):
+    def setUp(self):
+        super().setUp()
+        self.bias = mixer.blend(ConfigurationType, code='BIAS')
+
+    def assertRejected(self, row, message):
+        with self.assertRaises(ValidationError) as caught:
+            row.clean()
+        self.assertIn(message, ' '.join(caught.exception.messages))
+
+    def test_more_than_one_location_is_rejected(self):
+        row = CalibrationSchedule(configuration_type=self.bias, site=self.site, telescope=self.telescope)
+        self.assertRejected(row, 'Set at most one location')
+
+    def test_a_location_with_an_instrument_type_is_allowed(self):
+        CalibrationSchedule(configuration_type=self.bias, site=self.site,
+                            instrument_type=self.instrument_type).clean()
+
+    def test_an_offset_without_a_dark_bound_is_rejected(self):
+        """A window sized from the exposures has no room to be delayed into."""
+        row = CalibrationSchedule(configuration_type=self.bias, sun_alt_start=6,
+                                  sun_alt_end=None, window_offset_minutes=10)
+        self.assertRejected(row, 'window_offset_minutes needs sun_alt_end')
+
+    def test_an_offset_with_both_bounds_is_allowed(self):
+        CalibrationSchedule(configuration_type=self.bias, sun_alt_start=-9,
+                            sun_alt_end=-12, window_offset_minutes=10).clean()
+
+    def test_an_offset_can_inherit_its_dark_bound(self):
+        mixer.blend(CalibrationSchedule, configuration_type=self.bias,
+                    instrument_type=self.instrument_type, instrument=None, telescope=None,
+                    site=None, direct_submission=True, enabled=True, sun_alt_start=-9,
+                    sun_alt_end=-12, window_offset_minutes=None)
+        CalibrationSchedule(configuration_type=self.bias, instrument=self.instrument,
+                            window_offset_minutes=10).clean()
+
+
+class EffectiveScheduleEndpointTest(BaseHardwareTest):
+    """The resolved-settings endpoint clients read."""
+
+    def setUp(self):
+        super().setUp()
+        self.bias = mixer.blend(ConfigurationType, code='BIAS')
+        self.url = reverse('calibrationschedule-effective')
+
+    def _schedule(self, **kwargs):
+        defaults = dict(configuration_type=self.bias, instrument_type=self.instrument_type,
+                        instrument=None, telescope=None, site=None, direct_submission=True,
+                        when=CalibrationSchedule.BOTH, enabled=True)
+        return mixer.blend(CalibrationSchedule, **{**defaults, **kwargs})
+
+    def _get(self, **params):
+        return self.client.get(self.url, params)
+
+    def _schedules(self):
+        return self._get(site=self.site.code).json()['schedules']
+
+    def test_site_is_required(self):
+        self.assertEqual(self._get().status_code, 400)
+
+    def test_an_unknown_site_is_not_found(self):
+        self.assertEqual(self._get(site='nope').status_code, 404)
+
+    def test_nothing_scheduled_returns_an_empty_list(self):
+        r = self._get(site=self.site.code)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['schedules'], [])
+
+    def test_a_row_resolves_for_every_twilight_it_covers(self):
+        self._schedule(sun_alt_start=-6.0)
+        got = self._schedules()
+        self.assertEqual({row['when'] for row in got},
+                         {CalibrationSchedule.EVENING, CalibrationSchedule.MORNING})
+        self.assertTrue(all(row['sun_alt_start'] == -6.0 for row in got))
+        self.assertTrue(all(row['instrument'] == self.instrument.code for row in got))
+        self.assertTrue(all(row['direct_submission'] for row in got))
+
+    def test_a_disabled_row_is_omitted(self):
+        self._schedule(enabled=False)
+        self.assertEqual(self._schedules(), [])
+
+    def test_a_narrow_row_overrides_a_broad_one(self):
+        self._schedule(sun_alt_start=-6.0, sun_alt_end=-12.0)
+        self._schedule(instrument=self.instrument, instrument_type=None, sun_alt_start=None,
+                       sun_alt_end=-10.0)
+        got = self._schedules()
+        self.assertTrue(all(row['sun_alt_end'] == -10.0 for row in got))
+        self.assertTrue(all(row['sun_alt_start'] == -6.0 for row in got))  # inherited
+
+    def test_another_site_is_not_included(self):
+        self._schedule(site=mixer.blend(Site, code='oth'), instrument_type=None)
+        self.assertEqual(self._schedules(), [])
+
+    def test_a_disabled_instrument_is_omitted(self):
+        self._schedule()
+        self.instrument.state = Instrument.DISABLED
+        self.instrument.save()
+        self.assertEqual(self._schedules(), [])
+
+
+class CalibrationScheduleApiTest(BaseHardwareTest):
+    def setUp(self):
+        super().setUp()
+        self.bias = mixer.blend(ConfigurationType, code='BIAS')
+        self.key = dict(configuration_type=self.bias, instrument_type=self.instrument_type,
+                        when=CalibrationSchedule.BOTH, direct_submission=True)
+        self.row = CalibrationSchedule.objects.create(**self.key)
+
+    def assertRejected(self, serializer, message):
+        self.assertFalse(serializer.is_valid())
+        self.assertIn(message, json.dumps(serializer.errors))
+
+    def test_the_database_rejects_a_duplicate_with_null_scope(self):
+        with self.assertRaises(IntegrityError):
+            CalibrationSchedule.objects.create(**self.key)
+
+    def test_the_api_rejects_a_duplicate(self):
+        serializer = CalibrationScheduleSerializer(data={
+            'configuration_type': 'BIAS', 'instrument_type': self.instrument_type.code,
+            'when': CalibrationSchedule.BOTH, 'direct_submission': True})
+        self.assertRejected(serializer, 'already exists')
+
+    def test_a_patch_cannot_add_a_second_location(self):
+        self.row.instrument = self.instrument
+        self.row.save()
+        serializer = CalibrationScheduleSerializer(self.row, data={'site': self.site.code}, partial=True)
+        self.assertRejected(serializer, 'Set at most one location')
+
+    def test_the_api_checks_the_window_offset(self):
+        serializer = CalibrationScheduleSerializer(self.row, data={'window_offset_minutes': 10},
+                                                   partial=True)
+        self.assertRejected(serializer, 'window_offset_minutes needs sun_alt_end')
+
+    def test_anonymous_writes_are_rejected(self):
+        response = self.client.post('/calibrationschedules/', {'configuration_type': 'BIAS'})
+        self.assertIn(response.status_code, (401, 403))
+
+    def test_the_list_filters_by_code(self):
+        CalibrationSchedule.objects.create(configuration_type=self.bias, site=self.site)
+        got = self.client.get('/calibrationschedules/', {'site': self.site.code}).json()['results']
+        self.assertEqual([row['site'] for row in got], [self.site.code])
+
+
+class ResolutionOrderTest(BaseHardwareTest):
+    """matching() ranks every scope and twilight correctly against a full table."""
+
+    # Index into `scopes` below, most specific first: instrument, telescope,
+    # site and type, site, type, network. Scope 6 is another site and never matches.
+    EXPECTED_SCOPE_ORDER = [5, 4, 3, 1, 2, 0]
+
+    def setUp(self):
+        super().setUp()
+        self.types = [mixer.blend(ConfigurationType, code=c) for c in ('BIAS', 'DARK')]
+        other_site = mixer.blend(Site, code='oth')
+
+        scopes = [
+            {},
+            {'site': self.site},
+            {'instrument_type': self.instrument_type},
+            {'site': self.site, 'instrument_type': self.instrument_type},
+            {'telescope': self.telescope},
+            {'instrument': self.instrument},
+            {'site': other_site},
+        ]
+        self.pks = {}
+        for configuration_type in self.types:
+            for i, scope in enumerate(scopes):
+                for when in (CalibrationSchedule.EVENING, CalibrationSchedule.MORNING,
+                             CalibrationSchedule.BOTH):
+                    for direct in (True, False):
+                        base = dict(instrument=None, telescope=None, instrument_type=None,
+                                    site=None)
+                        base.update(scope)
+                        row = mixer.blend(CalibrationSchedule, configuration_type=configuration_type,
+                                          when=when, direct_submission=direct, enabled=(i != 0),
+                                          window_count=i + 1, **base)
+                        self.pks[configuration_type.code, i, when, direct] = row.pk
+
+    def test_rows_come_back_most_specific_first(self):
+        rows = CalibrationSchedule.all_rows()
+        for configuration_type in self.types:
+            for direct in (True, False):
+                for when in (CalibrationSchedule.EVENING, CalibrationSchedule.MORNING,
+                             CalibrationSchedule.BOTH):
+                    whens = [when] if when == CalibrationSchedule.BOTH else [when, CalibrationSchedule.BOTH]
+                    expected = [self.pks[configuration_type.code, i, w, direct]
+                                for i in self.EXPECTED_SCOPE_ORDER for w in whens]
+                    got = CalibrationSchedule.matching(self.instrument, configuration_type, direct,
+                                                       when=when, rows=rows)
+                    self.assertEqual([r.pk for r in got], expected)
+
+    def test_the_instrument_row_wins_over_a_disabled_network_row(self):
+        settings = CalibrationSchedule.effective(self.instrument, self.types[0], True,
+                                                 when=CalibrationSchedule.EVENING)
+        self.assertEqual(settings['window_count'], 6)
+
+
+class CalibrationTargetTest(BaseHardwareTest):
+    def setUp(self):
+        super().setUp()
+        self.spectrum = mixer.blend(ConfigurationType, code='SPECTRUM')
+
+    def _data(self, **kwargs):
+        return {'name': 'HD 1', 'ra': 10.0, 'dec': -20.0, 'configuration_type': 'SPECTRUM',
+                'site': self.site.code, 'season_start': '01-01', 'season_end': '12-31', 'config': {}, **kwargs}
+
+    def test_a_target_needs_a_site(self):
+        serializer = CalibrationTargetSerializer(data=self._data(site=None))
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('site', serializer.errors)
+
+    def test_season_dates_must_be_month_and_day(self):
+        serializer = CalibrationTargetSerializer(data=self._data(season_start='13-01', season_end='02-30'))
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('season_start', serializer.errors)
+
+    def test_a_season_is_required(self):
+        serializer = CalibrationTargetSerializer(data=self._data(season_start='', season_end=''))
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(set(serializer.errors), {'season_start', 'season_end'})
+
+    def test_a_valid_target_is_accepted(self):
+        serializer = CalibrationTargetSerializer(data=self._data(season_start='11-01', season_end='02-28'))
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_the_list_filters_by_configuration_type_and_site(self):
+        season = dict(season_start='01-01', season_end='12-31')
+        CalibrationTarget.objects.create(name='HD 1', ra=10, dec=-20, configuration_type=self.spectrum,
+                                         site=self.site, **season)
+        CalibrationTarget.objects.create(name='HD 2', ra=10, dec=-20, configuration_type=self.spectrum,
+                                         site=mixer.blend(Site, code='oth'), **season)
+        got = self.client.get('/calibrationtargets/', {'configuration_type': 'SPECTRUM',
+                                                       'site': self.site.code}).json()['results']
+        self.assertEqual([t['name'] for t in got], ['HD 1'])

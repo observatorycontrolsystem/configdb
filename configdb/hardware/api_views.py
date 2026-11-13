@@ -1,4 +1,8 @@
+from itertools import product
+
 from rest_framework import viewsets, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.schemas.openapi import AutoSchema
@@ -7,7 +11,7 @@ from configdb.hardware import serializers
 from .models import (
     Site, Enclosure, Telescope, OpticalElementGroup, Instrument, Camera, OpticalElement,
     CameraType, GenericMode, GenericModeGroup, InstrumentType, ModeType, ConfigurationType,
-    InstrumentCategory, ConfigurationTypeProperties
+    InstrumentCategory, ConfigurationTypeProperties, CalibrationSchedule, CalibrationTarget
 )
 
 
@@ -188,3 +192,90 @@ class GenericModeViewSet(FilterableViewSet):
     queryset = GenericMode.objects.all()
     serializer_class = serializers.GenericModeSerializer
     filter_fields = ('name', 'code', 'schedulable')
+
+
+class CalibrationTargetFilter(django_filters.rest_framework.FilterSet):
+    configuration_type = django_filters.CharFilter(field_name='configuration_type__code',
+                                                   label='Configuration type code')
+    site = django_filters.CharFilter(field_name='site__code', label='Site code')
+
+    class Meta:
+        model = CalibrationTarget
+        fields = ['name', 'configuration_type', 'site']
+
+
+class CalibrationTargetViewSet(FilterableViewSet):
+    schema = CustomViewSchema(tags=['Calibration Targets'])
+    queryset = CalibrationTarget.objects.all().select_related('configuration_type', 'site')
+    serializer_class = serializers.CalibrationTargetSerializer
+    filterset_class = CalibrationTargetFilter
+
+
+class CalibrationScheduleFilter(django_filters.rest_framework.FilterSet):
+    configuration_type = django_filters.CharFilter(field_name='configuration_type__code',
+                                                   label='Configuration type code')
+    instrument_type = django_filters.CharFilter(field_name='instrument_type__code',
+                                                label='Instrument type code')
+    site = django_filters.CharFilter(field_name='site__code', label='Site code')
+
+    class Meta:
+        model = CalibrationSchedule
+        fields = ['configuration_type', 'instrument', 'telescope', 'instrument_type', 'site',
+                  'enabled', 'when', 'direct_submission']
+
+
+class CalibrationScheduleViewSet(FilterableViewSet):
+    schema = CustomViewSchema(tags=['Calibration Schedules'])
+    queryset = CalibrationSchedule.objects.all().select_related(
+        'configuration_type', 'instrument', 'telescope', 'instrument_type', 'site'
+    )
+    serializer_class = serializers.CalibrationScheduleSerializer
+    filterset_class = CalibrationScheduleFilter
+
+    @action(detail=False, methods=['get'])
+    def effective(self, request):
+        """
+        Resolved settings for every calibration due at a site.
+
+        Clients read this instead of applying the scope rules themselves, so
+        precedence has one implementation.
+
+        `?site=<code>` is required, and an unknown site is a 404 so that a typo does
+        not read as nothing scheduled. Combinations with no enabled row are omitted,
+        as are DISABLED instruments.
+        """
+        site_code = request.query_params.get('site')
+        if not site_code:
+            return Response({'error': 'site is required, for example ?site=<site code>'}, status=400)
+        if not Site.objects.filter(code=site_code).exists():
+            return Response({'error': f'No site with code {site_code}'}, status=404)
+
+        instruments = Instrument.objects.filter(
+            telescope__enclosure__site__code=site_code
+        ).exclude(state=Instrument.DISABLED).select_related('instrument_type', 'telescope__enclosure__site')
+        # Only types anybody has scheduled, rather than every type in the network.
+        configuration_types = ConfigurationType.objects.filter(
+            calibrationschedule__isnull=False
+        ).distinct()
+
+        twilights = (CalibrationSchedule.EVENING, CalibrationSchedule.MORNING)
+        rows = CalibrationSchedule.all_rows()
+
+        resolved = []
+        for instrument, configuration_type, direct, when in product(
+                instruments, configuration_types, (True, False), twilights):
+            settings = CalibrationSchedule.effective(
+                instrument, configuration_type, direct, when=when, rows=rows)
+            if settings is None:
+                continue
+            resolved.append({
+                'instrument': instrument.code,
+                'instrument_type': getattr(instrument.instrument_type, 'code', None),
+                'telescope': str(instrument.telescope),
+                'state': instrument.state,
+                'configuration_type': configuration_type.code,
+                'direct_submission': direct,
+                'when': when,
+                **settings,
+            })
+        return Response({'site': site_code, 'schedules': resolved})

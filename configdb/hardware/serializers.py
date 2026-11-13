@@ -1,9 +1,12 @@
+import copy
+
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from .models import (
     Site, Enclosure, Telescope, OpticalElement, GenericMode, Instrument, Camera, OpticalElementGroup,
     CameraType, GenericModeGroup, InstrumentType, ConfigurationTypeProperties, ConfigurationType, ModeType,
-    InstrumentCategory
+    InstrumentCategory, CalibrationSchedule, CalibrationTarget
 )
 from configdb.hardware.validator import OCSValidator
 from configdb.hardware.heroic import update_heroic_instrument_capabilities
@@ -407,3 +410,48 @@ class AvailabilityHistorySerializer(serializers.Serializer):
     start = serializers.DateTimeField(required=False, write_only=True)
     end = serializers.DateTimeField(required=False, write_only=True)
     availability_intervals = serializers.DictField(read_only=True)
+
+
+class CalibrationTargetSerializer(serializers.ModelSerializer):
+    configuration_type = serializers.SlugRelatedField(
+        slug_field='code', queryset=ConfigurationType.objects.all())
+    site = serializers.SlugRelatedField(slug_field='code', queryset=Site.objects.all())
+
+    class Meta:
+        model = CalibrationTarget
+        fields = ('id', 'name', 'ra', 'dec', 'proper_motion_ra', 'proper_motion_dec',
+                  'configuration_type', 'site', 'season_start', 'season_end', 'config')
+        read_only_fields = ['id']
+
+
+class CalibrationScheduleSerializer(serializers.ModelSerializer):
+    configuration_type = serializers.SlugRelatedField(
+        slug_field='code', queryset=ConfigurationType.objects.all())
+    instrument_type = serializers.SlugRelatedField(
+        slug_field='code', queryset=InstrumentType.objects.all(), required=False, allow_null=True)
+    site = serializers.SlugRelatedField(
+        slug_field='code', queryset=Site.objects.all(), required=False, allow_null=True)
+
+    class Meta:
+        model = CalibrationSchedule
+        fields = ('id', 'configuration_type', 'instrument', 'telescope', 'instrument_type', 'site',
+                  'enabled', 'when', 'direct_submission', 'sun_alt_start', 'sun_alt_end',
+                  'proposal', 'window_offset_minutes', 'window_count', 'window_length_minutes')
+        extra_kwargs = {
+            'instrument': {'help_text': 'Instrument id. Instrument codes are only unique per telescope.'},
+            'telescope': {'help_text': 'Telescope id. Telescope codes are only unique per enclosure.'},
+        }
+        read_only_fields = ['id']
+
+    def validate(self, data):
+        # DRF never calls the model's own validation, and a PATCH carries only the
+        # fields it changes, so validate the row as it would be saved.
+        row = copy.copy(self.instance) if self.instance else CalibrationSchedule()
+        for field, value in data.items():
+            setattr(row, field, value)
+        try:
+            row.clean()
+            row.validate_constraints()
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.messages)
+        return data

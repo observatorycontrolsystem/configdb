@@ -25,6 +25,8 @@ router.register(r'modetypes', api_views.ModeTypeViewSet)
 router.register(r'configurationtypes', api_views.ConfigurationTypeViewSet)
 router.register(r'configurationtypeproperties', api_views.ConfigurationTypePropertiesViewSet)
 router.register(r'instrumentcategories', api_views.InstrumentCategoryViewSet)
+router.register(r'calibrationschedules', api_views.CalibrationScheduleViewSet)
+router.register(r'calibrationtargets', api_views.CalibrationTargetViewSet)
 
 urlpatterns = [
     re_path(r'^$', IndexView.as_view(), name='index'),

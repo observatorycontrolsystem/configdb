@@ -1,7 +1,10 @@
 import datetime
 
+from django.core.exceptions import ValidationError
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db.models import F, Value
+from django.db.models.functions import Coalesce
+from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 
 class BaseModel(models.Model):
     modified = models.DateTimeField(auto_now=True)
@@ -402,3 +405,263 @@ class Instrument(BaseModel):
 
     def __str__(self):
         return '{0}.{1}'.format(self.telescope, self.code)
+
+
+MONTH_DAY = RegexValidator(r'^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$', 'Use MM-DD, month then day, for example 12-31 for 31 December.')
+
+
+class CalibrationTarget(BaseModel):
+    name = models.CharField(max_length=200, help_text='Target name')
+    ra = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(360.0)],
+        help_text='Right ascension in degrees'
+    )
+    dec = models.FloatField(
+        validators=[MinValueValidator(-90.0), MaxValueValidator(90.0)],
+        help_text='Declination in degrees'
+    )
+    proper_motion_ra = models.FloatField(null=True, blank=True, help_text='Proper motion in RA, mas/year')
+    proper_motion_dec = models.FloatField(null=True, blank=True, help_text='Proper motion in Dec, mas/year')
+    configuration_type = models.ForeignKey(ConfigurationType, on_delete=models.PROTECT,
+                                           help_text='Configuration type this target is used for')
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, help_text='Site this target is used at')
+    season_start = models.CharField(max_length=5, validators=[MONTH_DAY],
+                                    help_text='First day the target is used, as MM-DD (month then day). The '
+                                              'season may run across the new year. Use 01-01 to 12-31 '
+                                              'for all year.')
+    season_end = models.CharField(max_length=5, validators=[MONTH_DAY],
+                                  help_text='Last day the target is used, inclusive, as MM-DD (month then day), '
+                                            'for example 12-31 for 31 December.')
+    config = models.JSONField(
+        default=dict, blank=True,
+        help_text='Per-target overrides such as exposure time, slit, max airmass and acquire radius.'
+    )
+
+    def __str__(self):
+        return f'{self.name} ({self.configuration_type_id})'
+
+
+class CalibrationSchedule(BaseModel):
+    """
+    When one configuration type is taken, and with what settings.
+
+    Scope has two independent axes. A location, being at most one of instrument,
+    telescope or site, and an optional instrument_type qualifier. A lookup takes
+    the most specific row that matches and fills any value left blank from the
+    next row out.
+
+    Location is ranked first, so a row naming a site beats one naming only an
+    instrument type. That is what lets operations stop a calibration at one site
+    without editing the network-wide defaults.
+    """
+
+    EVENING = 'EVENING'
+    MORNING = 'MORNING'
+    BOTH = 'BOTH'
+    WHEN_CHOICES = ((EVENING, 'Evening'), (MORNING, 'Morning'), (BOTH, 'Both'))
+
+    # Location axis, most specific first. At most one may be set on a row.
+    LOCATION_FIELDS = ('instrument', 'telescope', 'site')
+    SCOPE_FIELDS = LOCATION_FIELDS + ('instrument_type',)
+    VALUE_FIELDS = ('sun_alt_start', 'sun_alt_end', 'proposal',
+                    'window_offset_minutes', 'window_count', 'window_length_minutes')
+
+    configuration_type = models.ForeignKey(ConfigurationType, on_delete=models.PROTECT,
+                                           help_text='Configuration type to submit')
+
+    instrument = models.ForeignKey('Instrument', null=True, blank=True, on_delete=models.CASCADE,
+                                   help_text='Scope this row to a single instrument')
+    telescope = models.ForeignKey(Telescope, null=True, blank=True, on_delete=models.CASCADE,
+                                  help_text='Scope this row to a telescope, covering every instrument on it')
+    instrument_type = models.ForeignKey(InstrumentType, null=True, blank=True, on_delete=models.CASCADE,
+                                        help_text='Scope this row to an instrument type')
+    site = models.ForeignKey(Site, null=True, blank=True, on_delete=models.CASCADE,
+                             help_text='Scope this row to a site')
+
+    enabled = models.BooleanField(default=True, help_text='Uncheck to stop submitting without deleting the row')
+    when = models.CharField(max_length=8, choices=WHEN_CHOICES, default=BOTH,
+                            help_text='Which twilight this run belongs to')
+    direct_submission = models.BooleanField(
+        default=True,
+        help_text='Place the observation directly through /api/schedule/, which takes the slot. '
+                  'Uncheck to queue it through /api/requestgroups/ and let the scheduler decide. '
+                  'A configuration type can have a row of each at the same scope.'
+    )
+
+    sun_alt_start = models.FloatField(
+        null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)],
+        help_text='The brighter of the two solar altitudes bounding the window. An evening '
+                  'window opens here, a morning window closes here.'
+    )
+    sun_alt_end = models.FloatField(
+        null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)],
+        help_text='The darker of the two. Leave blank to anchor the window at sun_alt_start '
+                  'and size it from the exposures instead.'
+    )
+    proposal = models.CharField(
+        max_length=64, blank=True,
+        help_text='Portal proposal to submit under. Leave blank for the default for this '
+                  'configuration type.'
+    )
+    window_offset_minutes = models.IntegerField(
+        null=True, blank=True,
+        help_text='Delay the window opening this many minutes past the point sun_alt_start '
+                  'is reached. The observing window, not the submission.'
+    )
+    window_count = models.IntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text='How many windows to offer. Leave blank to tile until sun_alt_end is reached.'
+    )
+    window_length_minutes = models.IntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text='Length of each window. Leave blank for a single window spanning '
+                  'sun_alt_start to sun_alt_end.'
+    )
+
+    class Meta:
+        # Postgres treats NULLs as distinct and Django 4.2 has no nulls_distinct, so
+        # the nullable scope columns are coalesced for the constraint to bite.
+        constraints = [
+            models.UniqueConstraint(
+                F('configuration_type'),
+                Coalesce(F('instrument'), Value(0)),
+                Coalesce(F('telescope'), Value(0)),
+                Coalesce(F('instrument_type'), Value(0)),
+                Coalesce(F('site'), Value(0)),
+                F('when'),
+                F('direct_submission'),
+                name='unique_calibration_schedule_scope',
+                violation_error_message='A row with this configuration type, scope, twilight '
+                                        'and submission path already exists.',
+            ),
+        ]
+
+    # Instrument lookups that select the instruments a scope field covers.
+    INSTRUMENT_SCOPE_LOOKUPS = {'instrument': 'pk', 'telescope': 'telescope',
+                                'site': 'telescope__enclosure__site',
+                                'instrument_type': 'instrument_type'}
+
+    def clean(self):
+        locations = [f for f in self.LOCATION_FIELDS if getattr(self, f'{f}_id', None)]
+        if len(locations) > 1:
+            raise ValidationError(
+                f'Set at most one location. This row sets {", ".join(locations)}. '
+                f'An instrument type can be combined with any one of them.'
+            )
+        self._check_window_offset()
+
+    def _check_window_offset(self):
+        """
+        window_offset_minutes needs sun_alt_end once merged with the rows around this one.
+
+        With only sun_alt_start, the window is anchored at that altitude and sized
+        by the length of the run, so there is no slack to delay its start into.
+        Either value can come from a broader row, so the check runs on the merged
+        settings of every instrument this row covers.
+        """
+        if not self.configuration_type_id:
+            return
+        rows = [r for r in self.all_rows() if r.pk != self.pk] + [self]
+        instruments = Instrument.objects.exclude(state=Instrument.DISABLED).filter(**{
+            self.INSTRUMENT_SCOPE_LOOKUPS[f]: getattr(self, f'{f}_id')
+            for f in self.SCOPE_FIELDS if getattr(self, f'{f}_id', None)
+        }).select_related('telescope__enclosure')
+        whens = (self.EVENING, self.MORNING) if self.when == self.BOTH else (self.when,)
+
+        for instrument in instruments:
+            for when in whens:
+                applicable = self.matching(instrument, self.configuration_type,
+                                           self.direct_submission, when, rows)
+                if not applicable or not applicable[0].enabled:
+                    continue
+
+                def merged(field):
+                    return next((getattr(r, field) for r in applicable
+                                 if getattr(r, field) is not None), None)
+
+                if merged('window_offset_minutes') and merged('sun_alt_end') is None:
+                    raise ValidationError(
+                        f'window_offset_minutes needs sun_alt_end, and {instrument} '
+                        f'({when.lower()}) gets no sun_alt_end from this row or any row it '
+                        f'inherits from. Without it the window is sized from the exposures, '
+                        f'and delaying the start would make it too short to fit them.'
+                    )
+
+    @property
+    def specificity(self):
+        """Sort key, lowest first. Location outranks the instrument type qualifier."""
+        location = next(
+            (i for i, f in enumerate(self.LOCATION_FIELDS) if getattr(self, f'{f}_id', None)),
+            len(self.LOCATION_FIELDS)
+        )
+        return (location, 0 if self.instrument_type_id else 1)
+
+    @classmethod
+    def all_rows(cls):
+        """
+        Every row, with the relations resolution needs, in one query each.
+
+        The table holds one row per scope per configuration type, so a few hundred
+        at most. Resolving a whole site against this list costs one query rather
+        than one per combination.
+        """
+        return list(cls.objects.all().select_related(
+            'configuration_type', 'instrument', 'telescope', 'instrument_type', 'site'
+        ))
+
+    @classmethod
+    def matching(cls, instrument, configuration_type, direct_submission, when=BOTH, rows=None):
+        """
+        Rows that apply to this instrument, most specific first.
+
+        Disabled rows are included so that a narrow row can switch off what a
+        broader one turns on. Use effective() to get the answer that counts.
+
+        Pass `rows` from all_rows() to resolve many combinations without a query
+        each.
+        """
+        scope = {
+            'instrument': instrument.pk,
+            'telescope': instrument.telescope_id,
+            'site': instrument.telescope.enclosure.site_id,
+            'instrument_type': instrument.instrument_type_id,
+        }
+
+        def applies(row):
+            if row.configuration_type_id != configuration_type.pk:
+                return False
+            if row.direct_submission != direct_submission:
+                return False
+            if row.when not in (when, cls.BOTH):
+                return False
+            return all(getattr(row, f'{f}_id') in (None, scope[f]) for f in cls.SCOPE_FIELDS)
+
+        candidates = cls.all_rows() if rows is None else rows
+        # A row naming this twilight beats one that covers both at the same scope.
+        return sorted((r for r in candidates if applies(r)),
+                      key=lambda r: (r.specificity, r.when == cls.BOTH))
+
+    @classmethod
+    def effective(cls, instrument, configuration_type, direct_submission, when=BOTH, rows=None):
+        """
+        Merged settings for this instrument, or None if nothing should be submitted.
+
+        Values come from the most specific row that sets them, so a per-instrument
+        row can override one setting and inherit the rest. The most specific row
+        also decides whether anything runs at all, so a site row with enabled off
+        suppresses an instrument type row that is on.
+        """
+        applicable = cls.matching(instrument, configuration_type, direct_submission, when, rows)
+        if not applicable or not applicable[0].enabled:
+            return None
+        settings = {}
+        for row in applicable:
+            for field in cls.VALUE_FIELDS:
+                if settings.get(field) in (None, ''):
+                    settings[field] = getattr(row, field)
+        return settings
+
+    def __str__(self):
+        parts = [str(getattr(self, f)) for f in self.SCOPE_FIELDS if getattr(self, f'{f}_id', None)]
+        how = 'direct' if self.direct_submission else 'queued'
+        return f'{self.configuration_type_id} on {" ".join(parts) or "network"} ({self.when.lower()}, {how})'
