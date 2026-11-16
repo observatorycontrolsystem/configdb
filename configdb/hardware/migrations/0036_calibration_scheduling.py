@@ -143,9 +143,10 @@ class Migration(migrations.Migration):
                             ("EVENING", "Evening"),
                             ("MORNING", "Morning"),
                             ("BOTH", "Both"),
+                            ("NIGHT", "Night"),
                         ],
                         default="BOTH",
-                        help_text="Which twilight this run belongs to",
+                        help_text="Which twilight this run belongs to. NIGHT is for a run spread across the night, from the evening twilight to the morning one. BOTH covers evening and morning, not night.",
                         max_length=8,
                     ),
                 ),
@@ -160,7 +161,7 @@ class Migration(migrations.Migration):
                     "sun_alt_start",
                     models.FloatField(
                         blank=True,
-                        help_text="The brighter of the two solar altitudes bounding the window. An evening window opens here, a morning window closes here.",
+                        help_text="Evening: the window opens as the sun sets through this altitude. Morning: it closes as the sun rises through it. Night: it opens as the sun sets through it.",
                         null=True,
                         validators=[
                             django.core.validators.MinValueValidator(-90),
@@ -172,7 +173,7 @@ class Migration(migrations.Migration):
                     "sun_alt_end",
                     models.FloatField(
                         blank=True,
-                        help_text="The darker of the two. Leave blank to anchor the window at sun_alt_start and size it from the exposures instead.",
+                        help_text="Evening: the window closes as the sun sets through this altitude. Morning: it opens as the sun rises through it. Night: it closes as the sun rises through it. Leave blank to anchor the window at sun_alt_start and size it by the length of the run instead.",
                         null=True,
                         validators=[
                             django.core.validators.MinValueValidator(-90),

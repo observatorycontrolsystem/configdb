@@ -258,12 +258,12 @@ class CalibrationScheduleViewSet(FilterableViewSet):
             calibrationschedule__isnull=False
         ).distinct()
 
-        twilights = (CalibrationSchedule.EVENING, CalibrationSchedule.MORNING)
+        whens = (CalibrationSchedule.EVENING, CalibrationSchedule.MORNING, CalibrationSchedule.NIGHT)
         rows = CalibrationSchedule.all_rows()
 
         resolved = []
         for instrument, configuration_type, direct, when in product(
-                instruments, configuration_types, (True, False), twilights):
+                instruments, configuration_types, (True, False), whens):
             settings = CalibrationSchedule.effective(
                 instrument, configuration_type, direct, when=when, rows=rows)
             if settings is None:

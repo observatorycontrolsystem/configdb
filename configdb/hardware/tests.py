@@ -839,6 +839,14 @@ class CalibrationScheduleResolutionTest(BaseHardwareTest):
         self.assertEqual(evening_rows, [evening, both])
         self.assertEqual(morning_rows, [both])
 
+    def test_a_night_row_and_a_both_row_do_not_cover_each_other(self):
+        both = self._schedule(instrument_type=self.instrument_type, when=CalibrationSchedule.BOTH)
+        night = self._schedule(instrument_type=self.instrument_type, when=CalibrationSchedule.NIGHT)
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, True,
+                                                      when=CalibrationSchedule.NIGHT), [night])
+        self.assertEqual(CalibrationSchedule.matching(self.instrument, self.bias, True,
+                                                      when=CalibrationSchedule.EVENING), [both])
+
     def test_direct_and_queued_rows_coexist_and_do_not_merge(self):
         direct = self._schedule(instrument_type=self.instrument_type, direct_submission=True,
                                 sun_alt_start=-9.9)
@@ -880,7 +888,7 @@ class CalibrationScheduleValidationTest(BaseHardwareTest):
                             instrument_type=self.instrument_type).clean()
 
     def test_an_offset_without_a_dark_bound_is_rejected(self):
-        """A window sized from the exposures has no room to be delayed into."""
+        """A window sized by the length of the run has no room to be delayed into."""
         row = CalibrationSchedule(configuration_type=self.bias, sun_alt_start=6,
                                   sun_alt_end=None, window_offset_minutes=10)
         self.assertRejected(row, 'window_offset_minutes needs sun_alt_end')
@@ -937,6 +945,10 @@ class EffectiveScheduleEndpointTest(BaseHardwareTest):
         self.assertTrue(all(row['sun_alt_start'] == -6.0 for row in got))
         self.assertTrue(all(row['instrument'] == self.instrument.code for row in got))
         self.assertTrue(all(row['direct_submission'] for row in got))
+
+    def test_a_night_row_resolves_only_for_the_night(self):
+        self._schedule(when=CalibrationSchedule.NIGHT, sun_alt_start=-12.0, sun_alt_end=-12.0)
+        self.assertEqual([row['when'] for row in self._schedules()], [CalibrationSchedule.NIGHT])
 
     def test_a_disabled_row_is_omitted(self):
         self._schedule(enabled=False)

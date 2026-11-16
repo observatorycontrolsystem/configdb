@@ -458,7 +458,8 @@ class CalibrationSchedule(BaseModel):
     EVENING = 'EVENING'
     MORNING = 'MORNING'
     BOTH = 'BOTH'
-    WHEN_CHOICES = ((EVENING, 'Evening'), (MORNING, 'Morning'), (BOTH, 'Both'))
+    NIGHT = 'NIGHT'
+    WHEN_CHOICES = ((EVENING, 'Evening'), (MORNING, 'Morning'), (BOTH, 'Both'), (NIGHT, 'Night'))
 
     # Location axis, most specific first. At most one may be set on a row.
     LOCATION_FIELDS = ('instrument', 'telescope', 'site')
@@ -480,7 +481,9 @@ class CalibrationSchedule(BaseModel):
 
     enabled = models.BooleanField(default=True, help_text='Uncheck to stop submitting without deleting the row')
     when = models.CharField(max_length=8, choices=WHEN_CHOICES, default=BOTH,
-                            help_text='Which twilight this run belongs to')
+                            help_text='Which twilight this run belongs to. NIGHT is for a run spread across the night, '
+                            'from the evening twilight to the morning one. BOTH covers evening and morning, not '
+                            'night.')
     direct_submission = models.BooleanField(
         default=True,
         help_text='Place the observation directly through /api/schedule/, which takes the slot. '
@@ -490,13 +493,15 @@ class CalibrationSchedule(BaseModel):
 
     sun_alt_start = models.FloatField(
         null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)],
-        help_text='The brighter of the two solar altitudes bounding the window. An evening '
-                  'window opens here, a morning window closes here.'
+        help_text='Evening: the window opens as the sun sets through this altitude. Morning: it '
+                  'closes as the sun rises through it. Night: it opens as the sun sets through it.'
     )
     sun_alt_end = models.FloatField(
         null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)],
-        help_text='The darker of the two. Leave blank to anchor the window at sun_alt_start '
-                  'and size it from the exposures instead.'
+        help_text='Evening: the window closes as the sun sets through this altitude. Morning: it '
+                  'opens as the sun rises through it. Night: it closes as the sun rises through it. '
+                  'Leave blank to anchor the window at sun_alt_start and size it by the length of the '
+                  'run instead.'
     )
     proposal = models.CharField(
         max_length=64, blank=True,
@@ -583,8 +588,8 @@ class CalibrationSchedule(BaseModel):
                     raise ValidationError(
                         f'window_offset_minutes needs sun_alt_end, and {instrument} '
                         f'({when.lower()}) gets no sun_alt_end from this row or any row it '
-                        f'inherits from. Without it the window is sized from the exposures, '
-                        f'and delaying the start would make it too short to fit them.'
+                        f'inherits from. Without it the window is sized by the length of the run, '
+                        f'and delaying the start would make it too short to fit it.'
                     )
 
     @property
@@ -627,12 +632,15 @@ class CalibrationSchedule(BaseModel):
             'instrument_type': instrument.instrument_type_id,
         }
 
+        # A BOTH row covers the evening and morning twilights, not a night run.
+        covering = (when,) if when == cls.NIGHT else (when, cls.BOTH)
+
         def applies(row):
             if row.configuration_type_id != configuration_type.pk:
                 return False
             if row.direct_submission != direct_submission:
                 return False
-            if row.when not in (when, cls.BOTH):
+            if row.when not in covering:
                 return False
             return all(getattr(row, f'{f}_id') in (None, scope[f]) for f in cls.SCOPE_FIELDS)
 
