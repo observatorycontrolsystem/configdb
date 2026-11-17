@@ -106,7 +106,9 @@ class Migration(migrations.Migration):
                 (
                     "site",
                     models.ForeignKey(
-                        help_text="Site this target is used at",
+                        blank=True,
+                        help_text="Site this target is used at. Leave blank for every site.",
+                        null=True,
                         on_delete=django.db.models.deletion.CASCADE,
                         to="hardware.site",
                     ),

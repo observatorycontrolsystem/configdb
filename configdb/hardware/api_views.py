@@ -4,6 +4,7 @@ from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 import django_filters
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.schemas.openapi import AutoSchema
 
@@ -197,11 +198,15 @@ class GenericModeViewSet(FilterableViewSet):
 class CalibrationTargetFilter(django_filters.rest_framework.FilterSet):
     configuration_type = django_filters.CharFilter(field_name='configuration_type__code',
                                                    label='Configuration type code')
-    site = django_filters.CharFilter(field_name='site__code', label='Site code')
+    site = django_filters.CharFilter(method='filter_site',
+                                     label='Site code. Targets for every site are included.')
 
     class Meta:
         model = CalibrationTarget
         fields = ['name', 'configuration_type', 'site']
+
+    def filter_site(self, queryset, name, value):
+        return queryset.filter(Q(site__code=value) | Q(site__isnull=True))
 
 
 class CalibrationTargetViewSet(FilterableViewSet):

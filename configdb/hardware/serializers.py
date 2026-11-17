@@ -415,7 +415,8 @@ class AvailabilityHistorySerializer(serializers.Serializer):
 class CalibrationTargetSerializer(serializers.ModelSerializer):
     configuration_type = serializers.SlugRelatedField(
         slug_field='code', queryset=ConfigurationType.objects.all())
-    site = serializers.SlugRelatedField(slug_field='code', queryset=Site.objects.all())
+    site = serializers.SlugRelatedField(
+        slug_field='code', queryset=Site.objects.all(), required=False, allow_null=True)
 
     class Meta:
         model = CalibrationTarget

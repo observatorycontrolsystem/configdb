@@ -424,7 +424,8 @@ class CalibrationTarget(BaseModel):
     proper_motion_dec = models.FloatField(null=True, blank=True, help_text='Proper motion in Dec, mas/year')
     configuration_type = models.ForeignKey(ConfigurationType, on_delete=models.PROTECT,
                                            help_text='Configuration type this target is used for')
-    site = models.ForeignKey(Site, on_delete=models.CASCADE, help_text='Site this target is used at')
+    site = models.ForeignKey(Site, null=True, blank=True, on_delete=models.CASCADE,
+                             help_text='Site this target is used at. Leave blank for every site.')
     season_start = models.CharField(max_length=5, validators=[MONTH_DAY],
                                     help_text='First day the target is used, as MM-DD (month then day). The '
                                               'season may run across the new year. Use 01-01 to 12-31 '

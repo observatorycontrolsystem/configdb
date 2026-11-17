@@ -144,7 +144,7 @@ Two optional tables record when an observatory takes its calibrations, so a cali
     - **`when`:** `EVENING` or `MORNING` for a window in that twilight, `BOTH` for the same settings in each, or `NIGHT` for a run spread across the night. On a `NIGHT` row the window opens as the sun sets through `sun_alt_start` and closes as it rises through `sun_alt_end`. `BOTH` does not cover `NIGHT`.
     - **`direct_submission`:** whether the calibration is placed directly or queued for the scheduler. Each has its own rows.
     - **Values:** sun altitudes, window offset, count and length, and proposal. Unchecking `enabled` stops the calibration without deleting the row.
-2. Calibration target - A star a configuration type is taken on at a site, with the part of the year (`MM-DD` to `MM-DD`) it is used and any per-target settings in `config`.
+2. Calibration target - A star a configuration type is taken on at a site, or at every site if none is set, with the part of the year (`MM-DD` to `MM-DD`) it is used and any per-target settings in `config`.
 
 Several schedule rows can cover one instrument. The most specific location wins (instrument, then telescope, site, network), with a row naming an instrument type ahead of one that doesn't at the same location. Values it leaves blank come from the next row out. So a site row with `enabled` unchecked stops a calibration there, even if a network-wide row for the instrument type is on. Clients should read the resolved settings from `calibrationschedules/effective/` rather than applying these rules themselves.
 
@@ -167,7 +167,7 @@ Return the resolved calibration settings for every instrument at a site, one ent
 
     GET /calibrationschedules/effective/?site=my_site_code
 
-Return the calibration targets for one configuration type at a site
+Return the calibration targets for one configuration type at a site, including those for every site
 
     GET /calibrationtargets/?configuration_type=SPECTRUM&site=my_site_code
 

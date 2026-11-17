@@ -1079,10 +1079,9 @@ class CalibrationTargetTest(BaseHardwareTest):
         return {'name': 'HD 1', 'ra': 10.0, 'dec': -20.0, 'configuration_type': 'SPECTRUM',
                 'site': self.site.code, 'season_start': '01-01', 'season_end': '12-31', 'config': {}, **kwargs}
 
-    def test_a_target_needs_a_site(self):
+    def test_a_target_without_a_site_is_accepted(self):
         serializer = CalibrationTargetSerializer(data=self._data(site=None))
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('site', serializer.errors)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_season_dates_must_be_month_and_day(self):
         serializer = CalibrationTargetSerializer(data=self._data(season_start='13-01', season_end='02-30'))
@@ -1104,6 +1103,11 @@ class CalibrationTargetTest(BaseHardwareTest):
                                          site=self.site, **season)
         CalibrationTarget.objects.create(name='HD 2', ra=10, dec=-20, configuration_type=self.spectrum,
                                          site=mixer.blend(Site, code='oth'), **season)
+        CalibrationTarget.objects.create(name='HD 3', ra=10, dec=-20, configuration_type=self.spectrum,
+                                         site=None, **season)
+        CalibrationTarget.objects.create(name='HD 4', ra=10, dec=-20,
+                                         configuration_type=mixer.blend(ConfigurationType, code='STANDARD'),
+                                         site=None, **season)
         got = self.client.get('/calibrationtargets/', {'configuration_type': 'SPECTRUM',
                                                        'site': self.site.code}).json()['results']
-        self.assertEqual([t['name'] for t in got], ['HD 1'])
+        self.assertEqual(sorted(t['name'] for t in got), ['HD 1', 'HD 3'])
