@@ -14,7 +14,8 @@ from reversion.errors import RegistrationError
 from configdb.hardware.heroic import update_heroic_instrument_capabilities
 from configdb.hardware.models import (
     Site, Enclosure, GenericMode, ModeType, GenericModeGroup, Telescope, Instrument, Camera, CameraType,
-    OpticalElementGroup, OpticalElement, InstrumentType, InstrumentCategory, ConfigurationType, ConfigurationTypeProperties
+    OpticalElementGroup, OpticalElement, InstrumentType, InstrumentCategory, ConfigurationType, ConfigurationTypeProperties,
+    CalibrationSchedule, CalibrationTarget
 )
 from configdb.hardware.validator import OCSValidator
 
@@ -370,3 +371,26 @@ class LogEntryAdmin(admin.ModelAdmin):
 
     def queryset(self, request):
         return super().queryset(request).prefetch_related('content_type')
+
+
+@admin.register(CalibrationTarget)
+class CalibrationTargetAdmin(HardwareAdmin):
+    list_display = ('name', 'configuration_type', 'site', 'ra', 'dec', 'season_start', 'season_end')
+    list_filter = ('configuration_type__code', 'site__code')
+    search_fields = ('name',)
+
+
+@admin.register(CalibrationSchedule)
+class CalibrationScheduleAdmin(HardwareAdmin):
+    list_display = ('configuration_type', 'scope', 'when', 'direct_submission', 'enabled',
+                    'sun_alt_start', 'sun_alt_end', 'proposal')
+    list_select_related = ('configuration_type', 'instrument', 'telescope', 'instrument_type', 'site')
+    list_filter = ('enabled', 'direct_submission', 'when', 'configuration_type__code',
+                   'site__code', 'instrument_type__code')
+    search_fields = ('configuration_type__code', 'site__code', 'instrument_type__code',
+                     'telescope__code', 'instrument__code', 'proposal')
+
+    def scope(self, obj):
+        parts = [f'{field}: {getattr(obj, field)}' for field in obj.SCOPE_FIELDS
+                 if getattr(obj, f'{field}_id', None)]
+        return ', '.join(parts) or 'network default'
